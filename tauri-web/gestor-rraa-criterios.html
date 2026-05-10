@@ -764,6 +764,11 @@
                             </div>
                         </div>
 
+                        <div id="instrSelect" style="display:none; margin-bottom:14px; padding:10px 14px; background:#f8f9ff; border:2px solid #c7d2fe; border-radius:8px; align-items:center; gap:12px;">
+                            <label style="font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap;">📋 Instrumento</label>
+                            <select id="instrPorCeSelect" onchange="cambiarInstrumentoCE(this.value)" style="flex:1; padding:7px 10px; border:1px solid #c7d2fe; border-radius:6px; font-size:0.95em; color:#1e1b4b; background:white; cursor:pointer;"></select>
+                        </div>
+
                         <div class="table-container">
                             <table id="ponderacionesTable">
                                 <thead>
@@ -812,6 +817,7 @@
         let raaaActuales = [];
         let criteriosActuales = [];
         let ponderacionesUnidad = [];
+        let instrumentosDisponibles = [];
         let criterioRaActivo = null;
         let ponderacionUnidadActiva = null;
         let ponderacionRaActiva = null;
@@ -905,12 +911,14 @@
                 raaaActuales = result.rraa;
                 criteriosActuales = result.criterios;
                 ponderacionesUnidad = result.ponderacionesUnidad || [];
+                instrumentosDisponibles = result.instrumentos || [];
                 criterioRaActivo = criterioRaActivo || primerRAConCriterios();
                 ponderacionUnidadActiva = ponderacionUnidadActiva || primeraUnidadPonderacion();
                 ponderacionRaActiva = ponderacionRaActiva || primerRAConCriterios();
                 mostrarTablaRRAA();
                 mostrarTablaCriterios();
                 mostrarTablaPonderacionesUnidad();
+                actualizarSelectorInstrumento();
                 actualizarStatsRRAA();
                 actualizarStatsCriterios();
                 actualizarOpcionesRA();
@@ -1092,6 +1100,7 @@
             ponderacionRaActiva = ponderacionRaActiva || primerRAConCriterios();
             actualizarOpcionesPonderacion();
             mostrarTablaPonderacionesUnidad();
+            actualizarSelectorInstrumento();
         }
 
         // ===== MOSTRAR TABLA RRAA =====
@@ -1309,11 +1318,35 @@
         function seleccionarUnidadPonderacion(value) {
             ponderacionUnidadActiva = Number(value);
             mostrarTablaPonderacionesUnidad();
+            actualizarSelectorInstrumento();
         }
 
         function seleccionarRAPonderacion(value) {
             ponderacionRaActiva = Number(value);
             mostrarTablaPonderacionesUnidad();
+            actualizarSelectorInstrumento();
+        }
+
+        function actualizarSelectorInstrumento() {
+            const cont = document.getElementById('instrSelect');
+            const sel = document.getElementById('instrPorCeSelect');
+            if (!cont || !sel) return;
+            const unidad = ponderacionesUnidad.find(u => Number(u.rowIdx) === Number(ponderacionUnidadActiva));
+            const ce = raaaActuales.find(r => Number(r.numero) === Number(ponderacionRaActiva));
+            if (!unidad || !ce || instrumentosDisponibles.length === 0) { cont.style.display = 'none'; return; }
+            const actual = (unidad.instrPorCe && unidad.instrPorCe[String(ponderacionRaActiva)]) || '';
+            sel.innerHTML = '<option value="">-- Sin instrumento --</option>' +
+                instrumentosDisponibles.map(i => `<option value="${i.codigo}" ${i.codigo === actual ? 'selected' : ''}>${i.codigo} - ${i.nombre}</option>`).join('');
+            cont.style.display = 'flex';
+        }
+
+        function cambiarInstrumentoCE(codigo) {
+            const unidad = ponderacionesUnidad.find(u => Number(u.rowIdx) === Number(ponderacionUnidadActiva));
+            const ce = raaaActuales.find(r => Number(r.numero) === Number(ponderacionRaActiva));
+            if (!unidad || !ce) return;
+            if (!unidad.instrPorCe) unidad.instrPorCe = {};
+            unidad.instrPorCe[String(ponderacionRaActiva)] = { codigo, colIdx: ce.instrColIdx };
+            activarAutoguardado();
         }
 
         function primeraUnidadPonderacion() {
