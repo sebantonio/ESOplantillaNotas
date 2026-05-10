@@ -658,16 +658,13 @@
                 </p>
 
                 <div class="primary-actions">
-                    <a
-                        class="action-card"
-                        href="gestor-notas.html"
-                    >
+                    <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">
                         <div class="action-icon">📝</div>
                         <div>
-                            <strong>Añadir notas</strong>
-                            <span>Registra la nota final de las actividades por unidad.</span>
+                            <strong>Introducir notas</strong>
+                            <span>Notas por actividad/unidad o recuperaciones por evaluación.</span>
                         </div>
-                    </a>
+                    </div>
 
                     <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalVerNotas').style.display='flex'">
                         <div class="action-icon">👁️</div>
@@ -1335,6 +1332,23 @@
             document.getElementById('btnImportar').disabled = false;
         }
     </script>
+
+<div id="modalIntroducirNotas" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:32px 28px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+        <h2 style="margin:0 0 22px;font-size:1.1rem;color:#312e81;font-weight:800">Introducir notas</h2>
+        <div style="display:flex;flex-direction:column;gap:12px">
+            <a href="gestor-notas.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
+                <span style="font-size:1.8rem;flex-shrink:0">📝</span>
+                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Notas por unidad</strong><span style="font-size:0.82rem;color:#6b7280">Registra las notas de actividades por criterio y unidad</span></div>
+            </a>
+            <a href="gestor-recuperaciones.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #d1fae5;border-radius:10px;text-decoration:none;color:inherit">
+                <span style="font-size:1.8rem;flex-shrink:0">🔄</span>
+                <div><strong style="display:block;color:#065f46;font-size:0.95rem;margin-bottom:3px">Recuperaciones</strong><span style="font-size:0.82rem;color:#6b7280">Introduce notas de recuperación por evaluación y criterio</span></div>
+            </a>
+        </div>
+        <button onclick="document.getElementById('modalIntroducirNotas').style.display='none'" style="display:block;margin-top:18px;width:100%;padding:10px;background:white;border:1px solid #d1d5db;border-radius:8px;color:#6b7280;font:inherit;font-size:0.88rem;cursor:pointer">Cerrar</button>
+    </div>
+</div>
 
 <div id="modalVerNotas" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:1000;align-items:center;justify-content:center">
     <div style="background:white;border-radius:14px;padding:32px 28px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25)">

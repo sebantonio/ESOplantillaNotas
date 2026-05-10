@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ver Notas por Evaluación</title>
+    <title>Recuperaciones por Evaluación</title>
     <script src="app-bridge.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,9 +14,9 @@
         .nav-button, .nav-link { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 14px; border-radius: 8px; font-size: 0.92em; font-weight: 700; text-decoration: none; cursor: pointer; }
         .nav-button { color: #6366f1; background: white; border: 2px solid #6366f1; }
         .nav-link { color: white; background: #6366f1; border: 2px solid #6366f1; }
-        .header { padding: 28px 30px; color: white; background: #3730a3; }
+        .header { padding: 28px 30px; color: white; background: #065f46; }
         .header h1 { margin-bottom: 4px; font-size: 1.5rem; }
-        #headerTitulo { font-size: 0.92rem; color: #d1d5db; font-weight: 400; margin-top: 2px; }
+        #headerTitulo { font-size: 0.92rem; color: #d1fae5; font-weight: 400; margin-top: 2px; }
         .toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; background: #fafbff; }
         .toolbar label { font-size: 0.9rem; font-weight: 700; color: #374151; white-space: nowrap; }
         select, input[type=search] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.92rem; background: #fff; }
@@ -51,7 +51,12 @@
         .th-ce-nota  { font-size: 0.72em; font-weight: 800; }
         .th-rec { font-size: 0.68em; color: #b45309; font-weight: 700; background: #fffbeb !important; }
         .td-rec { background: #fffbeb; }
-        .rec-val { display: inline-block; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 0.88rem; min-width: 42px; background: #fef3c7; color: #92400e; }
+        .rec-input { width: 52px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; font-size: 0.85rem; background: #fffef0; font-family: inherit; }
+        .rec-input:focus { outline: 2px solid #f59e0b; background: white; border-color: #f59e0b; }
+        .btn-save { padding: 7px 18px; border: 2px solid #16a34a; border-radius: 7px; background: #16a34a; color: white; font-weight: 700; font-size: 0.92em; cursor: pointer; white-space: nowrap; }
+        .btn-save:hover { background: #15803d; border-color: #15803d; }
+        .btn-save:disabled { opacity: 0.55; cursor: default; }
+        .save-status { font-size: 0.78em; color: #6b7280; }
         .pag-btn { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; }
         .pag-btn:disabled { opacity: 0.4; cursor: default; }
         .pag-btn:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
@@ -72,14 +77,14 @@
             <a class="nav-link" href="index.html">Inicio</a>
         </div>
         <div class="nav-group">
-            <a class="nav-link" href="gestor-recuperaciones.html">Introducir recuperaciones</a>
+            <a class="nav-link" href="gestor-notas.html">Introducir notas</a>
+            <a class="nav-link" href="visor-notas.html">Ver evaluaciones</a>
             <a class="nav-link" href="visor-unidades.html">Por Unidad</a>
-            <a class="nav-link" href="informes.html">Por CE/Unidad</a>
         </div>
     </nav>
 
     <header class="header">
-        <h1>Notas por Evaluación</h1>
+        <h1>Introducir Recuperaciones</h1>
         <div id="headerTitulo"></div>
     </header>
 
@@ -97,6 +102,8 @@
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
+        <button id="btnSave" class="btn-save" onclick="saveAllRec()">Guardar</button>
+        <span id="saveStatus" class="save-status"></span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
             <span id="pageInfoTop" style="font-size:0.82rem;color:#374151;white-space:nowrap;"></span>
@@ -198,6 +205,48 @@
         return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
     }
 
+    async function saveRec(rowIdx, colIdx, value) {
+        try {
+            await window.electronExcel.saveEvalRec({
+                evaluacion: evalSelect.value,
+                rowIdx, colIdx, value,
+            });
+        } catch (e) {
+            showMessage("Error al guardar Rec: " + (e.message || e), "error");
+        }
+    }
+
+    function saveRecFromInput(input) {
+        const rowIdx = parseInt(input.dataset.row, 10);
+        const colIdx = parseInt(input.dataset.col, 10);
+        saveRec(rowIdx, colIdx, input.value.trim());
+    }
+
+    let autoSaveTimer = null;
+
+    async function saveAllRec() {
+        const inputs = document.querySelectorAll('.rec-input');
+        if (!inputs.length) return;
+        const btn = document.getElementById('btnSave');
+        const status = document.getElementById('saveStatus');
+        if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+        try {
+            for (const inp of inputs) {
+                await saveRec(parseInt(inp.dataset.row, 10), parseInt(inp.dataset.col, 10), inp.value.trim());
+            }
+            if (status) status.textContent = 'Guardado ' + new Date().toLocaleTimeString();
+        } catch(e) {
+            showMessage('Error al guardar: ' + (e.message || e), 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+        }
+    }
+
+    function resetAutoSave() {
+        if (autoSaveTimer) clearInterval(autoSaveTimer);
+        autoSaveTimer = setInterval(saveAllRec, 10000);
+    }
+
     function renderStats() {
         const alumnos = (currentState && currentState.alumnos) || [];
         const nums = alumnos.map(a => a.final).filter(n => typeof n === "number" && n > 0);
@@ -240,15 +289,12 @@
             return;
         }
 
-        // Agrupar CRs por CE (raColIdx) — calcular colspan teniendo en cuenta columnas Rec
         const ceGroups = raColumns.map((ra, i) => {
             const crs = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
-            // colspan = 1 (Nota CE) + sum(cr.recColIdx >= 0 ? 2 : 1)
             const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
             return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
         });
 
-        // Cabecera fila 1: Alumno (rowspan=2) | Final (rowspan=2) | CE bloques
         let head1 = `<tr>`;
         head1 += `<th class="th-nombre" rowspan="2">Alumno</th>`;
         head1 += `<th rowspan="2" class="th-final">Nota<br>Final</th>`;
@@ -259,7 +305,6 @@
         });
         head1 += `</tr>`;
 
-        // Cabecera fila 2: Nota CE | CR1.1 | Rec | CR1.2 | Rec | ...
         let head2 = `<tr>`;
         ceGroups.forEach(g => {
             const c = g.color;
@@ -275,16 +320,13 @@
         head2 += `</tr>`;
         notasHead.innerHTML = head1 + head2;
 
-        // Filas de alumnos
         let bodyHtml = "";
         alumnos.forEach(alumno => {
             bodyHtml += `<tr>`;
             bodyHtml += `<td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
-            // Nota Final — primera
             const fDisp = formatNote(alumno.finalDisplay);
             const fCls  = gradeClass(alumno.finalDisplay);
             bodyHtml += `<td class="td-final"><span class="grade ${fCls}">${fDisp || "—"}</span></td>`;
-            // CE groups
             ceGroups.forEach(g => {
                 const c = g.color;
                 const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
@@ -298,8 +340,8 @@
                     const cls   = gradeClass(crVal ? crVal.display : "");
                     bodyHtml += `<td style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
                     if (Number(cr.recColIdx) >= 0) {
-                        const recDisp = formatNote(crVal ? crVal.recDisplay : "");
-                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><span class="rec-val">${recDisp || "—"}</span></td>`;
+                        const recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
+                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input" type="text" placeholder="—" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)" onkeydown="if(event.key==='Enter')this.blur()"></td>`;
                     }
                 });
             });
@@ -323,6 +365,7 @@
     }
 
     async function loadEvaluacion(evaluacion) {
+        await saveAllRec();
         showMessage("Cargando notas...", "info");
         try {
             const data = await window.electronExcel.getNotasEvaluacion({ evaluacion });
@@ -331,13 +374,13 @@
             currentPage  = 0;
             headerTitulo.textContent = data.title || data.sheetName || "";
 
-            // Poblar selector de alumnos
             const nombres = (data.alumnos || []).map(a => a.nombre);
             alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
                 nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
             renderStats();
             renderTable();
+            resetAutoSave();
             showMessage("Notas cargadas.", "success");
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
@@ -349,7 +392,6 @@
             showMessage("Abre esta pantalla desde la aplicación local.", "error");
             return;
         }
-        // Auto-seleccionar Excel desde localStorage
         const current = await window.electronExcel.getSelectedFile().catch(() => null);
         if (!current) {
             try {

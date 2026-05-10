@@ -12,6 +12,7 @@ const files = [
   'gestor-rraa-criterios.html',
   'gestor-unidades.html',
   'gestor-notas.html',
+  'gestor-recuperaciones.html',
   'incluir-actividad.html',
   'visor-notas.html',
   'visor-actividades.html',
