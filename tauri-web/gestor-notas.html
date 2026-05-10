@@ -720,73 +720,6 @@
             grid-template-columns: minmax(180px, 1fr) auto auto !important;
         }
 
-        /* Modal visualización */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(17, 24, 39, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.open { display: flex; }
-
-        .modal-box {
-            background: white;
-            border-radius: 14px;
-            padding: 32px 28px;
-            max-width: 500px;
-            width: 92%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-        }
-        .modal-box h2 {
-            margin: 0 0 22px;
-            font-size: 1.1rem;
-            color: #312e81;
-            font-weight: 800;
-        }
-        .visor-cards {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .visor-card {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 18px;
-            border: 1.5px solid #e0e7ff;
-            border-radius: 10px;
-            text-decoration: none;
-            color: inherit;
-            transition: border-color 0.15s, background 0.15s;
-            cursor: pointer;
-        }
-        .visor-card:hover {
-            border-color: #6366f1;
-            background: #f5f3ff;
-        }
-        .visor-card-icon {
-            font-size: 1.8rem;
-            flex-shrink: 0;
-        }
-        .visor-card strong { display: block; color: #312e81; font-size: 0.95rem; margin-bottom: 3px; }
-        .visor-card span { font-size: 0.82rem; color: #6b7280; }
-        .modal-close {
-            display: block;
-            margin-top: 18px;
-            width: 100%;
-            padding: 10px;
-            background: white;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            color: #6b7280;
-            font: inherit;
-            font-size: 0.88rem;
-            cursor: pointer;
-        }
-        .modal-close:hover { border-color: #6366f1; color: #4338ca; }
 
         @media (max-width: 800px) {
             body {
@@ -811,7 +744,9 @@
                 <a class="nav-link" href="index.html">Inicio</a>
             </div>
             <div class="nav-group">
-                <button class="nav-button" type="button" onclick="document.getElementById('modalVisualizacion').classList.add('open')">Ver notas &#9660;</button>
+                <a class="nav-link" href="visor-notas.html">Por Evaluacion</a>
+                <a class="nav-link" href="visor-unidades.html">Por Unidad</a>
+                <a class="nav-link" href="informes.html">Por CE/Unidad</a>
                 <a class="nav-link" href="gestor-rraa-criterios.html">RRAA y CE</a>
             </div>
         </nav>
@@ -1767,35 +1702,5 @@
         }
     </script>
 
-    <!-- Modal fuera del .container para evitar overflow:hidden -->
-    <div class="modal-overlay" id="modalVisualizacion" onclick="if(event.target===this)this.classList.remove('open')">
-        <div class="modal-box">
-            <h2>Visualizar notas</h2>
-            <div class="visor-cards">
-                <a class="visor-card" href="visor-unidades.html">
-                    <span class="visor-card-icon">📊</span>
-                    <div>
-                        <strong>Ver por Unidad</strong>
-                        <span>Notas de cada alumno organizadas por unidad didáctica</span>
-                    </div>
-                </a>
-                <a class="visor-card" href="visor-notas.html">
-                    <span class="visor-card-icon">📋</span>
-                    <div>
-                        <strong>Ver por Evaluación</strong>
-                        <span>Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span>
-                    </div>
-                </a>
-                <a class="visor-card" href="informes.html">
-                    <span class="visor-card-icon">📁</span>
-                    <div>
-                        <strong>Ver por CE y Unidad</strong>
-                        <span>Competencias específicas y criterios desglosados por unidad</span>
-                    </div>
-                </a>
-            </div>
-            <button class="modal-close" onclick="document.getElementById('modalVisualizacion').classList.remove('open')">Cerrar</button>
-        </div>
-    </div>
 </body>
 </html>
