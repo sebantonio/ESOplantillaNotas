@@ -798,22 +798,40 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         .ok_or_else(|| format!("No se encontro la hoja de la {evaluacion} evaluacion."))?;
     let rows = read_sheet_rows(path, &sheet_name)?;
 
-    // Buscar layout — estrategia 1: fila con "NOTA CE" seguida de CR codes (hasta 3 filas después)
-    //                  estrategia 2: fallback — fila con >= 2 códigos de criterio
+    // Buscar layout:
+    // ESO: NOTA CE y CR codes están en la MISMA fila (ej. fila 17); fila+1 = sub-cabecera "Rec"; fila+2 = alumnos
+    // FP:  NOTA CE en fila N, CR codes en fila N+1; alumnos en N+2
+    // Fallback: primera fila con >= 2 CR codes
     let (summary_row_idx, code_row_idx, first_student_row_idx) = {
         let mut found = None;
+
+        // Estrategia 1 (ESO): misma fila tiene NOTA CE y >= 2 CR codes
         for row_idx in 0..rows.len() {
-            if rows[row_idx].iter().filter(|v| is_nota_ce_cell(v)).count() == 0 { continue; }
-            for offset in 1..=3 {
-                if let Some(next) = rows.get(row_idx + offset) {
-                    if next.iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
-                        found = Some((row_idx, row_idx + offset, row_idx + offset + 1));
-                        break;
+            let has_nota_ce = rows[row_idx].iter().any(|v| is_nota_ce_cell(v));
+            let cr_count = rows[row_idx].iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count();
+            if has_nota_ce && cr_count >= 2 {
+                found = Some((row_idx, row_idx, row_idx + 2)); // +2 para saltar fila "Rec"
+                break;
+            }
+        }
+
+        // Estrategia 2 (FP): fila NOTA CE + CR codes en la siguiente (hasta 3 filas después)
+        if found.is_none() {
+            for row_idx in 0..rows.len() {
+                if rows[row_idx].iter().filter(|v| is_nota_ce_cell(v)).count() == 0 { continue; }
+                for offset in 1..=3 {
+                    if let Some(next) = rows.get(row_idx + offset) {
+                        if next.iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
+                            found = Some((row_idx, row_idx + offset, row_idx + offset + 1));
+                            break;
+                        }
                     }
                 }
+                if found.is_some() { break; }
             }
-            if found.is_some() { break; }
         }
+
+        // Estrategia 3 (fallback): primera fila con >= 2 CR codes
         if found.is_none() {
             for row_idx in 1..rows.len() {
                 if rows[row_idx].iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
@@ -822,6 +840,7 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
                 }
             }
         }
+
         found.ok_or("No se encontro la cabecera de notas de evaluacion.")?
     };
 
