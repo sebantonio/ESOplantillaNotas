@@ -1172,7 +1172,7 @@
 
             const criteriosVisibles = criteriosActuales.filter((crit) =>
                 Number(crit.raNumero) === Number(ponderacionRaActiva) &&
-                (String(crit.texto || "").trim() !== "" || Number(crit.ponderacion) !== 0 || Number(crit.ponderacionInstituto) !== 0 || Number(crit.ponderacionEmpresa) !== 0)
+                String(crit.texto || "").trim() !== ""
             );
             tbody.innerHTML = criteriosVisibles.map((crit) => {
                 const critIdx = criteriosActuales.indexOf(crit);
