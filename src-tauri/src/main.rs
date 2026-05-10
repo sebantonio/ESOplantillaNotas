@@ -1922,8 +1922,10 @@ fn save_instrumentos_to_file(path: &str, instrumentos: &[Value]) -> Result<(), S
             if let Some(inst) = instrumentos_owned.get(slot) {
                 let codigo = inst["codigo"].as_str().unwrap_or("");
                 let nombre = inst["nombre"].as_str().unwrap_or("");
-                s = set_xml_cell(&s, ri, 13, if codigo.is_empty() { None } else { Some(&json!(codigo)) }, "text")?;
-                s = set_xml_cell(&s, ri, 14, if nombre.is_empty() { None } else { Some(&json!(nombre)) }, "text")?;
+                let codigo_val = json!(codigo);
+                let nombre_val = json!(nombre);
+                s = set_xml_cell(&s, ri, 13, if codigo.is_empty() { None } else { Some(&codigo_val) }, "text")?;
+                s = set_xml_cell(&s, ri, 14, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
             } else {
                 s = set_xml_cell(&s, ri, 13, None, "text")?;
                 s = set_xml_cell(&s, ri, 14, None, "text")?;
