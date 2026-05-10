@@ -968,8 +968,39 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         if !cr_cols.is_empty() { break; }
     }
 
+    // Leer ponderaciones de PESOS para la unidad actual
+    let ponderaciones_por_cr: std::collections::HashMap<String, f64> = {
+        let mut map = std::collections::HashMap::new();
+        if let Ok(pesos_rows) = read_sheet_rows(path, "PESOS") {
+            // CR col map: fila idx 3 tiene los códigos CR
+            let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+            if pesos_rows.len() > 3 {
+                for ci in 0..pesos_rows[3].len() {
+                    let code = cell_str(&pesos_rows, 3, ci);
+                    if is_cr_code(&code) { cr_col_map.insert(code.to_uppercase(), ci); }
+                }
+            }
+            // Buscar fila de la unidad actual (col A, filas idx 4-19)
+            let unidad_norm = normalize_plain(unidad);
+            for ri in 4..pesos_rows.len().min(20) {
+                let nombre_pesos = normalize_plain(&cell_str(&pesos_rows, ri, 0));
+                if nombre_pesos == unidad_norm || nombre_pesos.contains(&unidad_norm) || unidad_norm.contains(&nombre_pesos) {
+                    for (cr_code, col) in &cr_col_map {
+                        let pond = cell_f64(&pesos_rows, ri, *col).unwrap_or(0.0);
+                        map.insert(cr_code.clone(), pond);
+                    }
+                    break;
+                }
+            }
+        }
+        map
+    };
+
     let criterios_json: Vec<Value> = cr_cols.iter()
-        .map(|(code, ci)| json!({ "codigo": code, "colIdx": ci }))
+        .map(|(code, ci)| {
+            let ponderacion = ponderaciones_por_cr.get(code).copied().unwrap_or(0.0);
+            json!({ "codigo": code, "colIdx": ci, "ponderacion": ponderacion })
+        })
         .collect();
 
     // Iterar filas de alumnos: usar nombre de DATOS por posición

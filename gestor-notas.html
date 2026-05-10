@@ -1099,7 +1099,11 @@
                 '<th style="width:200px;min-width:160px;text-align:left;font-size:0.82em;padding:8px 10px">Alumno</th>'
             ];
             criterios.forEach((cr) => {
-                headers.push(`<th style="width:80px;text-align:center;font-size:0.72em;padding:8px 4px">${escapeHtml(cr.codigo)}</th>`);
+                const pond = cr.ponderacion || 0;
+                const tieneP = pond > 0;
+                const pctTxt = tieneP ? `<div style="font-size:0.85em;color:#6366f1;font-weight:600;margin-top:2px">${Math.round(pond * 100)}%</div>` : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
+                const bgH = tieneP ? '' : 'background:#f3f4f6;color:#9ca3af;';
+                headers.push(`<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;${bgH}">${escapeHtml(cr.codigo)}${pctTxt}</th>`);
             });
 
             // Reescribir headers
@@ -1119,19 +1123,28 @@
                 html += `<td style="font-size:0.85em;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(alumno.nombre)}</td>`;
 
                 criterios.forEach((cr) => {
+                    const tieneP = (cr.ponderacion || 0) > 0;
                     const nota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);
                     const notaVal = nota ? nota.display || "" : "";
-                    html += `<td style="text-align:center;padding:6px 4px">
-                        <input
-                            type="text"
-                            inputmode="decimal"
-                            class="nota-cr"
-                            data-cr-codigo="${escapeHtml(cr.codigo)}"
-                            data-cr-colidx="${cr.colIdx}"
-                            value="${escapeHtml(String(notaVal))}"
-                            style="width:74px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #d7d7d7;border-radius:5px;min-height:34px"
-                        />
-                    </td>`;
+                    if (tieneP) {
+                        html += `<td style="text-align:center;padding:6px 4px">
+                            <input type="text" inputmode="decimal" class="nota-cr"
+                                data-cr-codigo="${escapeHtml(cr.codigo)}"
+                                data-cr-colidx="${cr.colIdx}"
+                                value="${escapeHtml(String(notaVal))}"
+                                style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #d7d7d7;border-radius:5px;min-height:32px"
+                            />
+                        </td>`;
+                    } else {
+                        html += `<td style="text-align:center;padding:6px 4px;background:#f3f4f6">
+                            <input type="text" class="nota-cr" disabled
+                                data-cr-codigo="${escapeHtml(cr.codigo)}"
+                                data-cr-colidx="${cr.colIdx}"
+                                value="${escapeHtml(String(notaVal))}"
+                                style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #e5e7eb;border-radius:5px;min-height:32px;background:#f3f4f6;color:#9ca3af;cursor:not-allowed"
+                            />
+                        </td>`;
+                    }
                 });
 
                 row.innerHTML = html;
