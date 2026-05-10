@@ -313,6 +313,7 @@
         function iniciarJuego() {
             document.getElementById('inicio').style.display = 'none';
             juegoActivo = true;
+            ultimaGeneracion = Date.now();
             generarAsteroides();
             bucleJuego();
         }
@@ -392,15 +393,13 @@
 
             // Generar nuevos asteroides continuamente
             const ahora = Date.now();
-            const asteroidesPequenos = asteroides.filter(a => a.tamaño < 15).length;
-            if (ahora - ultimaGeneracion > INTERVALO_GENERACION && asteroides.length < 3 + nivel) {
-                for (let i = 0; i < Math.max(1, Math.floor(nivel / 2)); i++) {
-                    asteroides.push(new Asteroide(
-                        Math.random() * canvas.width,
-                        Math.random() * 50 - 50,
-                        20 + Math.random() * 15
-                    ));
-                }
+            const asteroidesGrandes = asteroides.filter(a => a.tamaño > 15).length;
+            if (ahora - ultimaGeneracion > INTERVALO_GENERACION && asteroidesGrandes < 3 + nivel) {
+                asteroides.push(new Asteroide(
+                    Math.random() * canvas.width,
+                    Math.random() * 50 - 50,
+                    20 + Math.random() * 15
+                ));
                 ultimaGeneracion = ahora;
             }
 
