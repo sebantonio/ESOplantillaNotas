@@ -359,8 +359,14 @@ fn load_rraa_criterios(path: &str) -> Result<Value, String> {
     let (ce_list, criterios, ponderaciones_unidad) = extract_rraa_criterios_data(path)
         .ok_or("No se encontraron las hojas PESOS o DATOS.")?;
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
-    // "rraa" se mapea a CE para compatibilidad con el frontend
-    Ok(json!({ "filePath": path, "fileName": file_name, "rraa": ce_list, "criterios": criterios, "ponderacionesUnidad": ponderaciones_unidad }))
+    let rows = read_sheet_rows(path, "DATOS").unwrap_or_default();
+    let mut instrumentos: Vec<Value> = Vec::new();
+    for ri in 4..=13usize {
+        let codigo = cell_str(&rows, ri, 13);
+        let nombre = cell_str(&rows, ri, 14);
+        if !codigo.is_empty() { instrumentos.push(json!({ "codigo": codigo, "nombre": nombre })); }
+    }
+    Ok(json!({ "filePath": path, "fileName": file_name, "rraa": ce_list, "criterios": criterios, "ponderacionesUnidad": ponderaciones_unidad, "instrumentos": instrumentos }))
 }
 
 #[tauri::command]
@@ -454,7 +460,11 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             if col < *entry { *entry = col; }
         }
     }
-    // Añadir ponderacionTotal a cada CE: buscar valor no-cero en first_cr_col y first_cr_col-1
+    // instrColIdx por CE = columna "Inst ev." = first_cr_col - 1
+    let ce_instr_col: std::collections::HashMap<i64, usize> = ce_first_col.iter()
+        .filter_map(|(&ce, &col)| if col > 0 { Some((ce, col - 1)) } else { None })
+        .collect();
+    // Añadir ponderacionTotal e instrColIdx a cada CE
     let ce_list: Vec<Value> = ce_list.into_iter().map(|ce| {
         let ce_num = ce["numero"].as_i64().unwrap_or(0);
         let pond_total = ce_first_col.get(&ce_num).and_then(|&col| {
@@ -464,8 +474,10 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
                 if col > 0 { cell_f64(r, 22, col - 1) } else { None }
             })
         }).unwrap_or(0.0);
+        let instr_col = ce_instr_col.get(&ce_num).copied().unwrap_or(0);
         let mut obj = ce.as_object().cloned().unwrap_or_default();
         obj.insert("ponderacionTotal".to_string(), json!(pond_total));
+        obj.insert("instrColIdx".to_string(), json!(instr_col));
         Value::Object(obj)
     }).collect();
     // Añadir ponderacionCR (% individual) a cada criterio desde fila idx 21 de PESOS
@@ -491,11 +503,17 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, i + 4, actual_col)).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
+        let mut instr_por_ce = serde_json::Map::new();
+        for (&ce_num, &instr_col) in &ce_instr_col {
+            let instr = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, instr_col)).unwrap_or_default();
+            instr_por_ce.insert(ce_num.to_string(), json!(instr));
+        }
         ponderaciones_unidad.push(json!({
             "numero": i + 1,
             "rowIdx": i + 4,
             "nombre": nombre,
-            "ponderaciones": ponderaciones
+            "ponderaciones": ponderaciones,
+            "instrPorCe": instr_por_ce
         }));
     }
 
@@ -1373,13 +1391,23 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
                         s = set_xml_cell(&s, 3, ci, Some(&criterio["codigo"]), "text")?;
                     }
                 }
-                // Filas de unidades: ponderaciones por CR
+                // Filas de unidades: ponderaciones por CR e instrumento por CE
                 for unidad in &pond2 {
                     if let Some(ri) = unidad["rowIdx"].as_u64().map(|n| n as usize) {
                         if let Some(ponds) = unidad["ponderaciones"].as_object() {
                             for (col_key, vals) in ponds {
                                 let ci: usize = col_key.parse().unwrap_or(0);
                                 s = set_xml_cell(&s, ri, ci, Some(&json!(parse_decimal(&vals["ponderacion"]))), "number")?;
+                            }
+                        }
+                        if let Some(instrs) = unidad["instrPorCe"].as_object() {
+                            for (_ce_num, val) in instrs {
+                                if let (Some(instr_str), Some(col_idx)) = (val["codigo"].as_str(), val["colIdx"].as_u64()) {
+                                    let ci = col_idx as usize;
+                                    if ci > 0 {
+                                        s = set_xml_cell(&s, ri, ci, Some(&json!(instr_str)), "text")?;
+                                    }
+                                }
                             }
                         }
                     }
