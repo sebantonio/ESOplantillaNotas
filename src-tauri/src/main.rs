@@ -433,6 +433,16 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
 
     // Ponderaciones: hoja PESOS si existe (pesos por CR y unidad)
     let pesos_rows = read_sheet_rows(path, "PESOS").ok();
+    // Mapa CR código → columna real en PESOS (fila idx 3)
+    let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    if let Some(ref rows) = pesos_rows {
+        if rows.len() > 3 {
+            for ci in 0..rows[3].len() {
+                let code = cell_str(rows, 3, ci);
+                if is_cr_code(&code) { cr_col_map.insert(code, ci); }
+            }
+        }
+    }
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
     for i in 0..15usize {
         let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, 0)).unwrap_or_default();
@@ -440,7 +450,9 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         let mut ponderaciones = serde_json::Map::new();
         for c in &criterios {
             let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
-            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, i + 4, ci)).unwrap_or(0.0);
+            let cr_code = c["codigo"].as_str().unwrap_or("");
+            let actual_col = cr_col_map.get(cr_code).copied().unwrap_or(ci);
+            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, i + 4, actual_col)).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
         ponderaciones_unidad.push(json!({
