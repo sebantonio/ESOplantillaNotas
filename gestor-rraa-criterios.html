@@ -1146,8 +1146,6 @@
                     <td><input class="codigo-input" type="text" value="${escaparHtml(crit.codigo || crit.nombre)}" maxlength="6" onchange="actualizarCriterioCampo(${idx}, 'codigo', this.value)" title="${escaparHtml(crit.raDescripcion || '')}" /></td>
                     <td><textarea onchange="actualizarCriterioCampo(${idx}, 'texto', this.value)">${escaparHtml(crit.texto || '')}</textarea></td>
                     <td><input type="number" value="${crit.ponderacion || 0}" min="0" max="1" step="0.01" readonly /></td>
-                    <td><input type="number" value="${crit.ponderacionInstituto || 0}" min="0" max="1" step="0.01" readonly /></td>
-                    <td><input type="number" value="${crit.ponderacionEmpresa || 0}" min="0" max="1" step="0.01" readonly /></td>
                     <td>
                         <button class="delete" onclick="eliminarCriterio(${idx})">🗑️</button>
                     </td>
@@ -1183,12 +1181,10 @@
 
                 return `
                     <tr>
-                        <td>RA ${crit.raNumero}</td>
+                        <td>CE ${crit.raNumero}</td>
                         <td><input class="codigo-input" type="text" value="${escaparHtml(crit.codigo || crit.nombre)}" maxlength="6" onchange="actualizarCriterioCampo(${critIdx}, 'codigo', this.value)" /></td>
                         <td><textarea onchange="actualizarCriterioCampo(${critIdx}, 'texto', this.value)">${escaparHtml(crit.texto || '')}</textarea></td>
-                        <td><input type="number" value="${final}" readonly /></td>
-                        <td><input type="number" value="${values.ponderacionInstituto || 0}" min="0" max="1" step="0.01" onchange="actualizarPonderacionUnidad(${unidad.rowIdx}, ${crit.colIdx}, 'ponderacionInstituto', this.value)" /></td>
-                        <td><input type="number" value="${values.ponderacionEmpresa || 0}" min="0" max="1" step="0.01" onchange="actualizarPonderacionUnidad(${unidad.rowIdx}, ${crit.colIdx}, 'ponderacionEmpresa', this.value)" /></td>
+                        <td><input type="number" value="${values.ponderacion || 0}" min="0" max="1" step="0.01" onchange="actualizarPonderacionUnidad(${unidad.rowIdx}, ${crit.colIdx}, 'ponderacion', this.value)" /></td>
                         <td><button class="delete" onclick="mostrarTablaPonderacionesUnidad()" title="Actualizar">🔄</button></td>
                     </tr>
                 `;
@@ -1211,7 +1207,7 @@
             }
 
             select.innerHTML = listaRANumeros().map((raNumero) => `
-                <option value="${raNumero}">RA ${raNumero}</option>
+                <option value="${raNumero}">CE ${raNumero}</option>
             `).join('');
 
             actualizarFiltroRA();
@@ -1219,7 +1215,7 @@
 
         function opcionesRA(raNumero) {
             return listaRANumeros().map((numero) => `
-                <option value="${numero}" ${Number(numero) === Number(raNumero) ? 'selected' : ''}>RA ${numero}</option>
+                <option value="${numero}" ${Number(numero) === Number(raNumero) ? 'selected' : ''}>CE ${numero}</option>
             `).join('');
         }
 
@@ -1304,7 +1300,7 @@
             raSelect.innerHTML = listaRANumeros().map((raNumero) => {
                 const rraa = raaaActuales.find(item => Number(item.numero) === Number(raNumero));
                 const nombre = rraa && rraa.descripcion ? ` - ${rraa.descripcion}` : '';
-                return `<option value="${raNumero}" ${Number(raNumero) === Number(ponderacionRaActiva) ? 'selected' : ''}>RA ${raNumero}${escaparHtml(nombre)}</option>`;
+                return `<option value="${raNumero}" ${Number(raNumero) === Number(ponderacionRaActiva) ? 'selected' : ''}>CE ${raNumero}${escaparHtml(nombre)}</option>`;
             }).join('');
         }
 
@@ -1357,7 +1353,7 @@
             filtro.innerHTML = numeros.map((raNumero) => {
                 const rraa = raaaActuales.find(item => Number(item.numero) === Number(raNumero));
                 const nombre = rraa && rraa.descripcion ? ` - ${rraa.descripcion}` : '';
-                return `<option value="${raNumero}" ${Number(raNumero) === Number(criterioRaActivo) ? 'selected' : ''}>RA ${raNumero}${escaparHtml(nombre)}</option>`;
+                return `<option value="${raNumero}" ${Number(raNumero) === Number(criterioRaActivo) ? 'selected' : ''}>CE ${raNumero}${escaparHtml(nombre)}</option>`;
             }).join('');
         }
 
@@ -1427,7 +1423,7 @@
             const descripcion = document.getElementById('nuevoRRAA').value.trim();
 
             if (!descripcion) {
-                mostrarMensaje('❌ Por favor ingresa la descripción del RRAA', 'error');
+                mostrarMensaje('❌ Por favor ingresa la descripción de la CE', 'error');
                 return;
             }
 
@@ -1441,7 +1437,7 @@
             actualizarStatsRRAA();
             document.getElementById('nuevoRRAA').value = '';
             marcarCambio();
-            mostrarMensaje('✅ RRAA agregado', 'success');
+            mostrarMensaje('✅ CE agregada', 'success');
         }
 
         // ===== AGREGAR CRITERIO =====
@@ -1489,12 +1485,12 @@
         // ===== ELIMINAR RRAA =====
         function eliminarRRAA(idx) {
             const desc = raaaActuales[idx].descripcion.substring(0, 50);
-            if (confirm(`¿Eliminar este RRAA?\n"${desc}..."`)) {
+            if (confirm(`¿Eliminar esta CE?\n"${desc}..."`)) {
                 raaaActuales.splice(idx, 1);
                 mostrarTablaRRAA();
                 actualizarStatsRRAA();
                 marcarCambio();
-                mostrarMensaje('✅ RRAA eliminado', 'success');
+                mostrarMensaje('✅ CE eliminada', 'success');
             }
         }
 
@@ -1843,8 +1839,8 @@
                     const resumen = `
 📊 IMPORTACIÓN COMPLETADA
 
-RRAA: ${importRraa.length} registros
-CE: ${importCriterios.length} registros
+CE: ${importRraa.length} registros
+Criterios: ${importCriterios.length} registros
 Unidades: ${importUnidades.length} registros
 
 ¿Deseas reemplazar los datos actuales con los importados?
@@ -1860,7 +1856,7 @@ Unidades: ${importUnidades.length} registros
                         actualizarStatsCriterios();
                         actualizarOpcionesRA();
                         actualizarOpcionesPonderacion();
-                        mostrarMensaje(`✅ Importados: ${importRraa.length} RRAA, ${importCriterios.length} CE`, 'success');
+                        mostrarMensaje(`✅ Importados: ${importRraa.length} CE, ${importCriterios.length} criterios`, 'success');
                     }
 
                     mostrarLoading(false);

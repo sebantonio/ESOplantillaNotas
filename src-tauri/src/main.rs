@@ -1896,6 +1896,58 @@ fn excel_delete_diario_entrada(payload: Value) -> Result<Value, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Instrumentos de evaluación (DATOS cols N/O, filas 5-9)
+// ---------------------------------------------------------------------------
+
+fn load_instrumentos(path: &str) -> Result<Value, String> {
+    let rows = read_sheet_rows(path, "DATOS")?;
+    let mut instrumentos: Vec<Value> = Vec::new();
+    // DATOS filas 5-9 (0-indexed 4-8): col N(13)=código, O(14)=nombre
+    for ri in 4..=8usize {
+        let codigo = cell_str(&rows, ri, 13);
+        let nombre = cell_str(&rows, ri, 14);
+        if codigo.is_empty() && nombre.is_empty() { continue; }
+        instrumentos.push(json!({ "codigo": codigo, "nombre": nombre }));
+    }
+    let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
+    Ok(json!({ "filePath": path, "fileName": file_name, "instrumentos": instrumentos }))
+}
+
+fn save_instrumentos_to_file(path: &str, instrumentos: &[Value]) -> Result<(), String> {
+    let instrumentos_owned = instrumentos.to_vec();
+    edit_workbook_sheets_xml(path, vec![("DATOS", Box::new(move |xml: &str| {
+        let mut s = xml.to_string();
+        for slot in 0..5usize {
+            let ri = 4 + slot;
+            if let Some(inst) = instrumentos_owned.get(slot) {
+                let codigo = inst["codigo"].as_str().unwrap_or("");
+                let nombre = inst["nombre"].as_str().unwrap_or("");
+                s = set_xml_cell(&s, ri, 13, if codigo.is_empty() { None } else { Some(&json!(codigo)) }, "text")?;
+                s = set_xml_cell(&s, ri, 14, if nombre.is_empty() { None } else { Some(&json!(nombre)) }, "text")?;
+            } else {
+                s = set_xml_cell(&s, ri, 13, None, "text")?;
+                s = set_xml_cell(&s, ri, 14, None, "text")?;
+            }
+        }
+        Ok(s)
+    }))])
+}
+
+#[tauri::command]
+fn excel_get_instrumentos() -> Result<Value, String> {
+    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
+    match get_selected_path() { Some(p) => load_instrumentos(&p), None => Ok(Value::Null) }
+}
+
+#[tauri::command]
+fn excel_save_instrumentos(instrumentos: Value) -> Result<Value, String> {
+    let path = require_selected_path()?;
+    let arr = instrumentos.as_array().ok_or("Lista de instrumentos no valida.")?.clone();
+    save_instrumentos_to_file(&path, &arr)?;
+    load_instrumentos(&path)
+}
+
+// ---------------------------------------------------------------------------
 // open external + main
 // ---------------------------------------------------------------------------
 
@@ -1914,7 +1966,8 @@ fn main() {
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_get_alumnos_informes, app_open_external,
-            excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada
+            excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
+            excel_get_instrumentos, excel_save_instrumentos
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicacion Tauri");

@@ -38,6 +38,8 @@
     openExternal: (url) => invoke("app_open_external", { url }),
     getDiarioData: () => invoke("excel_get_diario"),
     saveDiarioEntrada: (payload) => invoke("excel_save_diario_entrada", { payload }),
-    deleteDiarioEntrada: (payload) => invoke("excel_delete_diario_entrada", { payload })
+    deleteDiarioEntrada: (payload) => invoke("excel_delete_diario_entrada", { payload }),
+    getInstrumentos: () => invoke("excel_get_instrumentos"),
+    saveInstrumentos: (instrumentos) => invoke("excel_save_instrumentos", { instrumentos })
   };
 })();

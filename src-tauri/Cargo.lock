@@ -1016,6 +1016,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "eso-notas-local"
+version = "0.1.0"
+dependencies = [
+ "calamine",
+ "chrono",
+ "once_cell",
+ "regex",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "webbrowser",
+ "zip",
+]
+
+[[package]]
 name = "event-listener"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2580,23 +2597,6 @@ name = "pkg-config"
 version = "0.3.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
-
-[[package]]
-name = "plantilla-notas-local"
-version = "0.1.0"
-dependencies = [
- "calamine",
- "chrono",
- "once_cell",
- "regex",
- "rfd",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "webbrowser",
- "zip",
-]
 
 [[package]]
 name = "plist"
