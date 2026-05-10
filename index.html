@@ -803,23 +803,46 @@
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
                 <label id="lblAlumnos" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:#6366f1;" checked />
-                    <div>
+                    <div style="flex:1;">
                         <strong style="display:block; font-size:0.95em;">👥 Alumnos</strong>
-                        <span style="font-size:0.85em;color:#5f6f89;">Nº y nombre — columnas A y B del archivo fuente</span>
+                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel. Sin cabecera (o con "Nombre"/"Alumno", se omite). Max 27 alumnos.</span>
+                        <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
+                            1 columna: &nbsp;<em>Juan García López</em><br>
+                            2 columnas: <em>1;Juan García López</em>
+                        </div>
                     </div>
                 </label>
                 <label id="lblCE" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importCE" style="width:17px;height:17px;accent-color:#6366f1;" />
-                    <div>
+                    <div style="flex:1;">
                         <strong style="display:block; font-size:0.95em;">⚖️ CE y Criterios</strong>
-                        <span style="font-size:0.85em;color:#5f6f89;">Hoja PESOS del archivo fuente → hoja PESOS del libro activo</span>
+                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel con hoja PESOS. Sin cabecera (o con "CE"/"Codigo", se omite).</span>
+                        <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
+                            Formato A: <em>CE1;CR1.1;Descripción del criterio</em><br>
+                            Formato B: <em>CR1.1;Descripción del criterio</em> &nbsp;(CE se deduce del número)
+                        </div>
                     </div>
                 </label>
                 <label id="lblInst" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importInstrumentos" style="width:17px;height:17px;accent-color:#6366f1;" />
-                    <div>
+                    <div style="flex:1;">
                         <strong style="display:block; font-size:0.95em;">📊 Instrumentos de evaluación</strong>
-                        <span style="font-size:0.85em;color:#5f6f89;">Códigos y nombres (columnas N-O del archivo fuente)</span>
+                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja). Sin cabecera (o con "Codigo"/"Abreviatura", se omite). Max 10.</span>
+                        <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
+                            2 columnas: <em>PE;Prueba escrita</em><br>
+                            <em>TD;Trabajo en grupo</em>
+                        </div>
+                    </div>
+                </label>
+                <label id="lblUnidades" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="importUnidades" style="width:17px;height:17px;accent-color:#6366f1;" />
+                    <div style="flex:1;">
+                        <strong style="display:block; font-size:0.95em;">📚 Unidades didácticas</strong>
+                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja o hoja DATOS). Sin cabecera (o con "Codigo"/"Unidad", se omite). Max 15.</span>
+                        <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
+                            3 columnas: <em>U1;Introducción a la asignatura;1ª</em><br>
+                            Evaluación: <em>1ª</em> / <em>2ª</em> / <em>3ª</em> &nbsp;(también acepta 1a, 2a, 3a)
+                        </div>
                     </div>
                 </label>
             </div>
@@ -1020,6 +1043,7 @@
             document.getElementById('importAlumnos').checked = true;
             document.getElementById('importCE').checked = false;
             document.getElementById('importInstrumentos').checked = false;
+            document.getElementById('importUnidades').checked = false;
             document.getElementById('modalImportar').style.display = 'flex';
         }
 
@@ -1085,8 +1109,9 @@
             const doAlumnos      = document.getElementById('importAlumnos').checked;
             const doCE           = document.getElementById('importCE').checked;
             const doInstrumentos = document.getElementById('importInstrumentos').checked;
+            const doUnidades     = document.getElementById('importUnidades').checked;
 
-            if (!doAlumnos && !doCE && !doInstrumentos) {
+            if (!doAlumnos && !doCE && !doInstrumentos && !doUnidades) {
                 mostrarImportMsg('Selecciona al menos una sección a importar.', false);
                 return;
             }
@@ -1218,7 +1243,7 @@
                         if (codigo.toLowerCase() === 'codigo' || codigo.toLowerCase() === 'abreviatura') continue;
                         if (!codigo && !nombre) continue;
                         instrumentos.push({ codigo, nombre });
-                        if (instrumentos.length === 5) break; // máximo 5
+                        if (instrumentos.length === 10) break; // máximo 10
                     }
 
                     if (instrumentos.length === 0) throw new Error('No se encontraron instrumentos. Formato esperado: abreviatura;nombre');
@@ -1226,6 +1251,39 @@
                     lineas.push(`✅ Instrumentos: ${instrumentos.length} importados`);
                 } catch(err) {
                     lineas.push(`❌ Instrumentos: ${err.message}`);
+                }
+            }
+
+            // ── UNIDADES ─────────────────────────────────────────────────────
+            // CSV/Excel: 3 columnas — código;nombre;evaluación (1ª/2ª/3ª). Max 15.
+            if (doUnidades) {
+                try {
+                    const sheetName = importWorkbook.SheetNames.includes('DATOS')
+                        ? 'DATOS' : importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(
+                        importWorkbook.Sheets[sheetName], { header: 1, defval: '' });
+
+                    const EVAL_MAP = { '1a': '1ª', '2a': '2ª', '3a': '3ª', '1ª': '1ª', '2ª': '2ª', '3ª': '3ª' };
+                    const unidades = [];
+
+                    for (const row of rows) {
+                        if (!row || row.length < 2) continue;
+                        const colA = String(row[0] || '').trim();
+                        const colB = String(row[1] || '').trim();
+                        const colC = String(row[2] || '').trim();
+                        // Saltar cabecera
+                        if (/^(codigo|unidad|u[.]?n|nombre)/i.test(colA)) continue;
+                        if (!colA && !colB) continue;
+                        const evaluacion = EVAL_MAP[colC.toLowerCase()] || colC || '';
+                        unidades.push({ codigo: colA, nombre: colB, evaluacion });
+                        if (unidades.length === 15) break;
+                    }
+
+                    if (unidades.length === 0) throw new Error('No se encontraron unidades. Formato: código;nombre;evaluación');
+                    await window.electronExcel.saveUnidades(unidades);
+                    lineas.push(`✅ Unidades: ${unidades.length} importadas`);
+                } catch(err) {
+                    lineas.push(`❌ Unidades: ${err.message}`);
                 }
             }
 

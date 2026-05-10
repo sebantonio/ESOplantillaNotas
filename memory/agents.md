@@ -13,3 +13,4 @@ Modo ultra-eficiente:
 - Mantén nombres y estructura existentes.
 - No generes comentarios innecesarios.
 - Analiza primero y modifica después.
+Haz commint y push
