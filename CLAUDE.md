@@ -1,5 +1,12 @@
 # Gestor de Notas ESO - Guía del Codebase
 
+## Estilo de respuesta (obligatorio)
+- Respuestas cortas y técnicas. Sin teoría, sin contexto repetido.
+- Solo cambios mínimos. Diffs antes que archivos completos.
+- No reescribir código intacto. No comentarios innecesarios.
+- Bullets de 1 línea. Sin introducciones ni conclusiones.
+- Solo código cuando sea suficiente. Pregunta en 1 frase si falta contexto.
+
 **Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.0 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
 
 ## Estructura
