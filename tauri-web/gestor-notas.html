@@ -816,36 +816,6 @@
             </div>
         </nav>
 
-        <!-- Modal selección de visualización -->
-        <div class="modal-overlay" id="modalVisualizacion" onclick="if(event.target===this)this.classList.remove('open')">
-            <div class="modal-box">
-                <h2>Visualizar notas</h2>
-                <div class="visor-cards">
-                    <a class="visor-card" href="visor-unidades.html">
-                        <span class="visor-card-icon">📊</span>
-                        <div>
-                            <strong>Ver por Unidad</strong>
-                            <span>Notas de cada alumno organizadas por unidad didáctica</span>
-                        </div>
-                    </a>
-                    <a class="visor-card" href="visor-notas.html">
-                        <span class="visor-card-icon">📋</span>
-                        <div>
-                            <strong>Ver por Evaluación</strong>
-                            <span>Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span>
-                        </div>
-                    </a>
-                    <a class="visor-card" href="informes.html">
-                        <span class="visor-card-icon">📁</span>
-                        <div>
-                            <strong>Ver por CE y Unidad</strong>
-                            <span>Competencias específicas y criterios desglosados por unidad</span>
-                        </div>
-                    </a>
-                </div>
-                <button class="modal-close" onclick="document.getElementById('modalVisualizacion').classList.remove('open')">Cerrar</button>
-            </div>
-        </div>
 
         <header class="header">
             <h1>Notas por Unidad</h1>
@@ -1008,11 +978,21 @@
         const raSelect = document.getElementById("raSelect");
         const raDescBox = document.getElementById("raDescBox");
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             if (!window.electronExcel) {
                 showMessage("Abre esta pantalla desde la aplicacion local de Electron para modificar el Excel.", "error");
                 setDisabled(true);
                 return;
+            }
+
+            const cur = await window.electronExcel.getSelectedFile().catch(() => null);
+            if (!cur) {
+                try {
+                    const recent = JSON.parse(localStorage.getItem("recentExcelFiles") || "[]");
+                    for (const f of recent) {
+                        try { if (await window.electronExcel.setSelectedFile(f.path)) break; } catch {}
+                    }
+                } catch {}
             }
 
             reloadButton.addEventListener("click", () => loadNotasConGuardado());
@@ -1796,5 +1776,36 @@
                 .replace(/'/g, "&#039;");
         }
     </script>
+
+    <!-- Modal fuera del .container para evitar overflow:hidden -->
+    <div class="modal-overlay" id="modalVisualizacion" onclick="if(event.target===this)this.classList.remove('open')">
+        <div class="modal-box">
+            <h2>Visualizar notas</h2>
+            <div class="visor-cards">
+                <a class="visor-card" href="visor-unidades.html">
+                    <span class="visor-card-icon">📊</span>
+                    <div>
+                        <strong>Ver por Unidad</strong>
+                        <span>Notas de cada alumno organizadas por unidad didáctica</span>
+                    </div>
+                </a>
+                <a class="visor-card" href="visor-notas.html">
+                    <span class="visor-card-icon">📋</span>
+                    <div>
+                        <strong>Ver por Evaluación</strong>
+                        <span>Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span>
+                    </div>
+                </a>
+                <a class="visor-card" href="informes.html">
+                    <span class="visor-card-icon">📁</span>
+                    <div>
+                        <strong>Ver por CE y Unidad</strong>
+                        <span>Competencias específicas y criterios desglosados por unidad</span>
+                    </div>
+                </a>
+            </div>
+            <button class="modal-close" onclick="document.getElementById('modalVisualizacion').classList.remove('open')">Cerrar</button>
+        </div>
+    </div>
 </body>
 </html>
