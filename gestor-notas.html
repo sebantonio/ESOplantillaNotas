@@ -1101,7 +1101,7 @@
             criterios.forEach((cr) => {
                 const pond = cr.ponderacion || 0;
                 const tieneP = pond > 0;
-                const pctTxt = tieneP ? `<div style="font-size:0.85em;color:#6366f1;font-weight:600;margin-top:2px">${Math.round(pond * 100)}%</div>` : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
+                const pctTxt = tieneP ? `<div style="font-size:0.85em;color:#6366f1;font-weight:600;margin-top:2px">${Math.round(pond)}%</div>` : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
                 const bgH = tieneP ? '' : 'background:#f3f4f6;color:#9ca3af;';
                 headers.push(`<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;${bgH}">${escapeHtml(cr.codigo)}${pctTxt}</th>`);
             });
