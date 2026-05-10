@@ -491,7 +491,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         obj.insert("ponderacionCR".to_string(), json!(pct));
         obj.insert("actualCol".to_string(), json!(actual_col.unwrap_or(0)));
         Value::Object(obj)
-    }).filter(|c| c["ponderacionCR"].as_f64().unwrap_or(0.0) > 0.0).collect();
+    }).collect();
 
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
     for i in 0..15usize {
