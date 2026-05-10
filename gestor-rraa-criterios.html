@@ -1385,10 +1385,12 @@
                 ponderacionEmpresa: 0
             };
             unidad.ponderaciones[colIdx][campo] = parseFloat(value) || 0;
-            unidad.ponderaciones[colIdx].ponderacion = sumarPonderaciones(
-                unidad.ponderaciones[colIdx].ponderacionInstituto,
-                unidad.ponderaciones[colIdx].ponderacionEmpresa
-            );
+            if (campo !== 'ponderacion') {
+                unidad.ponderaciones[colIdx].ponderacion = sumarPonderaciones(
+                    unidad.ponderaciones[colIdx].ponderacionInstituto,
+                    unidad.ponderaciones[colIdx].ponderacionEmpresa
+                );
+            }
             marcarCambio();
             mostrarTablaPonderacionesUnidad();
         }
