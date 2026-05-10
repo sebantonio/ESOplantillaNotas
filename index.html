@@ -1095,33 +1095,30 @@
             const lineas = [];
 
             // ── ALUMNOS ──────────────────────────────────────────────────────
+            // CSV simple: una columna con el nombre, una fila por alumno.
+            // También acepta dos columnas (nº;nombre) o Excel con hoja DATOS.
             if (doAlumnos) {
                 try {
-                    // Buscar hoja: DATOS o la primera disponible
                     const sheetName = importWorkbook.SheetNames.includes('DATOS')
-                        ? 'DATOS'
-                        : importWorkbook.SheetNames[0];
-                    const rows = XLSX.utils.sheet_to_json(importWorkbook.Sheets[sheetName], { header: 1 });
-
-                    // Detectar fila de inicio: buscamos col A numérica y col B texto (nombre)
-                    // Si es CSV simple, puede ser desde la fila 0
-                    let dataStart = 0;
-                    for (let i = 0; i < Math.min(rows.length, 10); i++) {
-                        if (rows[i][0] && String(rows[i][0]).match(/^\d+$/) && rows[i][1] && String(rows[i][1]).trim().length > 2) {
-                            dataStart = i;
-                            break;
-                        }
-                    }
+                        ? 'DATOS' : importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(
+                        importWorkbook.Sheets[sheetName], { header: 1 });
 
                     const alumnos = [];
-                    for (let i = dataStart; i < rows.length; i++) {
-                        const num  = rows[i][0];
-                        const nom  = rows[i][1];
-                        if (!nom || String(nom).trim() === '') break;
-                        alumnos.push({ numero: Number(num) || alumnos.length + 1, nombre: String(nom).trim() });
+                    for (const row of rows) {
+                        if (!row || row.length === 0) continue;
+                        const colA = String(row[0] || '').trim();
+                        const colB = String(row[1] || '').trim();
+                        // Saltar cabecera si existe
+                        if (colA.toLowerCase() === 'nombre' || colA.toLowerCase() === 'alumno') continue;
+                        // Una columna: nombre en col A
+                        // Dos columnas: nº en col A y nombre en col B
+                        const nombre = colB.length > 1 ? colB : colA;
+                        if (!nombre) continue;
+                        alumnos.push({ numero: alumnos.length + 1, nombre });
                     }
 
-                    if (alumnos.length === 0) throw new Error('No se encontraron alumnos en el archivo fuente.');
+                    if (alumnos.length === 0) throw new Error('No se encontraron nombres en el archivo.');
                     await window.electronExcel.saveAlumnos(alumnos);
                     lineas.push(`✅ Alumnos: ${alumnos.length} importados`);
                 } catch(err) {
@@ -1130,58 +1127,73 @@
             }
 
             // ── CE Y CRITERIOS ───────────────────────────────────────────────
+            // CSV simple: columnas CE;Código;Descripción, una fila por criterio.
+            // Agrupa CE únicas automáticamente.
             if (doCE) {
                 try {
-                    if (!importWorkbook.SheetNames.includes('PESOS')) {
-                        throw new Error('El archivo fuente no tiene hoja "PESOS".');
-                    }
-                    const pesosRows = XLSX.utils.sheet_to_json(importWorkbook.Sheets['PESOS'], { header: 1 });
+                    const sheetName = importWorkbook.SheetNames.includes('PESOS')
+                        ? 'PESOS' : importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(
+                        importWorkbook.Sheets[sheetName], { header: 1 });
 
-                    // Obtener CE y criterios actuales del libro destino para mezclar ponderaciones
-                    const actual = await window.electronExcel.getRraaCriterios();
-
-                    // Fila 3 (idx 2): cabeceras CE
-                    const ceHeaderRow = pesosRows[2] || [];
-                    const ceList = [];
-                    ceHeaderRow.forEach((cell, colIdx) => {
-                        const s = String(cell || '').trim();
-                        if (s.toUpperCase().startsWith('CE') && s.length <= 12) {
-                            const num = s.replace(/\D/g, '') || String(ceList.length + 1);
-                            ceList.push({ numero: Number(num), descripcion: s, colIdx });
-                        }
-                    });
-
-                    // Fila 4 (idx 3): códigos CR
-                    const crRow = pesosRows[3] || [];
+                    const ceMap = new Map(); // ceLabel → { numero, descripcion }
                     const criterios = [];
-                    crRow.forEach((cell, colIdx) => {
-                        const s = String(cell || '').trim();
-                        if (/^CR\d+\.\d+$/i.test(s)) {
-                            const ceNum = Number(s.replace(/^CR(\d+).*/i, '$1'));
-                            criterios.push({
-                                numero: criterios.length + 1,
-                                codigo: s, nombre: s, originalCodigo: s,
-                                raNumero: ceNum,
-                                raDescripcion: ceList.find(c => c.numero === ceNum)?.descripcion || '',
-                                texto: '', colIdx,
-                                ponderacion: 0, ponderacionInstituto: 0, ponderacionEmpresa: 0
+
+                    for (const row of rows) {
+                        if (!row || row.length < 2) continue;
+                        const colA = String(row[0] || '').trim(); // CE o código CR
+                        const colB = String(row[1] || '').trim(); // código CR o descripción
+                        const colC = String(row[2] || '').trim(); // descripción (si hay 3 cols)
+
+                        // Saltar cabecera
+                        if (colA.toLowerCase() === 'ce' || colA.toLowerCase() === 'codigo') continue;
+
+                        let ceLabel, crCodigo, crTexto;
+
+                        if (/^CE\d+$/i.test(colA) && /^CR\d+\.\d+$/i.test(colB)) {
+                            // Formato: CE1 ; CR1.1 ; descripción
+                            ceLabel  = colA.toUpperCase();
+                            crCodigo = colB.toUpperCase();
+                            crTexto  = colC;
+                        } else if (/^CR\d+\.\d+$/i.test(colA)) {
+                            // Formato: CR1.1 ; descripción
+                            crCodigo = colA.toUpperCase();
+                            crTexto  = colB;
+                            const ceNum = crCodigo.match(/^CR(\d+)/i)[1];
+                            ceLabel  = `CE${ceNum}`;
+                        } else {
+                            continue;
+                        }
+
+                        if (!ceMap.has(ceLabel)) {
+                            ceMap.set(ceLabel, {
+                                numero: ceMap.size + 1,
+                                descripcion: ceLabel,
+                                colIdx: ceMap.size
                             });
                         }
-                    });
-
-                    // Filas 5-19 (idx 4-18): ponderaciones por unidad
-                    const ponderacionesUnidad = [];
-                    for (let ri = 4; ri <= 18; ri++) {
-                        const row = pesosRows[ri] || [];
-                        const nombre = row[0] && String(row[0]) !== '0' ? String(row[0]) : '';
-                        const ponds = {};
-                        criterios.forEach(c => {
-                            ponds[c.colIdx] = { ponderacion: Number(row[c.colIdx]) || 0 };
+                        const ce = ceMap.get(ceLabel);
+                        criterios.push({
+                            numero: criterios.length + 1,
+                            codigo: crCodigo, nombre: crCodigo,
+                            originalCodigo: crCodigo,
+                            raNumero: ce.numero,
+                            raDescripcion: ce.descripcion,
+                            texto: crTexto,
+                            colIdx: criterios.length,
+                            ponderacion: 0, ponderacionInstituto: 0, ponderacionEmpresa: 0
                         });
-                        ponderacionesUnidad.push({ numero: ri - 3, rowIdx: ri, nombre, ponderaciones: ponds });
                     }
 
-                    if (ceList.length === 0 && criterios.length === 0) throw new Error('No se encontraron CE ni criterios en la hoja PESOS.');
+                    const ceList = Array.from(ceMap.values());
+                    if (ceList.length === 0) throw new Error('No se encontraron CE ni criterios. Formato esperado: CE;Código;Descripción');
+
+                    // Ponderaciones vacías (el profesor las rellenará)
+                    const ponderacionesUnidad = Array.from({ length: 15 }, (_, i) => ({
+                        numero: i + 1, rowIdx: i + 4, nombre: '',
+                        ponderaciones: Object.fromEntries(criterios.map(c => [c.colIdx, { ponderacion: 0 }]))
+                    }));
+
                     await window.electronExcel.saveRraaCriterios({ rraa: ceList, criterios, ponderacionesUnidad });
                     lineas.push(`✅ CE: ${ceList.length} | Criterios: ${criterios.length} importados`);
                 } catch(err) {
@@ -1190,22 +1202,26 @@
             }
 
             // ── INSTRUMENTOS ─────────────────────────────────────────────────
+            // CSV simple: dos columnas — abreviatura;nombre, una fila por instrumento.
             if (doInstrumentos) {
                 try {
-                    const sheetName = importWorkbook.SheetNames.includes('DATOS')
-                        ? 'DATOS'
-                        : importWorkbook.SheetNames[0];
-                    const rows = XLSX.utils.sheet_to_json(importWorkbook.Sheets[sheetName], { header: 1 });
+                    const sheetName = importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(
+                        importWorkbook.Sheets[sheetName], { header: 1 });
 
-                    // Columnas N(13) y O(14), filas 4-8 (0-indexed)
                     const instrumentos = [];
-                    for (let ri = 4; ri <= 8; ri++) {
-                        const codigo = rows[ri] ? String(rows[ri][13] || '').trim() : '';
-                        const nombre = rows[ri] ? String(rows[ri][14] || '').trim() : '';
-                        if (codigo || nombre) instrumentos.push({ codigo, nombre });
+                    for (const row of rows) {
+                        if (!row || row.length < 2) continue;
+                        const codigo = String(row[0] || '').trim();
+                        const nombre = String(row[1] || '').trim();
+                        // Saltar cabecera
+                        if (codigo.toLowerCase() === 'codigo' || codigo.toLowerCase() === 'abreviatura') continue;
+                        if (!codigo && !nombre) continue;
+                        instrumentos.push({ codigo, nombre });
+                        if (instrumentos.length === 5) break; // máximo 5
                     }
 
-                    if (instrumentos.length === 0) throw new Error('No se encontraron instrumentos en cols N-O filas 5-9.');
+                    if (instrumentos.length === 0) throw new Error('No se encontraron instrumentos. Formato esperado: abreviatura;nombre');
                     await window.electronExcel.saveInstrumentos(instrumentos);
                     lineas.push(`✅ Instrumentos: ${instrumentos.length} importados`);
                 } catch(err) {

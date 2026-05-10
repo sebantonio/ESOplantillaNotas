@@ -779,41 +779,56 @@
         </footer>
     </main>
 
+    <!-- INPUT OCULTO PARA SELECCIONAR ARCHIVO FUENTE -->
+    <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none" />
+
     <!-- MODAL IMPORTAR -->
     <div id="modalImportar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:2000; align-items:center; justify-content:center;" onclick="cerrarModalImportar(event)">
-        <div style="background:white; border-radius:12px; padding:32px; max-width:480px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">
-            <h2 style="font-size:1.4em; color:#3730a3; margin-bottom:8px;">📥 Importar datos</h2>
-            <p style="color:#5f6f89; font-size:0.95em; margin-bottom:24px;">Selecciona qué quieres importar al archivo Excel activo desde otro archivo.</p>
+        <div style="background:white; border-radius:12px; padding:32px; max-width:520px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">
+            <h2 style="font-size:1.4em; color:#3730a3; margin-bottom:6px;">📥 Importar datos externos</h2>
+            <p style="color:#5f6f89; font-size:0.93em; margin-bottom:20px;">Coge datos de un CSV u otro Excel y los copia al libro activo. Selecciona el archivo fuente y qué secciones importar.</p>
 
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                <label style="display:flex; align-items:center; gap:10px; padding:14px 16px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e0e0e0'">
-                    <input type="checkbox" id="importAlumnos" style="width:18px;height:18px;accent-color:#6366f1;" checked />
+            <!-- Selector de archivo fuente -->
+            <div style="border:2px dashed #c7d2fe; border-radius:8px; padding:14px 16px; margin-bottom:18px; display:flex; align-items:center; gap:12px; background:#f8f9ff;">
+                <span style="font-size:1.5em;">📂</span>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600; font-size:0.93em; color:#3730a3; margin-bottom:3px;">Archivo fuente</div>
+                    <div id="importSrcName" style="font-size:0.87em; color:#5f6f89; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ningún archivo seleccionado</div>
+                </div>
+                <button type="button" onclick="seleccionarArchivoFuente()" style="background:#6366f1; color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.88em; flex-shrink:0;">Elegir…</button>
+            </div>
+
+            <!-- Qué importar -->
+            <div style="font-weight:700; font-size:0.88em; color:#6366f1; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">¿Qué importar?</div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+                <label id="lblAlumnos" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:#6366f1;" checked />
                     <div>
-                        <strong style="display:block;">👥 Alumnos</strong>
-                        <span style="font-size:0.88em;color:#5f6f89;">Lista de alumnos (DATOS, cols A-B)</span>
+                        <strong style="display:block; font-size:0.95em;">👥 Alumnos</strong>
+                        <span style="font-size:0.85em;color:#5f6f89;">Nº y nombre — columnas A y B del archivo fuente</span>
                     </div>
                 </label>
-                <label style="display:flex; align-items:center; gap:10px; padding:14px 16px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e0e0e0'">
-                    <input type="checkbox" id="importCE" style="width:18px;height:18px;accent-color:#6366f1;" checked />
+                <label id="lblCE" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="importCE" style="width:17px;height:17px;accent-color:#6366f1;" />
                     <div>
-                        <strong style="display:block;">⚖️ CE y Criterios</strong>
-                        <span style="font-size:0.88em;color:#5f6f89;">Competencias específicas y criterios (PESOS)</span>
+                        <strong style="display:block; font-size:0.95em;">⚖️ CE y Criterios</strong>
+                        <span style="font-size:0.85em;color:#5f6f89;">Hoja PESOS del archivo fuente → hoja PESOS del libro activo</span>
                     </div>
                 </label>
-                <label style="display:flex; align-items:center; gap:10px; padding:14px 16px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e0e0e0'">
-                    <input type="checkbox" id="importInstrumentos" style="width:18px;height:18px;accent-color:#6366f1;" checked />
+                <label id="lblInst" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="importInstrumentos" style="width:17px;height:17px;accent-color:#6366f1;" />
                     <div>
-                        <strong style="display:block;">📊 Instrumentos de evaluación</strong>
-                        <span style="font-size:0.88em;color:#5f6f89;">PE, TD, TI, TG, L (DATOS, cols N-O)</span>
+                        <strong style="display:block; font-size:0.95em;">📊 Instrumentos de evaluación</strong>
+                        <span style="font-size:0.85em;color:#5f6f89;">Códigos y nombres (columnas N-O del archivo fuente)</span>
                     </div>
                 </label>
             </div>
 
-            <div id="importMsg" style="display:none; margin-top:16px; padding:12px 16px; border-radius:6px; font-size:0.92em;"></div>
+            <div id="importMsg" style="display:none; margin-bottom:14px; padding:11px 14px; border-radius:6px; font-size:0.91em; white-space:pre-line;"></div>
 
-            <div style="display:flex; gap:10px; margin-top:24px; justify-content:flex-end;">
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" onclick="cerrarModalImportar()" style="background:#f0f0f0; color:#333; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:600;">Cancelar</button>
-                <button type="button" onclick="ejecutarImportacion()" style="background:#6366f1; color:white; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:600;">Importar seleccionados</button>
+                <button type="button" id="btnImportar" onclick="ejecutarImportacion()" style="background:#6366f1; color:white; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:600;" disabled>Importar</button>
             </div>
         </div>
     </div>
@@ -991,12 +1006,21 @@
         });
     </script>
 
+    <!-- XLSX para leer CSV / Excel fuente en el navegador -->
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         // ===== MODAL IMPORTAR =====
+        let importWorkbook = null;   // workbook del archivo fuente leído con XLSX.js
+
         function abrirModalImportar() {
-            const modal = document.getElementById('modalImportar');
-            modal.style.display = 'flex';
+            importWorkbook = null;
+            document.getElementById('importSrcName').textContent = 'Ningún archivo seleccionado';
+            document.getElementById('btnImportar').disabled = true;
             document.getElementById('importMsg').style.display = 'none';
+            document.getElementById('importAlumnos').checked = true;
+            document.getElementById('importCE').checked = false;
+            document.getElementById('importInstrumentos').checked = false;
+            document.getElementById('modalImportar').style.display = 'flex';
         }
 
         function cerrarModalImportar(e) {
@@ -1014,51 +1038,183 @@
             el.style.border = ok ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
         }
 
+        function seleccionarArchivoFuente() {
+            const fi = document.getElementById('importFileInput');
+            fi.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                fi.value = '';
+                document.getElementById('importSrcName').textContent = file.name;
+                document.getElementById('importMsg').style.display = 'none';
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        if (file.name.toLowerCase().endsWith('.csv')) {
+                            // CSV: creamos workbook sintético con hoja "DATOS"
+                            const text = new TextDecoder('utf-8').decode(ev.target.result);
+                            const ws = XLSX.read(text, { type: 'string' }).Sheets['Sheet1']
+                                    || XLSX.utils.aoa_to_sheet(
+                                           text.split('\n').map(l => l.split(';').map(c => c.trim()))
+                                       );
+                            importWorkbook = { SheetNames: ['DATOS'], Sheets: { DATOS: ws } };
+                        } else {
+                            importWorkbook = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                        }
+                        document.getElementById('btnImportar').disabled = false;
+                        mostrarImportMsg(`✅ Archivo leído: ${file.name}`, true);
+                    } catch(err) {
+                        mostrarImportMsg('❌ No se pudo leer el archivo: ' + err.message, false);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            fi.click();
+        }
+
         async function ejecutarImportacion() {
+            if (!importWorkbook) {
+                mostrarImportMsg('Primero selecciona un archivo fuente.', false);
+                return;
+            }
             if (!window.electronExcel) {
                 mostrarImportMsg('Solo disponible en modo Tauri (aplicación de escritorio).', false);
                 return;
             }
 
-            const importAlumnos = document.getElementById('importAlumnos').checked;
-            const importCE = document.getElementById('importCE').checked;
-            const importInstrumentos = document.getElementById('importInstrumentos').checked;
+            const doAlumnos      = document.getElementById('importAlumnos').checked;
+            const doCE           = document.getElementById('importCE').checked;
+            const doInstrumentos = document.getElementById('importInstrumentos').checked;
 
-            if (!importAlumnos && !importCE && !importInstrumentos) {
-                mostrarImportMsg('Selecciona al menos una opción.', false);
+            if (!doAlumnos && !doCE && !doInstrumentos) {
+                mostrarImportMsg('Selecciona al menos una sección a importar.', false);
                 return;
             }
 
-            const resultados = [];
-            let errores = [];
+            document.getElementById('btnImportar').disabled = true;
+            const lineas = [];
 
-            // Importar alumnos: redirige a gestor-alumnos con flag de importación
-            if (importAlumnos) {
-                resultados.push('👥 Alumnos → gestor-alumnos.html');
-            }
-            if (importCE) {
-                resultados.push('⚖️ CE y Criterios → gestor-rraa-criterios.html');
-            }
-            if (importInstrumentos) {
-                resultados.push('📊 Instrumentos → gestor-instrumentos.html');
+            // ── ALUMNOS ──────────────────────────────────────────────────────
+            if (doAlumnos) {
+                try {
+                    // Buscar hoja: DATOS o la primera disponible
+                    const sheetName = importWorkbook.SheetNames.includes('DATOS')
+                        ? 'DATOS'
+                        : importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(importWorkbook.Sheets[sheetName], { header: 1 });
+
+                    // Detectar fila de inicio: buscamos col A numérica y col B texto (nombre)
+                    // Si es CSV simple, puede ser desde la fila 0
+                    let dataStart = 0;
+                    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                        if (rows[i][0] && String(rows[i][0]).match(/^\d+$/) && rows[i][1] && String(rows[i][1]).trim().length > 2) {
+                            dataStart = i;
+                            break;
+                        }
+                    }
+
+                    const alumnos = [];
+                    for (let i = dataStart; i < rows.length; i++) {
+                        const num  = rows[i][0];
+                        const nom  = rows[i][1];
+                        if (!nom || String(nom).trim() === '') break;
+                        alumnos.push({ numero: Number(num) || alumnos.length + 1, nombre: String(nom).trim() });
+                    }
+
+                    if (alumnos.length === 0) throw new Error('No se encontraron alumnos en el archivo fuente.');
+                    await window.electronExcel.saveAlumnos(alumnos);
+                    lineas.push(`✅ Alumnos: ${alumnos.length} importados`);
+                } catch(err) {
+                    lineas.push(`❌ Alumnos: ${err.message}`);
+                }
             }
 
-            // Los datos de configuración inicial se gestionan en cada página específica.
-            // Este modal redirige a la página correspondiente para hacer la importación.
-            const destinos = [];
-            if (importAlumnos) destinos.push('gestor-alumnos.html');
-            if (importCE) destinos.push('gestor-rraa-criterios.html');
-            if (importInstrumentos) destinos.push('gestor-instrumentos.html');
+            // ── CE Y CRITERIOS ───────────────────────────────────────────────
+            if (doCE) {
+                try {
+                    if (!importWorkbook.SheetNames.includes('PESOS')) {
+                        throw new Error('El archivo fuente no tiene hoja "PESOS".');
+                    }
+                    const pesosRows = XLSX.utils.sheet_to_json(importWorkbook.Sheets['PESOS'], { header: 1 });
 
-            if (destinos.length === 1) {
-                document.getElementById('modalImportar').style.display = 'none';
-                window.location.href = destinos[0];
-            } else {
-                mostrarImportMsg(
-                    'Abre cada sección y usa su botón "Importar" interno:\n' + resultados.join('\n'),
-                    true
-                );
+                    // Obtener CE y criterios actuales del libro destino para mezclar ponderaciones
+                    const actual = await window.electronExcel.getRraaCriterios();
+
+                    // Fila 3 (idx 2): cabeceras CE
+                    const ceHeaderRow = pesosRows[2] || [];
+                    const ceList = [];
+                    ceHeaderRow.forEach((cell, colIdx) => {
+                        const s = String(cell || '').trim();
+                        if (s.toUpperCase().startsWith('CE') && s.length <= 12) {
+                            const num = s.replace(/\D/g, '') || String(ceList.length + 1);
+                            ceList.push({ numero: Number(num), descripcion: s, colIdx });
+                        }
+                    });
+
+                    // Fila 4 (idx 3): códigos CR
+                    const crRow = pesosRows[3] || [];
+                    const criterios = [];
+                    crRow.forEach((cell, colIdx) => {
+                        const s = String(cell || '').trim();
+                        if (/^CR\d+\.\d+$/i.test(s)) {
+                            const ceNum = Number(s.replace(/^CR(\d+).*/i, '$1'));
+                            criterios.push({
+                                numero: criterios.length + 1,
+                                codigo: s, nombre: s, originalCodigo: s,
+                                raNumero: ceNum,
+                                raDescripcion: ceList.find(c => c.numero === ceNum)?.descripcion || '',
+                                texto: '', colIdx,
+                                ponderacion: 0, ponderacionInstituto: 0, ponderacionEmpresa: 0
+                            });
+                        }
+                    });
+
+                    // Filas 5-19 (idx 4-18): ponderaciones por unidad
+                    const ponderacionesUnidad = [];
+                    for (let ri = 4; ri <= 18; ri++) {
+                        const row = pesosRows[ri] || [];
+                        const nombre = row[0] && String(row[0]) !== '0' ? String(row[0]) : '';
+                        const ponds = {};
+                        criterios.forEach(c => {
+                            ponds[c.colIdx] = { ponderacion: Number(row[c.colIdx]) || 0 };
+                        });
+                        ponderacionesUnidad.push({ numero: ri - 3, rowIdx: ri, nombre, ponderaciones: ponds });
+                    }
+
+                    if (ceList.length === 0 && criterios.length === 0) throw new Error('No se encontraron CE ni criterios en la hoja PESOS.');
+                    await window.electronExcel.saveRraaCriterios({ rraa: ceList, criterios, ponderacionesUnidad });
+                    lineas.push(`✅ CE: ${ceList.length} | Criterios: ${criterios.length} importados`);
+                } catch(err) {
+                    lineas.push(`❌ CE y Criterios: ${err.message}`);
+                }
             }
+
+            // ── INSTRUMENTOS ─────────────────────────────────────────────────
+            if (doInstrumentos) {
+                try {
+                    const sheetName = importWorkbook.SheetNames.includes('DATOS')
+                        ? 'DATOS'
+                        : importWorkbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(importWorkbook.Sheets[sheetName], { header: 1 });
+
+                    // Columnas N(13) y O(14), filas 4-8 (0-indexed)
+                    const instrumentos = [];
+                    for (let ri = 4; ri <= 8; ri++) {
+                        const codigo = rows[ri] ? String(rows[ri][13] || '').trim() : '';
+                        const nombre = rows[ri] ? String(rows[ri][14] || '').trim() : '';
+                        if (codigo || nombre) instrumentos.push({ codigo, nombre });
+                    }
+
+                    if (instrumentos.length === 0) throw new Error('No se encontraron instrumentos en cols N-O filas 5-9.');
+                    await window.electronExcel.saveInstrumentos(instrumentos);
+                    lineas.push(`✅ Instrumentos: ${instrumentos.length} importados`);
+                } catch(err) {
+                    lineas.push(`❌ Instrumentos: ${err.message}`);
+                }
+            }
+
+            mostrarImportMsg(lineas.join('\n'), !lineas.some(l => l.startsWith('❌')));
+            document.getElementById('btnImportar').disabled = false;
         }
     </script>
 </body>
