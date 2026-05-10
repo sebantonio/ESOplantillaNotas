@@ -867,7 +867,7 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
                 if is_eval_criterion_code(&s) || normalize_plain(&s) == "REC" { Some(ci + 1) } else { None }
             })
         })
-        .ok_or("No se encontro la columna NOTA FINAL.")?;
+        .unwrap_or_else(|| col_index("CB")); // columna CB fija en plantilla ESO
 
     let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
     // Fila de sub-etiquetas "Rec" está justo debajo de la fila de cabecera
