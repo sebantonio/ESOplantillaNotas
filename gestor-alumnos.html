@@ -1030,9 +1030,7 @@
             document.querySelector('.actions-right button').textContent = 'Guardar cambios en el Excel';
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if (isElectronMode) cargarAlumnosDesdeSeleccionado();
-        });
+        if (isElectronMode) cargarAlumnosDesdeSeleccionado();
 
         // Verificar carga de XLSX cada 500ms hasta que esté listo (modo browser)
         const xlsxCheckInterval = setInterval(() => {
