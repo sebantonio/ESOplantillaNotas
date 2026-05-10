@@ -293,6 +293,12 @@ fn load_alumnos(path: &str) -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn excel_get_alumnos() -> Result<Value, String> {
+    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
+    match get_selected_path() { Some(p) => load_alumnos(&p), None => Ok(Value::Null) }
+}
+
+#[tauri::command]
 fn excel_save_alumnos(alumnos: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = alumnos.as_array().ok_or("La lista de alumnos no es valida.")?.clone();
@@ -1975,7 +1981,7 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             excel_select_file, excel_get_selected_file, excel_set_selected_file,
-            excel_verify_file_exists, excel_save_alumnos, excel_get_unidades,
+            excel_verify_file_exists, excel_get_alumnos, excel_save_alumnos, excel_get_unidades,
             excel_save_unidades, excel_get_rraa_criterios, excel_save_rraa_criterios,
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
