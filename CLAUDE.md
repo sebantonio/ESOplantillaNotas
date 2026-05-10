@@ -37,7 +37,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 **Rangos fijos (NO buscar por contenido de celda):**
 | Tabla | Rango Excel | 0-indexed |
 |-------|-------------|-----------|
-| Alumnos | A4:B30 | filas 3-29, cols 0(A) 1(B) |
+| Alumnos | A4:B41 | fila 4=header, datos filas 5-41 (0-idx:4-40), max 37 |
 | Unidades | I5:K20 | filas 4-19, cols 8(I) 9(J) 10(K) |
 | Instrumentos | N4:O13 | filas 3-12, cols 13(N) 14(O) |
 

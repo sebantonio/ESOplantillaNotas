@@ -635,7 +635,32 @@
             }
         });
 
-        // ===== CARGAR ARCHIVO LOCAL EN ELECTRON =====
+        // ===== CARGAR DESDE ARCHIVO YA SELECCIONADO (sin picker) =====
+        async function cargarAlumnosDesdeSeleccionado() {
+            try {
+                mostrarLoading(true);
+                const result = await window.electronExcel.getAlumnos();
+                if (!result) {
+                    mostrarLoading(false);
+                    return;
+                }
+                archivoOriginal = { name: result.fileName, path: result.filePath };
+                workbook = null;
+                hayCambiosSinGuardar = false;
+                limpiarTemporizadorAutoguardado();
+                window.alumnosActuales = result.alumnos || [];
+                mostrarTablaAlumnos(window.alumnosActuales);
+                actualizarStats(window.alumnosActuales);
+                document.getElementById('uploadArea').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                mostrarMensaje(`Archivo conectado: ${result.fileName}`, 'success');
+                mostrarLoading(false);
+            } catch (error) {
+                mostrarLoading(false);
+            }
+        }
+
+        // ===== CARGAR ARCHIVO LOCAL EN ELECTRON (con picker) =====
         async function seleccionarArchivoLocal() {
             try {
                 mostrarLoading(true);
@@ -1000,16 +1025,20 @@
         window.alumnosActuales = [];
 
         if (isElectronMode) {
-            document.querySelector('.upload-text').innerHTML = '<strong>Selecciona tu Excel local</strong>';
-            document.querySelector('.upload-hint').textContent = 'Puede estar en una carpeta sincronizada de OneDrive';
+            document.querySelector('.upload-text').innerHTML = '<strong>Selecciona otro archivo Excel</strong>';
+            document.querySelector('.upload-hint').textContent = 'El archivo reciente se carga automáticamente al abrir';
             document.querySelector('.actions-right button').textContent = 'Guardar cambios en el Excel';
         }
 
-        // Verificar carga de XLSX cada 500ms hasta que esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isElectronMode) cargarAlumnosDesdeSeleccionado();
+        });
+
+        // Verificar carga de XLSX cada 500ms hasta que esté listo (modo browser)
         const xlsxCheckInterval = setInterval(() => {
             if (checkXLSX()) {
                 clearInterval(xlsxCheckInterval);
-                mostrarMensaje(isElectronMode ? 'Modo local listo' : '✅ Sistema listo', 'success');
+                if (!isElectronMode) mostrarMensaje('✅ Sistema listo', 'success');
             }
         }, 500);
     </script>

@@ -784,7 +784,7 @@
 
     <!-- MODAL IMPORTAR -->
     <div id="modalImportar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:2000; align-items:center; justify-content:center;" onclick="cerrarModalImportar(event)">
-        <div style="background:white; border-radius:12px; padding:32px; max-width:520px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">
+        <div style="background:white; border-radius:12px; padding:32px; max-width:720px; width:95%; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-height:92vh; overflow-y:auto;" onclick="event.stopPropagation()">
             <h2 style="font-size:1.4em; color:#3730a3; margin-bottom:6px;">📥 Importar datos externos</h2>
             <p style="color:#5f6f89; font-size:0.93em; margin-bottom:20px;">Coge datos de un CSV u otro Excel y los copia al libro activo. Selecciona el archivo fuente y qué secciones importar.</p>
 
@@ -805,7 +805,7 @@
                     <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:#6366f1;" checked />
                     <div style="flex:1;">
                         <strong style="display:block; font-size:0.95em;">👥 Alumnos</strong>
-                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel. Sin cabecera (o con "Nombre"/"Alumno", se omite). Max 27 alumnos.</span>
+                        <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel. Sin cabecera (o con "Nombre"/"Alumno", se omite). Max 37 alumnos.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
                             1 columna: &nbsp;<em>Juan García López</em><br>
                             2 columnas: <em>1;Juan García López</em>
@@ -1143,6 +1143,7 @@
                         alumnos.push({ numero: alumnos.length + 1, nombre });
                     }
 
+                    if (alumnos.length > 37) alumnos.length = 37;
                     if (alumnos.length === 0) throw new Error('No se encontraron nombres en el archivo.');
                     await window.electronExcel.saveAlumnos(alumnos);
                     lineas.push(`✅ Alumnos: ${alumnos.length} importados`);

@@ -25,7 +25,7 @@ excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
 app_open_external
 
 **Estructura Excel ESO — hoja DATOS (rangos fijos):**
-- Alumnos: A4:B30 → col 0=nº, col 1=nombre (filas 3-29 en 0-indexed)
+- Alumnos: A4:B41 — fila 4=header "Alumnado", datos filas 5-41 (0-idx:4-40), max 37; Rust busca header dinámicamente
 - Unidades: I5:K20 → col 8=código, col 9=nombre, col 10=evaluación (filas 4-19 en 0-indexed)
 - Instrumentos: N4:O13 → col 13=abreviatura, col 14=nombre (filas 3-12 en 0-indexed, max 10)
 
