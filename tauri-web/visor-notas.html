@@ -351,6 +351,7 @@
     }
 
     async function loadEvaluacion(evaluacion) {
+        await saveAllRec();
         showMessage("Cargando notas...", "info");
         try {
             const data = await window.electronExcel.getNotasEvaluacion({ evaluacion });
