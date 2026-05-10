@@ -89,6 +89,8 @@
         </select>
         <label for="searchInput">Buscar:</label>
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
+        <label for="alumnoSelect">Alumno:</label>
+        <select id="alumnoSelect"><option value="">— Todos —</option></select>
     </div>
 
     <div class="stats">
@@ -125,6 +127,7 @@
 <script>
     const evalSelect      = document.getElementById("evalSelect");
     const searchInput     = document.getElementById("searchInput");
+    const alumnoSelect    = document.getElementById("alumnoSelect");
     const notasHead       = document.getElementById("notasHead");
     const notasBody       = document.getElementById("notasBody");
     const messageEl       = document.getElementById("message");
@@ -187,8 +190,11 @@
 
         const raColumns = data.raColumns || [];
         const criteria  = data.criteria  || [];
-        const query = normalize(searchInput.value);
-        const allAlumnos = (data.alumnos || []).filter(a => !query || normalize(a.nombre).includes(query));
+        const filtroAlumno = alumnoSelect.value;
+        const query = filtroAlumno ? "" : normalize(searchInput.value);
+        const allAlumnos = (data.alumnos || []).filter(a =>
+            filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
+        );
 
         const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
         if (currentPage >= totalPages) currentPage = totalPages - 1;
@@ -283,6 +289,12 @@
             currentState = data;
             currentPage  = 0;
             headerTitulo.textContent = data.title || data.sheetName || "";
+
+            // Poblar selector de alumnos
+            const nombres = (data.alumnos || []).map(a => a.nombre);
+            alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
+                nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+
             renderStats();
             renderTable();
             showMessage("Notas cargadas.", "success");
@@ -307,7 +319,8 @@
             } catch {}
         }
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
-        searchInput.addEventListener("input", () => { currentPage = 0; renderTable(); });
+        searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
+        alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
         loadEvaluacion("1");
     });
 </script>

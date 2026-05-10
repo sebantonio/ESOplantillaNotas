@@ -76,6 +76,8 @@
     <div class="toolbar">
         <label for="unidadSelect">Unidad:</label>
         <select id="unidadSelect"><option value="">Cargando...</option></select>
+        <label for="alumnoSelect">Alumno:</label>
+        <select id="alumnoSelect"><option value="">— Todos —</option></select>
     </div>
 
     <div class="content">
@@ -103,14 +105,15 @@
 </div>
 
 <script>
-    const unidadSelect = document.getElementById("unidadSelect");
-    const notasHead = document.getElementById("notasHead");
-    const notasBody = document.getElementById("notasBody");
-    const messageEl = document.getElementById("message");
-    const unidadTituloEl = document.getElementById("unidadTitulo");
-    const pageInfoEl = document.getElementById("pageInfo");
-    const btnPrev = document.getElementById("btnPrev");
-    const btnNext = document.getElementById("btnNext");
+    const unidadSelect  = document.getElementById("unidadSelect");
+    const alumnoSelect  = document.getElementById("alumnoSelect");
+    const notasHead     = document.getElementById("notasHead");
+    const notasBody     = document.getElementById("notasBody");
+    const messageEl     = document.getElementById("message");
+    const unidadTituloEl= document.getElementById("unidadTitulo");
+    const pageInfoEl    = document.getElementById("pageInfo");
+    const btnPrev       = document.getElementById("btnPrev");
+    const btnNext       = document.getElementById("btnNext");
     const perPageSelect = document.getElementById("perPageSelect");
 
     let currentState = null;
@@ -140,7 +143,8 @@
         if (!data) return;
 
         const criterios = data.criterios || [];
-        const allAlumnos = data.alumnos || [];
+        const filtroAlumno = alumnoSelect.value;
+        const allAlumnos = (data.alumnos || []).filter(a => !filtroAlumno || a.nombre === filtroAlumno);
         const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
         if (currentPage >= totalPages) currentPage = totalPages - 1;
         const alumnos = allAlumnos.slice(currentPage * perPage, currentPage * perPage + perPage);
@@ -255,13 +259,18 @@
             // Título desde A3 de la hoja
             unidadTituloEl.textContent = data.titulo || "";
 
-            // Poblar selector si aun no tiene opciones
+            // Poblar selector de unidades si aun no tiene opciones
             if (unidadSelect.options.length <= 1 && data.unidades && data.unidades.length) {
                 unidadSelect.innerHTML = data.unidades.map(u =>
                     `<option value="${escapeHtml(u.codigo)}">${escapeHtml(u.label || u.codigo)}</option>`
                 ).join("");
                 unidadSelect.value = unidad;
             }
+
+            // Poblar selector de alumnos
+            const nombres = (data.alumnos || []).map(a => a.nombre);
+            alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
+                nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
             renderTable();
             showMessage("Unidad cargada.", "success");
@@ -276,6 +285,7 @@
             return;
         }
         unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
+        alumnoSelect.addEventListener("change", () => { currentPage = 0; renderTable(); });
         loadUnidad("U1");
     });
 </script>
