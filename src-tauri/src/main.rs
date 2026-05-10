@@ -942,7 +942,7 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         .map_err(|_| format!("No se encontró la hoja \"{unidad}\"."))?;
     let unidades = list_unit_sheets(path)?;
 
-    let name_col: usize = 3; // columna D = nombre alumno
+    let name_col: usize = 1; // columna B = nombre alumno (igual que DATOS)
     let first_row: usize = 4; // fila 5 en Excel (0-indexed)
     let header_row: usize = 2; // fila 3 en Excel (códigos CR)
 
