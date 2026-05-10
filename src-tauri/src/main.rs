@@ -508,7 +508,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         let mut instr_por_ce = serde_json::Map::new();
         for (&ce_num, &instr_col) in &ce_instr_col {
             let instr = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, instr_col)).unwrap_or_default();
-            instr_por_ce.insert(ce_num.to_string(), json!(instr));
+            instr_por_ce.insert(ce_num.to_string(), json!({ "codigo": instr, "colIdx": instr_col }));
         }
         ponderaciones_unidad.push(json!({
             "numero": i + 1,
