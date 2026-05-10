@@ -943,21 +943,20 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
     let unidades = list_unit_sheets(path)?;
 
     let first_row: usize = 4; // fila 5 en Excel (0-indexed)
-    let header_row: usize = 2; // fila 3 en Excel (códigos CR)
 
-    // Auto-detectar columna de nombre: primera col (0-4) con texto no-numérico en las primeras filas de datos
-    let name_col: usize = {
-        let mut found = 1; // fallback col B
-        'outer: for ci in 0usize..5 {
-            for ri in first_row..(first_row + 5).min(rows.len()) {
-                let s = cell_str(&rows, ri, ci);
-                if !s.is_empty() && s.parse::<f64>().is_err() {
-                    found = ci;
-                    break 'outer;
+    // Cargar nombres desde DATOS (son fórmulas en la hoja de unidad, calamine no las evalúa)
+    let nombres_datos: Vec<String> = {
+        let mut v = Vec::new();
+        if let Ok(datos_rows) = read_sheet_rows(path, "DATOS") {
+            if let Some(header) = find_header_row(&datos_rows, "ALUMNADO") {
+                for i in (header + 1)..datos_rows.len() {
+                    let n = cell_str(&datos_rows, i, 1);
+                    if n.is_empty() { break; }
+                    v.push(n);
                 }
             }
         }
-        found
+        v
     };
 
     // Detectar códigos CR en la fila de encabezados (idx 2 o 3)
@@ -978,24 +977,13 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         .map(|(code, ci)| json!({ "codigo": code, "colIdx": ci }))
         .collect();
 
+    // Iterar filas de alumnos: usar nombre de DATOS por posición
     let mut alumnos: Vec<Value> = Vec::new();
-    let mut consecutive_empty = 0;
-    for ri in first_row..rows.len() {
-        let nombre = cell_str(&rows, ri, name_col);
-        if nombre.is_empty() {
-            consecutive_empty += 1;
-            if consecutive_empty >= 5 && !alumnos.is_empty() { break; }
-            continue;
-        }
-        consecutive_empty = 0;
-        let norm = normalize_plain(&nombre);
-        // Saltar filas que son etiquetas del Excel, no alumnos
-        if norm.contains("MEDIA") || norm.contains("PONDERACION")
-            || norm.contains("EVALUACION") || norm.contains("EVA")
-            || norm.contains("PESO") || norm.contains("DATO")
-            || norm.contains("SELECCIONA") || norm.contains("FINAL")
-            || (norm.starts_with("U") && norm.len() <= 3)
-        { continue; }
+    let max_alumnos = nombres_datos.len().max(37);
+    for ri in first_row..(first_row + max_alumnos).min(rows.len()) {
+        let alumno_idx = ri - first_row;
+        let nombre = nombres_datos.get(alumno_idx).cloned().unwrap_or_default();
+        if nombre.is_empty() { break; }
 
         let cr_notas: Vec<Value> = cr_cols.iter().map(|(code, ci)| {
             let n = cell_f64(&rows, ri, *ci);
