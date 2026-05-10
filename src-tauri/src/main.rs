@@ -203,9 +203,24 @@ fn find_header_row(rows: &[Vec<Value>], text: &str) -> Option<usize> {
     })
 }
 
-// En el Excel ESO la tabla de unidades está en cols J(9)/K(10)/L(11)/M(12)
-// con cabecera "UNIDADES" en col K, fila ~48.
+// En el Excel ESO la tabla de unidades está en cols J(9)/K(10)/L(11)
+// con cabecera "UNIDADES" en col K. Puede haber varias filas con "UNIDADES"
+// (bloques de evaluación "UNIDADES 1ª"), así que buscamos la primera que
+// además tenga col J con "N" o vacío (cabecera de la tabla principal), no "U".
 fn find_unidades_start(rows: &[Vec<Value>]) -> Option<usize> {
+    // Primero intentar fila con "UNIDADES" exacto en col K (sin sufijo 1ª/2ª/3ª)
+    if let Some(idx) = rows.iter().position(|row| {
+        let k = row.get(10).map(|v| cell_val_str(v).trim().to_uppercase()).unwrap_or_default();
+        k == "UNIDADES" || k == "UNIDADES 1\u{00aa}" || (k.contains("UNIDADES") && !k.contains("2") && !k.contains("3"))
+    }) {
+        // Confirmar que la fila siguiente tiene datos de unidad (col J empieza con "U")
+        let next = idx + 1;
+        let next_j = cell_str(rows, next, 9);
+        if next_j.to_uppercase().starts_with('U') || next_j.is_empty() {
+            return Some(next);
+        }
+    }
+    // Fallback: primera fila con "UNIDADES" en col K
     let idx = rows.iter().position(|row| {
         row.get(10).map(|v| cell_val_str(v).to_uppercase().contains("UNIDADES")).unwrap_or(false)
     })?;
