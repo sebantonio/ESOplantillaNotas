@@ -1409,9 +1409,10 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
                         if let Some(ponds) = unidad["ponderaciones"].as_object() {
                             for (col_key, vals) in ponds {
                                 let ci: usize = col_key.parse().unwrap_or(0);
-                                let actual = col_map.get(&ci).copied().unwrap_or(ci);
-                                if actual > 0 {
-                                    s = set_xml_cell(&s, ri, actual, Some(&json!(parse_decimal(&vals["ponderacion"]))), "number")?;
+                                if let Some(&actual) = col_map.get(&ci) {
+                                    if actual > 0 {
+                                        s = set_xml_cell(&s, ri, actual, Some(&json!(parse_decimal(&vals["ponderacion"]))), "number")?;
+                                    }
                                 }
                             }
                         }
