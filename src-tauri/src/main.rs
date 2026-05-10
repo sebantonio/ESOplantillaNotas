@@ -944,19 +944,14 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
 
     let first_row: usize = 4; // fila 5 en Excel (0-indexed)
 
-    // Cargar nombres desde DATOS (son fórmulas en la hoja de unidad, calamine no las evalúa)
-    let nombres_datos: Vec<String> = {
-        let mut v = Vec::new();
-        if let Ok(datos_rows) = read_sheet_rows(path, "DATOS") {
-            if let Some(header) = find_header_row(&datos_rows, "ALUMNADO") {
-                for i in (header + 1)..datos_rows.len() {
-                    let n = cell_str(&datos_rows, i, 1);
-                    if n.is_empty() { break; }
-                    v.push(n);
-                }
-            }
-        }
-        v
+    // Cargar nombres desde load_alumnos (mismo código que el gestor de alumnos)
+    let nombres_datos: Vec<String> = match load_alumnos(path) {
+        Ok(v) => v["alumnos"].as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .map(|a| a["nombre"].as_str().unwrap_or("").to_string())
+            .collect(),
+        Err(_) => Vec::new(),
     };
 
     // Detectar códigos CR en la fila de encabezados (idx 2 o 3), scan desde col 0
