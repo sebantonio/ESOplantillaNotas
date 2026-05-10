@@ -1989,6 +1989,22 @@ fn app_open_external(url: String) -> Result<(), String> {
     webbrowser::open(&url).map_err(|e| format!("No se pudo abrir el enlace: {e}"))
 }
 
+#[tauri::command]
+fn save_csv_template(filename: String, content: String) -> Result<bool, String> {
+    let path = rfd::FileDialog::new()
+        .set_file_name(&filename)
+        .add_filter("CSV", &["csv"])
+        .save_file();
+    match path {
+        Some(p) => {
+            let bom = "\u{FEFF}";
+            std::fs::write(&p, format!("{}{}", bom, content)).map_err(|e| e.to_string())?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -2000,7 +2016,7 @@ fn main() {
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
-            excel_get_instrumentos, excel_save_instrumentos
+            excel_get_instrumentos, excel_save_instrumentos, save_csv_template
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicacion Tauri");
