@@ -63,6 +63,13 @@
             font-size: 1.45rem;
             font-weight: 800;
             box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .brand-mark:hover {
+            transform: scale(1.1);
+            box-shadow: 0 16px 36px rgba(37, 99, 235, 0.35);
         }
 
         .brand h1 {
@@ -627,7 +634,7 @@
     <main class="shell">
         <header class="topbar">
             <div class="brand">
-                <div class="brand-mark">ESO</div>
+                <div class="brand-mark" onclick="window.location.href='asteroides.html'" title="🚀 ¡Easter egg!">ESO</div>
                 <div>
                     <h1>Gestor de Notas ESO</h1>
                     <p>Panel de trabajo para el curso actual</p>
