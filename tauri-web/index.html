@@ -1047,55 +1047,27 @@
         // ===== PLANTILLAS DESCARGABLES =====
         function descargarPlantilla(tipo, e) {
             e.preventDefault(); e.stopPropagation();
-            const wb = XLSX.utils.book_new();
-            let ws, nombre;
-
+            let csv, nombre;
             if (tipo === 'alumnos') {
-                ws = XLSX.utils.aoa_to_sheet([
-                    ['Nº', 'Nombre'],
-                    [1, 'García López, Ana'],
-                    [2, 'Martínez Ruiz, Carlos'],
-                    [3, ''],
-                ]);
-                nombre = 'plantilla_alumnos.xlsx';
-                XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
-
+                csv = 'Nº;Nombre\n1;García López, Ana\n2;Martínez Ruiz, Carlos\n3;\n';
+                nombre = 'plantilla_alumnos.csv';
             } else if (tipo === 'ce') {
-                ws = XLSX.utils.aoa_to_sheet([
-                    ['CE', 'Codigo', 'Descripcion'],
-                    ['CE1', 'CR1.1', 'Identifica y comprende los conceptos básicos'],
-                    ['CE1', 'CR1.2', 'Aplica los procedimientos de forma autónoma'],
-                    ['CE2', 'CR2.1', 'Analiza situaciones y propone soluciones'],
-                    ['CE2', 'CR2.2', 'Comunica resultados con claridad y precisión'],
-                ]);
-                nombre = 'plantilla_ce_criterios.xlsx';
-                XLSX.utils.book_append_sheet(wb, ws, 'PESOS');
-
+                csv = 'CE;Codigo;Descripcion\nCE1;CR1.1;Identifica y comprende los conceptos básicos\nCE1;CR1.2;Aplica los procedimientos de forma autónoma\nCE2;CR2.1;Analiza situaciones y propone soluciones\nCE2;CR2.2;Comunica resultados con claridad y precisión\n';
+                nombre = 'plantilla_ce_criterios.csv';
             } else if (tipo === 'instrumentos') {
-                ws = XLSX.utils.aoa_to_sheet([
-                    ['Abreviatura', 'Nombre'],
-                    ['PE', 'Prueba escrita'],
-                    ['TD', 'Trabajo en grupo'],
-                    ['EX', 'Examen oral'],
-                    ['PR', 'Proyecto'],
-                    ['OB', 'Observación en clase'],
-                ]);
-                nombre = 'plantilla_instrumentos.xlsx';
-                XLSX.utils.book_append_sheet(wb, ws, 'Instrumentos');
-
+                csv = 'Abreviatura;Nombre\nPE;Prueba escrita\nTD;Trabajo en grupo\nEX;Examen oral\nPR;Proyecto\nOB;Observación en clase\n';
+                nombre = 'plantilla_instrumentos.csv';
             } else if (tipo === 'unidades') {
-                ws = XLSX.utils.aoa_to_sheet([
-                    ['Codigo', 'Nombre', 'Evaluacion'],
-                    ['U1', 'Introducción a la materia', '1ª'],
-                    ['U2', 'Conceptos fundamentales', '1ª'],
-                    ['U3', 'Aplicaciones prácticas', '2ª'],
-                    ['U4', 'Proyecto integrador', '3ª'],
-                ]);
-                nombre = 'plantilla_unidades.xlsx';
-                XLSX.utils.book_append_sheet(wb, ws, 'Unidades');
-            }
-
-            XLSX.writeFile(wb, nombre);
+                csv = 'Codigo;Nombre;Evaluacion\nU1;Introducción a la materia;1ª\nU2;Conceptos fundamentales;1ª\nU3;Aplicaciones prácticas;2ª\nU4;Proyecto integrador;3ª\n';
+                nombre = 'plantilla_unidades.csv';
+            } else { return; }
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = nombre;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
         }
 
         // ===== MODAL IMPORTAR =====
