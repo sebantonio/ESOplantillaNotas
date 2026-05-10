@@ -713,9 +713,9 @@
 
                         <!-- TABLA CRITERIOS -->
                         <h3>Criterios Actuales</h3>
-                        <div class="form-group" style="align-items: center; margin-bottom: 15px;">
-                            <button class="secondary" type="button" onclick="alternarMenuRA()" style="width: auto;">☰ CE</button>
-                            <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="flex: 1;"></select>
+                        <div style="margin-bottom:14px;">
+                            <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
+                            <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
                         </div>
                         <div class="table-container">
                             <table id="criteriosTable">
@@ -725,7 +725,6 @@
                                         <th class="col-ra">CE</th>
                                         <th class="col-codigo">Código</th>
                                         <th>Criterio de Evaluación</th>
-                                        <th class="col-ponderacion">Ponderación</th>
                                         <th class="col-accion">Acción</th>
                                     </tr>
                                 </thead>
@@ -744,7 +743,7 @@
                             <select id="nuevoCriterioRA" style="min-width: 120px;"></select>
                             <input class="codigo-input" type="text" id="nuevoCriterio" placeholder="CR1.1" maxlength="8" />
                             <textarea id="nuevoCriterioTexto" placeholder="Texto del criterio de evaluación" style="flex: 1;"></textarea>
-                            <input type="number" id="nuevoPonderacion" placeholder="Ponderación" min="0" max="100" step="1" />
+                            <input type="hidden" id="nuevoPonderacion" value="0" />
                             <input type="hidden" id="nuevoPonderacionInstituto" value="0" />
                             <input type="hidden" id="nuevoPonderacionEmpresa" value="0" />
                             <button onclick="agregarCriterio()">➕ Agregar</button>
@@ -1127,7 +1126,7 @@
             const emptyState = document.getElementById('emptyStateCriterios');
             const criteriosVisibles = criteriosActuales.filter((crit) =>
                 Number(crit.raNumero) === Number(criterioRaActivo) &&
-                (String(crit.texto || "").trim() !== "" || Number(crit.ponderacion) !== 0 || Number(crit.ponderacionInstituto) !== 0 || Number(crit.ponderacionEmpresa) !== 0)
+                String(crit.texto || "").trim() !== ""
             );
 
             if (criteriosVisibles.length === 0) {
@@ -1151,7 +1150,6 @@
                     </td>
                     <td><input class="codigo-input" type="text" value="${escaparHtml(crit.codigo || crit.nombre)}" maxlength="6" onchange="actualizarCriterioCampo(${idx}, 'codigo', this.value)" title="${escaparHtml(crit.raDescripcion || '')}" /></td>
                     <td><textarea onchange="actualizarCriterioCampo(${idx}, 'texto', this.value)">${escaparHtml(crit.texto || '')}</textarea></td>
-                    <td><input type="number" value="${crit.ponderacion || 0}" min="0" max="1" step="0.01" readonly /></td>
                     <td>
                         <button class="delete" onclick="eliminarCriterio(${idx})">🗑️</button>
                     </td>
