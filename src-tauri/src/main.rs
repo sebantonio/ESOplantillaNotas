@@ -781,7 +781,8 @@ fn find_evaluation_sheet_name(names: &[String], evaluacion: &str) -> Option<Stri
 }
 
 fn is_eval_criterion_code(s: &str) -> bool {
-    Regex::new(r"^\d+\.?[a-z]\)?$").unwrap().is_match(s.trim())
+    let s = s.trim();
+    is_cr_code(s) || Regex::new(r"^\d+\.?[a-z]\)?$").unwrap().is_match(s)
 }
 
 fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> {
