@@ -804,7 +804,10 @@
                 <label id="lblAlumnos" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:#6366f1;" checked />
                     <div style="flex:1;">
-                        <strong style="display:block; font-size:0.95em;">👥 Alumnos</strong>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <strong style="font-size:0.95em;">👥 Alumnos</strong>
+                            <button type="button" onclick="descargarPlantilla('alumnos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                        </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel. Sin cabecera (o con "Nombre"/"Alumno", se omite). Max 37 alumnos.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
                             1 columna: &nbsp;<em>Juan García López</em><br>
@@ -815,7 +818,10 @@
                 <label id="lblCE" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importCE" style="width:17px;height:17px;accent-color:#6366f1;" />
                     <div style="flex:1;">
-                        <strong style="display:block; font-size:0.95em;">⚖️ CE y Criterios</strong>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <strong style="font-size:0.95em;">⚖️ CE y Criterios</strong>
+                            <button type="button" onclick="descargarPlantilla('ce',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                        </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel con hoja PESOS. Sin cabecera (o con "CE"/"Codigo", se omite).</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
                             Formato A: <em>CE1;CR1.1;Descripción del criterio</em><br>
@@ -826,7 +832,10 @@
                 <label id="lblInst" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importInstrumentos" style="width:17px;height:17px;accent-color:#6366f1;" />
                     <div style="flex:1;">
-                        <strong style="display:block; font-size:0.95em;">📊 Instrumentos de evaluación</strong>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <strong style="font-size:0.95em;">📊 Instrumentos de evaluación</strong>
+                            <button type="button" onclick="descargarPlantilla('instrumentos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                        </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja). Sin cabecera (o con "Codigo"/"Abreviatura", se omite). Max 10.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
                             2 columnas: <em>PE;Prueba escrita</em><br>
@@ -837,7 +846,10 @@
                 <label id="lblUnidades" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
                     <input type="checkbox" id="importUnidades" style="width:17px;height:17px;accent-color:#6366f1;" />
                     <div style="flex:1;">
-                        <strong style="display:block; font-size:0.95em;">📚 Unidades didácticas</strong>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <strong style="font-size:0.95em;">📚 Unidades didácticas</strong>
+                            <button type="button" onclick="descargarPlantilla('unidades',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                        </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja o hoja DATOS). Sin cabecera (o con "Codigo"/"Unidad", se omite). Max 15.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
                             3 columnas: <em>U1;Introducción a la asignatura;1ª</em><br>
@@ -1032,6 +1044,60 @@
     <!-- XLSX para leer CSV / Excel fuente en el navegador -->
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
+        // ===== PLANTILLAS DESCARGABLES =====
+        function descargarPlantilla(tipo, e) {
+            e.preventDefault(); e.stopPropagation();
+            const wb = XLSX.utils.book_new();
+            let ws, nombre;
+
+            if (tipo === 'alumnos') {
+                ws = XLSX.utils.aoa_to_sheet([
+                    ['Nº', 'Nombre'],
+                    [1, 'García López, Ana'],
+                    [2, 'Martínez Ruiz, Carlos'],
+                    [3, ''],
+                ]);
+                nombre = 'plantilla_alumnos.xlsx';
+                XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
+
+            } else if (tipo === 'ce') {
+                ws = XLSX.utils.aoa_to_sheet([
+                    ['CE', 'Codigo', 'Descripcion'],
+                    ['CE1', 'CR1.1', 'Identifica y comprende los conceptos básicos'],
+                    ['CE1', 'CR1.2', 'Aplica los procedimientos de forma autónoma'],
+                    ['CE2', 'CR2.1', 'Analiza situaciones y propone soluciones'],
+                    ['CE2', 'CR2.2', 'Comunica resultados con claridad y precisión'],
+                ]);
+                nombre = 'plantilla_ce_criterios.xlsx';
+                XLSX.utils.book_append_sheet(wb, ws, 'PESOS');
+
+            } else if (tipo === 'instrumentos') {
+                ws = XLSX.utils.aoa_to_sheet([
+                    ['Abreviatura', 'Nombre'],
+                    ['PE', 'Prueba escrita'],
+                    ['TD', 'Trabajo en grupo'],
+                    ['EX', 'Examen oral'],
+                    ['PR', 'Proyecto'],
+                    ['OB', 'Observación en clase'],
+                ]);
+                nombre = 'plantilla_instrumentos.xlsx';
+                XLSX.utils.book_append_sheet(wb, ws, 'Instrumentos');
+
+            } else if (tipo === 'unidades') {
+                ws = XLSX.utils.aoa_to_sheet([
+                    ['Codigo', 'Nombre', 'Evaluacion'],
+                    ['U1', 'Introducción a la materia', '1ª'],
+                    ['U2', 'Conceptos fundamentales', '1ª'],
+                    ['U3', 'Aplicaciones prácticas', '2ª'],
+                    ['U4', 'Proyecto integrador', '3ª'],
+                ]);
+                nombre = 'plantilla_unidades.xlsx';
+                XLSX.utils.book_append_sheet(wb, ws, 'Unidades');
+            }
+
+            XLSX.writeFile(wb, nombre);
+        }
+
         // ===== MODAL IMPORTAR =====
         let importWorkbook = null;   // workbook del archivo fuente leído con XLSX.js
 
