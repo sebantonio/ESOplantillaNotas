@@ -20,7 +20,7 @@
 - Mantén nombres y estructura existentes.
 - No generes comentarios innecesarios.
 - Analiza primero y modifica después.
-Haz commint y push
+- Haz commint y push
 
 
 **Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.0 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
