@@ -1,18 +1,18 @@
 # Gestor de Notas ESO - Guía del Codebase
 
-**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.0 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Desarrollo inicial
+**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.0 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
 
 ## Estructura
 
 ```
 ESOplantillaNotas/
 ├── HTML: index.html, gestor-alumnos.html, gestor-rraa-criterios.html,
-│         gestor-unidades.html, gestor-notas.html, visor-notas.html,
-│         visor-actividades.html, visor-unidades.html, informes.html,
-│         incluir-actividad.html, diario.html
-├── Backend: app-bridge.js (puente Tauri), main.js, preload.js, tauri-node-backend.js
+│         gestor-unidades.html, gestor-instrumentos.html, gestor-notas.html,
+│         visor-notas.html, visor-unidades.html, informes.html, diario.html
+├── Backend: app-bridge.js (puente Tauri), main.js, preload.js
 ├── Scripts: scripts/prepare-tauri-web.js
 ├── src-tauri/: main.rs (lógica Rust), Cargo.toml, tauri.conf.json
+├── memory/: contexto del proyecto para Claude Code
 └── Excel: CCGG PLANTILLA - RECUv45.xlsx
 ```
 
@@ -32,10 +32,18 @@ npm run tauri:build                                        # Build EXE
 
 ## Archivo Excel
 
-Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx`
+Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 
-> IMPORTANTE: La estructura de hojas de este Excel (ESO) puede diferir de plantillaNotas (FP).
-> Hay que analizar el Excel antes de adaptar los comandos Rust en main.rs.
+**Rangos fijos (NO buscar por contenido de celda):**
+| Tabla | Rango Excel | 0-indexed |
+|-------|-------------|-----------|
+| Alumnos | A4:B30 | filas 3-29, cols 0(A) 1(B) |
+| Unidades | I5:K20 | filas 4-19, cols 8(I) 9(J) 10(K) |
+| Instrumentos | N4:O13 | filas 3-12, cols 13(N) 14(O) |
+
+- Unidades: I=código, J=nombre, K=evaluación (1ª/2ª/3ª)
+- Instrumentos: N=abreviatura, O=nombre (max 10)
+- Hoja **PESOS**: CE y criterios (CR1.1, CR2.3...) con ponderaciones por unidad
 
 ## Stack Rust
 
@@ -50,6 +58,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx`
 - `excel_select_file`, `excel_set_selected_file`, `excel_get_selected_file`, `excel_verify_file_exists`
 - `excel_get_alumnos`, `excel_save_alumnos`
 - `excel_get_unidades`, `excel_save_unidades`
+- `excel_get_instrumentos`, `excel_save_instrumentos`
 - `excel_get_rraa_criterios`, `excel_save_rraa_criterios`
 - `excel_get_notas_actividad`, `excel_save_notas_actividad`
 - `excel_save_ce_notas`, `excel_add_actividad`
@@ -64,22 +73,19 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx`
 
 | Archivo | Función |
 |---------|---------|
-| index.html | Inicio — menú principal |
-| gestor-notas.html | Introducir notas actividades + CE por alumno |
+| index.html | Inicio — menú principal + modal importar CSV |
 | gestor-alumnos.html | Gestión de alumnos |
-| gestor-rraa-criterios.html | Gestión de RA y criterios |
-| gestor-unidades.html | Gestión de unidades |
-| visor-notas.html | RRAA y CCEE (evaluaciones) |
-| visor-actividades.html | Ver notas por actividad + panel RA |
-| visor-unidades.html | Ver notas por unidad + desplegable RA/CE |
+| gestor-rraa-criterios.html | Gestión de CE y criterios (ESO: sin RA) |
+| gestor-unidades.html | Gestión de unidades (sin columna Horas) |
+| gestor-instrumentos.html | Instrumentos de evaluación (max 10) |
+| gestor-notas.html | Introducir notas actividades + CE por alumno |
+| visor-notas.html | CE y evaluaciones |
+| visor-unidades.html | Notas por unidad |
 | informes.html | Informes finales |
 | diario.html | Diario de clase |
 
-## Próximos Pasos
+## Contexto adicional
 
-1. Analizar estructura del Excel `CCGG PLANTILLA - RECUv45.xlsx`
-2. Adaptar `src-tauri/src/main.rs` a la estructura ESO
-3. `npm install`
-4. `npm run tauri:build`
+Ver carpeta `memory/` para estado detallado, decisiones de diseño y preferencias de trabajo.
 
-**Responsable**: Sebantonio | **Creado**: 2026-05-10
+**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-10
