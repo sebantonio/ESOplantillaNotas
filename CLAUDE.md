@@ -1,6 +1,14 @@
 # Gestor de Notas ESO - Guía del Codebase
 
 ## Estilo de respuesta (obligatorio)
+- Actúa como senior engineer.
+- Haz cambios mínimos.
+- No refactorices salvo que se pida.
+- No expliques código.
+Devuelve solo:
+- archivos modificados
+- diff
+- comandos necesarios
 - Respuestas cortas y técnicas. Sin teoría, sin contexto repetido.
 - Solo cambios mínimos. Diffs antes que archivos completos.
 - No reescribir código intacto. No comentarios innecesarios.
