@@ -31,7 +31,7 @@ Devuelve solo:
 - Haz commint y push
 
 
-**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.0 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
+**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.63 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
 
 ## Estructura
 
@@ -75,6 +75,8 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - Unidades: I=código, J=nombre, K=evaluación (1ª/2ª/3ª)
 - Instrumentos: N=abreviatura, O=nombre (max 10)
 - Hoja **PESOS**: CE y criterios (CR1.1, CR2.3...) con ponderaciones por unidad
+  - Fila idx 3 = mapa CR→colIdx; filas 4-19 = valores por unidad (col A = nombre unidad)
+  - Valores son % directos (20 = 20%) — NO multiplicar por 100
 
 ## Stack Rust
 
@@ -95,7 +97,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - `excel_save_ce_notas`, `excel_add_actividad`
 - `excel_get_notas_actividades_tipo`
 - `excel_get_notas_evaluacion`, `excel_get_notas_evaluacion_alumno`
-- `excel_get_notas_unidad`
+- `excel_get_notas_unidad`, `excel_save_notas_unidad`
 - `excel_get_alumnos_informes`
 - `excel_get_diario`, `excel_save_diario_entrada`, `excel_delete_diario_entrada`
 - `app_open_external`
@@ -109,14 +111,21 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 | gestor-rraa-criterios.html | Gestión de CE y criterios (ESO: sin RA) |
 | gestor-unidades.html | Gestión de unidades (sin columna Horas) |
 | gestor-instrumentos.html | Instrumentos de evaluación (max 10) |
-| gestor-notas.html | Introducir notas actividades + CE por alumno |
-| visor-notas.html | CE y evaluaciones |
-| visor-unidades.html | Notas por unidad |
-| informes.html | Informes finales |
+| gestor-notas.html | Introducir notas: selector unidad + tabla Alumno×CR con autosave |
+| visor-notas.html | Ver notas por evaluación (1ª/2ª/3ª/final); auto-select Excel desde localStorage |
+| visor-unidades.html | Ver notas por unidad: mismo layout que gestor-notas pero solo lectura |
+| informes.html | Informes finales por alumno |
 | diario.html | Diario de clase |
+
+## Notas críticas de implementación
+
+- **Modales en Tauri**: usar `style.display='flex'/'none'` directamente; `classList.add('open')` no sobreescribe inline style
+- **Excel path**: `SELECTED_PATH` es static Rust — persiste en sesión pero se pierde al reiniciar si Excel no está en dir del exe. visor-notas.html auto-selecciona desde `localStorage.recentExcelFiles`
+- **Hojas de unidad (U1, U2...)**: celdas de nombre son fórmulas (=DATOS!B5) que calamine NO evalúa → usar siempre `load_alumnos()` para nombres
+- **CR scan en load_notas_unidad**: empezar desde col 0 (CR1.1-1.4 están en cols 0-3)
 
 ## Contexto adicional
 
 Ver carpeta `memory/` para estado detallado, decisiones de diseño y preferencias de trabajo.
 
-**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-10
+**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-10 (sesión 2)
