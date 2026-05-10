@@ -480,14 +480,16 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         obj.insert("instrColIdx".to_string(), json!(instr_col));
         Value::Object(obj)
     }).collect();
-    // Añadir ponderacionCR (% individual) a cada criterio desde fila idx 21 de PESOS
+    // Añadir ponderacionCR y actualCol (columna real en PESOS) a cada criterio
     let criterios: Vec<Value> = criterios.into_iter().map(|c| {
         let cr_code = c["codigo"].as_str().unwrap_or("").to_string();
-        let pct = cr_col_map.get(&cr_code)
-            .and_then(|&col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 21, col)))
+        let actual_col = cr_col_map.get(&cr_code).copied();
+        let pct = actual_col
+            .and_then(|col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 21, col)))
             .unwrap_or(0.0);
         let mut obj = c.as_object().cloned().unwrap_or_default();
         obj.insert("ponderacionCR".to_string(), json!(pct));
+        obj.insert("actualCol".to_string(), json!(actual_col.unwrap_or(0)));
         Value::Object(obj)
     }).collect();
 
@@ -1385,10 +1387,20 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
             let criterios2 = criterios_owned.clone(); let pond2 = pond_owned.clone();
             move |xml: &str| {
                 let mut s = xml.to_string();
-                // Fila 4 (idx 3): escribir códigos CR
+                // Mapa colIdx secuencial → columna real en PESOS
+                let col_map: std::collections::HashMap<usize, usize> = criterios2.iter()
+                    .filter_map(|c| {
+                        let ci = c["colIdx"].as_u64()? as usize;
+                        let ac = c["actualCol"].as_u64()? as usize;
+                        if ac > 0 { Some((ci, ac)) } else { None }
+                    })
+                    .collect();
+                // Fila 4 (idx 3): escribir códigos CR en su columna real
                 for criterio in &criterios2 {
-                    if let Some(ci) = criterio["colIdx"].as_u64().map(|n| n as usize) {
-                        s = set_xml_cell(&s, 3, ci, Some(&criterio["codigo"]), "text")?;
+                    if let Some(ac) = criterio["actualCol"].as_u64().map(|n| n as usize) {
+                        if ac > 0 {
+                            s = set_xml_cell(&s, 3, ac, Some(&criterio["codigo"]), "text")?;
+                        }
                     }
                 }
                 // Filas de unidades: ponderaciones por CR e instrumento por CE
@@ -1397,7 +1409,10 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
                         if let Some(ponds) = unidad["ponderaciones"].as_object() {
                             for (col_key, vals) in ponds {
                                 let ci: usize = col_key.parse().unwrap_or(0);
-                                s = set_xml_cell(&s, ri, ci, Some(&json!(parse_decimal(&vals["ponderacion"]))), "number")?;
+                                let actual = col_map.get(&ci).copied().unwrap_or(ci);
+                                if actual > 0 {
+                                    s = set_xml_cell(&s, ri, actual, Some(&json!(parse_decimal(&vals["ponderacion"]))), "number")?;
+                                }
                             }
                         }
                         if let Some(instrs) = unidad["instrPorCe"].as_object() {
