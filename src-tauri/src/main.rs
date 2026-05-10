@@ -481,7 +481,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         Value::Object(obj)
     }).collect();
     // Añadir ponderacionCR y actualCol (columna real en PESOS) a cada criterio
-    let criterios: Vec<Value> = criterios.into_iter().map(|c| {
+    let mut criterios: Vec<Value> = criterios.into_iter().map(|c| {
         let cr_code = c["codigo"].as_str().unwrap_or("").to_string();
         let actual_col = cr_col_map.get(&cr_code).copied();
         let pct = actual_col
@@ -492,6 +492,13 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         obj.insert("actualCol".to_string(), json!(actual_col.unwrap_or(0)));
         Value::Object(obj)
     }).filter(|c| c["ponderacionCR"].as_f64().unwrap_or(0.0) > 0.0).collect();
+
+    // Renumerar colIdx secuencialmente después del filtro (0, 1, 2...)
+    for (new_idx, c) in criterios.iter_mut().enumerate() {
+        if let Some(obj) = c.as_object_mut() {
+            obj.insert("colIdx".to_string(), json!(new_idx));
+        }
+    }
 
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
     for i in 0..15usize {
