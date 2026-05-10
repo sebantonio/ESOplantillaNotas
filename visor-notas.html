@@ -431,7 +431,7 @@
         const raDetailSelect = document.getElementById("raDetailSelect");
         const criteriaGrid = document.getElementById("criteriaGrid");
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             if (!window.electronExcel) {
                 showMessage("Abre esta pantalla desde la aplicacion local de Electron.", "error");
                 return;
@@ -444,6 +444,17 @@
                 selectedRaColIdx = Number(raDetailSelect.value);
                 renderDetail();
             });
+
+            const current = await window.electronExcel.getSelectedFile().catch(() => null);
+            if (!current) {
+                try {
+                    const recent = JSON.parse(localStorage.getItem("recentExcelFiles") || "[]");
+                    for (const f of recent) {
+                        try { if (await window.electronExcel.setSelectedFile(f.path)) break; } catch {}
+                    }
+                } catch {}
+            }
+
             loadNotes();
         });
 
@@ -455,7 +466,7 @@
                 });
 
                 if (!data) {
-                    showMessage("No se encontro el Excel en el directorio de la app.", "error");
+                    showMessage("No se encontro el Excel. Selecciona el archivo desde el inicio.", "error");
                     return;
                 }
 
