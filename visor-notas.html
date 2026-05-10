@@ -49,6 +49,10 @@
         .grade-empty{ background: #f3f4f6; color: #9ca3af; }
         .th-ce-group { font-size: 0.78em; font-weight: 800; text-align: center; padding: 4px 6px; }
         .th-ce-nota  { font-size: 0.72em; font-weight: 800; }
+        .th-rec { font-size: 0.68em; color: #b45309; font-weight: 700; background: #fffbeb !important; }
+        .td-rec { background: #fffbeb; }
+        .rec-input { width: 52px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; font-size: 0.85rem; background: #fffef0; font-family: inherit; }
+        .rec-input:focus { outline: 2px solid #f59e0b; background: white; border-color: #f59e0b; }
         .empty-msg { padding: 40px; text-align: center; color: #9ca3af; font-style: italic; }
         .pagination { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #fafbff; }
         .pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
@@ -155,6 +159,15 @@
         messageEl.className = "message " + type + " show";
     }
 
+    function formatNote(display) {
+        if (!display && display !== 0) return "";
+        const s = String(display).trim();
+        if (s === "") return "";
+        const n = parseFloat(s.replace(",", "."));
+        if (isNaN(n)) return s;
+        return n.toFixed(2).replace(".", ",");
+    }
+
     function gradeClass(display) {
         if (!display || display === "") return "grade-empty";
         const n = parseFloat(String(display).replace(",", "."));
@@ -170,6 +183,23 @@
 
     function normalize(s) {
         return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    }
+
+    async function saveRec(rowIdx, colIdx, value) {
+        try {
+            await window.electronExcel.saveEvalRec({
+                evaluacion: evalSelect.value,
+                rowIdx, colIdx, value,
+            });
+        } catch (e) {
+            showMessage("Error al guardar Rec: " + (e.message || e), "error");
+        }
+    }
+
+    function saveRecFromInput(input) {
+        const rowIdx = parseInt(input.dataset.row, 10);
+        const colIdx = parseInt(input.dataset.col, 10);
+        saveRec(rowIdx, colIdx, input.value.trim());
     }
 
     function renderStats() {
@@ -210,30 +240,35 @@
             return;
         }
 
-        // Agrupar CRs por CE (raColIdx)
-        const ceGroups = raColumns.map((ra, i) => ({
-            ra,
-            color: CE_COLORS[i % CE_COLORS.length],
-            criterios: criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx)),
-        }));
+        // Agrupar CRs por CE (raColIdx) — calcular colspan teniendo en cuenta columnas Rec
+        const ceGroups = raColumns.map((ra, i) => {
+            const crs = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
+            // colspan = 1 (Nota CE) + sum(cr.recColIdx >= 0 ? 2 : 1)
+            const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
+            return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
+        });
 
-        // Cabecera fila 1: Alumno (rowspan=2) | CE bloques (colspan) | Final (rowspan=2)
-        let head1 = `<tr><th class="th-nombre" rowspan="2">Alumno</th>`;
+        // Cabecera fila 1: Alumno (rowspan=2) | Final (rowspan=2) | CE bloques
+        let head1 = `<tr>`;
+        head1 += `<th class="th-nombre" rowspan="2">Alumno</th>`;
+        head1 += `<th rowspan="2" class="th-final">Nota<br>Final</th>`;
         ceGroups.forEach((g, i) => {
             const c = g.color;
             const label = `CE ${g.ra.numero || (i + 1)}`;
-            const span = 1 + g.criterios.length;
-            head1 += `<th colspan="${span}" class="th-ce-group" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">${label}</th>`;
+            head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">${label}</th>`;
         });
-        head1 += `<th rowspan="2" class="th-final">Nota<br>Final</th></tr>`;
+        head1 += `</tr>`;
 
-        // Cabecera fila 2: Nota CE | CR1.1 | CR1.2 | ... por cada bloque
+        // Cabecera fila 2: Nota CE | CR1.1 | Rec | CR1.2 | Rec | ...
         let head2 = `<tr>`;
         ceGroups.forEach(g => {
             const c = g.color;
             head2 += `<th class="th-ce-nota" style="width:72px;background:${c.notaBg};color:${c.fg};border-left:3px solid ${c.border};">Nota CE</th>`;
             g.criterios.forEach(cr => {
-                head2 += `<th style="width:68px;font-size:0.72em;padding:6px 4px;background:${c.bg};color:${c.fg};">${escapeHtml(cr.codigo)}</th>`;
+                head2 += `<th style="width:62px;font-size:0.72em;padding:5px 3px;background:${c.bg};color:${c.fg};">${escapeHtml(cr.codigo)}</th>`;
+                if (Number(cr.recColIdx) >= 0) {
+                    head2 += `<th class="th-rec" style="width:56px;font-size:0.68em;padding:5px 3px;">Rec</th>`;
+                }
             });
         });
         head2 += `</tr>`;
@@ -242,29 +277,31 @@
         // Filas de alumnos
         let bodyHtml = "";
         alumnos.forEach(alumno => {
-            bodyHtml += `<tr><td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
+            bodyHtml += `<tr>`;
+            bodyHtml += `<td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
+            // Nota Final — primera
+            const fDisp = formatNote(alumno.finalDisplay);
+            const fCls  = gradeClass(alumno.finalDisplay);
+            bodyHtml += `<td class="td-final"><span class="grade ${fCls}">${fDisp || "—"}</span></td>`;
+            // CE groups
             ceGroups.forEach(g => {
                 const c = g.color;
-                // Nota CE resumen
                 const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
-                const ceDisp = raVal ? raVal.display : "";
-                const ceCls  = gradeClass(ceDisp);
-                const ceVal  = (ceDisp && ceDisp !== "") ? escapeHtml(ceDisp) : "—";
-                bodyHtml += `<td style="border-left:3px solid ${c.border};"><span class="grade ${ceCls}">${ceVal}</span></td>`;
-                // CRs individuales
+                const ceDisp = formatNote(raVal ? raVal.display : "");
+                const ceCls  = gradeClass(raVal ? raVal.display : "");
+                bodyHtml += `<td style="border-left:3px solid ${c.border};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
                 g.criterios.forEach(cr => {
-                    const crVal  = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
-                    const disp   = crVal ? crVal.display : "";
-                    const cls    = gradeClass(disp);
-                    const val    = (disp && disp !== "") ? escapeHtml(disp) : "—";
-                    bodyHtml += `<td><span class="grade ${cls}">${val}</span></td>`;
+                    const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+                    const disp  = formatNote(crVal ? crVal.display : "");
+                    const cls   = gradeClass(crVal ? crVal.display : "");
+                    bodyHtml += `<td><span class="grade ${cls}">${disp || "—"}</span></td>`;
+                    if (Number(cr.recColIdx) >= 0) {
+                        const recDisp = formatNote(crVal ? crVal.recDisplay : "");
+                        const recRaw  = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
+                        bodyHtml += `<td class="td-rec"><input class="rec-input" type="text" placeholder="—" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)" onkeydown="if(event.key==='Enter')this.blur()"></td>`;
+                    }
                 });
             });
-            // Nota final
-            const fDisp = alumno.finalDisplay || "";
-            const fCls  = gradeClass(fDisp);
-            const fVal  = (fDisp && fDisp !== "") ? escapeHtml(fDisp) : "—";
-            bodyHtml += `<td class="td-final"><span class="grade ${fCls}">${fVal}</span></td>`;
             bodyHtml += `</tr>`;
         });
         notasBody.innerHTML = bodyHtml;

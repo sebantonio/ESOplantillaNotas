@@ -870,6 +870,8 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         .ok_or("No se encontro la columna NOTA FINAL.")?;
 
     let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
+    // Fila de sub-etiquetas "Rec" está justo debajo de la fila de cabecera
+    let rec_label_row = rows.get(code_row_idx + 1).cloned().unwrap_or_default();
     let mut criteria: Vec<Value> = Vec::new();
     for (ra_idx, ra) in ra_columns.iter().enumerate() {
         let ra_ci = ra["colIdx"].as_u64().unwrap() as usize;
@@ -877,7 +879,16 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         for ci in (ra_ci + 1)..next_ra_ci {
             let code = cell_val_str(code_row.get(ci).unwrap_or(&Value::Null));
             if !is_eval_criterion_code(&code) { continue; }
-            criteria.push(json!({ "colIdx": ci, "address": col_name(ci), "raColIdx": ra_ci, "raLabel": ra["label"], "codigo": code.trim(), "peso": cell_str(&rows, 12, ci) }));
+            // Columna Rec adyacente: ci+1 si no tiene código CR ni NOTA CE
+            let rec_ci: i64 = {
+                let nc = ci + 1;
+                let nc_code = cell_val_str(code_row.get(nc).unwrap_or(&Value::Null));
+                let nc_is_nota_ce = is_nota_ce_cell(code_row.get(nc).unwrap_or(&Value::Null));
+                if nc < next_ra_ci && !is_eval_criterion_code(&nc_code) && !nc_is_nota_ce {
+                    nc as i64
+                } else { -1 }
+            };
+            criteria.push(json!({ "colIdx": ci, "address": col_name(ci), "raColIdx": ra_ci, "raLabel": ra["label"], "codigo": code.trim(), "peso": cell_str(&rows, 12, ci), "recColIdx": rec_ci }));
         }
     }
 
@@ -893,7 +904,13 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         }).collect();
         let crit_vals: Vec<Value> = criteria.iter().map(|c| {
             let ci = c["colIdx"].as_u64().unwrap() as usize;
-            json!({ "colIdx": ci, "raColIdx": c["raColIdx"], "raLabel": c["raLabel"], "codigo": c["codigo"], "nota": cell_f64(&rows, row_idx, ci), "display": cell_str(&rows, row_idx, ci) })
+            let rec_ci = c["recColIdx"].as_i64().filter(|&n| n >= 0).map(|n| n as usize);
+            json!({
+                "colIdx": ci, "raColIdx": c["raColIdx"], "raLabel": c["raLabel"], "codigo": c["codigo"],
+                "nota": cell_f64(&rows, row_idx, ci), "display": cell_str(&rows, row_idx, ci),
+                "recColIdx": c["recColIdx"],
+                "recDisplay": rec_ci.map(|r| cell_str(&rows, row_idx, r)).unwrap_or_default(),
+            })
         }).collect();
         alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": cell_f64(&rows, row_idx, final_col), "finalDisplay": cell_str(&rows, row_idx, final_col), "rraa": rraa_vals, "criterios": crit_vals }));
     }
@@ -957,6 +974,28 @@ fn excel_get_notas_evaluacion(payload: Value) -> Result<Value, String> {
     if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
     let path = match get_selected_path() { Some(p) => p, None => return Ok(Value::Null) };
     load_notas_evaluacion(&path, payload["evaluacion"].as_str().unwrap_or("1"))
+}
+
+#[tauri::command]
+fn excel_save_eval_rec(payload: Value) -> Result<(), String> {
+    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
+    let path = match get_selected_path() { Some(p) => p, None => return Err("No hay archivo Excel seleccionado.".to_string()) };
+    let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
+    let row_idx = payload["rowIdx"].as_u64().ok_or("rowIdx requerido")? as usize;
+    let col_idx = payload["colIdx"].as_u64().ok_or("colIdx requerido")? as usize;
+    let value_raw = payload["value"].as_str().unwrap_or("").trim().to_string();
+    let names = sheet_names(&path)?;
+    let sheet_name = find_evaluation_sheet_name(&names, &evaluacion)
+        .ok_or_else(|| format!("No se encontró la hoja de la {} evaluación.", evaluacion))?;
+    edit_workbook_sheets_xml(&path, vec![(&sheet_name, Box::new(move |xml: &str| {
+        if value_raw.is_empty() {
+            set_xml_cell(xml, row_idx, col_idx, None, "number")
+        } else {
+            let n: f64 = value_raw.replace(",", ".").parse()
+                .map_err(|_| format!("Valor no válido: {}", value_raw))?;
+            set_xml_cell(xml, row_idx, col_idx, Some(&json!(n)), "number")
+        }
+    }))])
 }
 
 #[tauri::command]
@@ -2157,7 +2196,7 @@ fn main() {
             excel_save_unidades, excel_get_rraa_criterios, excel_save_rraa_criterios,
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
-            excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
+            excel_get_notas_evaluacion, excel_save_eval_rec, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template

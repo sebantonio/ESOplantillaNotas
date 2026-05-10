@@ -33,6 +33,7 @@
     getNotasUnidad: (payload) => invoke("excel_get_notas_unidad", { payload }),
     saveNotasUnidad: (payload) => invoke("excel_save_notas_unidad", { payload }),
     getNotasEvaluacion: (payload) => invoke("excel_get_notas_evaluacion", { payload }),
+    saveEvalRec: (payload) => invoke("excel_save_eval_rec", { payload }),
     getNotasEvaluacionAlumno: (payload) => invoke("excel_get_notas_evaluacion_alumno", { payload }),
     getAlumnosInformes: () => invoke("excel_get_alumnos_informes"),
     setSelectedFile: (filePath) => invoke("excel_set_selected_file", { filePath }),
