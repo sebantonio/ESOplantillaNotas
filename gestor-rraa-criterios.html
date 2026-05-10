@@ -1109,15 +1109,18 @@
             document.getElementById('rraaTable').style.display = 'table';
             emptyState.style.display = 'none';
 
-            tbody.innerHTML = raaaActuales.map((rraa, idx) => `
+            tbody.innerHTML = raaaActuales.map((rraa, idx) => {
+                const pond = rraa.ponderacionTotal;
+                const pctStr = (pond && pond > 0) ? `<span style="margin-left:10px;font-size:0.85em;font-weight:700;color:#6366f1;background:#ede9fe;padding:2px 8px;border-radius:12px;">${(pond * 100).toFixed(1)}%</span>` : '';
+                return `
                 <tr>
                     <td class="row-numero">${rraa.numero}</td>
-                    <td>${rraa.descripcion}</td>
+                    <td>${rraa.descripcion}${pctStr}</td>
                     <td>
                         <button class="delete" onclick="eliminarRRAA(${idx})">🗑️</button>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
 
         // ===== MOSTRAR TABLA CRITERIOS =====

@@ -443,6 +443,28 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             }
         }
     }
+    // Ponderación total por CE: fila idx 22 de PESOS en la columna del primer CR de cada CE
+    // Construir mapa ce_num → columna mínima de sus CR en PESOS
+    let mut ce_first_col: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
+    for c in &criterios {
+        let ce_num = c["raNumero"].as_i64().unwrap_or(0);
+        let cr_code = c["codigo"].as_str().unwrap_or("");
+        if let Some(&col) = cr_col_map.get(cr_code) {
+            let entry = ce_first_col.entry(ce_num).or_insert(col);
+            if col < *entry { *entry = col; }
+        }
+    }
+    let ce_list: Vec<Value> = ce_list.into_iter().map(|ce| {
+        let ce_num = ce["numero"].as_i64().unwrap_or(0);
+        let pond_total = ce_first_col.get(&ce_num)
+            .and_then(|&col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 22, col)))
+            .unwrap_or(0.0);
+        let pond_pct = (pond_total * 100.0).round() / 100.0;
+        let mut obj = ce.as_object().cloned().unwrap_or_default();
+        obj.insert("ponderacionTotal".to_string(), json!(pond_pct));
+        Value::Object(obj)
+    }).collect();
+
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
     for i in 0..15usize {
         let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, 0)).unwrap_or_default();
