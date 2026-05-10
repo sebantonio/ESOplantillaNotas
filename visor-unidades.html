@@ -42,6 +42,13 @@
         .th-cr-disabled { background: #f3f4f6; color: #9ca3af; }
         .td-cr-disabled { background: #f9fafb; }
         .empty-msg { padding: 40px; text-align: center; color: #9ca3af; font-style: italic; }
+        .pagination { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #fafbff; }
+        .pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
+        .pagination button:disabled { opacity: 0.4; cursor: default; }
+        .pagination button:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+        .pagination .page-info { font-size: 0.88rem; color: #374151; }
+        .pagination select.per-page { min-width: auto; padding: 6px 10px; font-size: 0.88rem; }
+        #unidadTitulo { font-size: 0.92rem; color: #d1d5db; font-weight: 400; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -60,7 +67,7 @@
 
     <header class="header">
         <h1>Notas por Unidad</h1>
-        <p>Visualizacion de notas por criterio de evaluacion y alumno.</p>
+        <div id="unidadTitulo"></div>
     </header>
 
     <div class="toolbar">
@@ -77,6 +84,19 @@
             </table>
         </div>
     </div>
+
+    <div class="pagination">
+        <button id="btnPrev" onclick="changePage(-1)" disabled>&#8249; Anterior</button>
+        <span class="page-info" id="pageInfo"></span>
+        <button id="btnNext" onclick="changePage(1)">Siguiente &#8250;</button>
+        <label for="perPageSelect" style="margin-left:auto;font-size:0.88rem;font-weight:600;color:#374151;">Por pagina:</label>
+        <select id="perPageSelect" class="per-page" onchange="changePerPage()">
+            <option value="10">10</option>
+            <option value="15" selected>15</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+        </select>
+    </div>
 </div>
 
 <script>
@@ -84,6 +104,15 @@
     const notasHead = document.getElementById("notasHead");
     const notasBody = document.getElementById("notasBody");
     const messageEl = document.getElementById("message");
+    const unidadTituloEl = document.getElementById("unidadTitulo");
+    const pageInfoEl = document.getElementById("pageInfo");
+    const btnPrev = document.getElementById("btnPrev");
+    const btnNext = document.getElementById("btnNext");
+    const perPageSelect = document.getElementById("perPageSelect");
+
+    let currentState = null;
+    let currentPage = 0;
+    let perPage = 15;
 
     function showMessage(text, type) {
         messageEl.textContent = text;
@@ -103,16 +132,22 @@
         return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    let currentState = null;
-
     function renderTable() {
         const data = currentState;
         if (!data) return;
 
         const criterios = data.criterios || [];
-        const alumnos = data.alumnos || [];
+        const allAlumnos = data.alumnos || [];
+        const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
+        if (currentPage >= totalPages) currentPage = totalPages - 1;
+        const alumnos = allAlumnos.slice(currentPage * perPage, currentPage * perPage + perPage);
 
-        if (!alumnos.length) {
+        // Actualizar paginación
+        pageInfoEl.textContent = `Página ${currentPage + 1} de ${totalPages} (${allAlumnos.length} alumnos)`;
+        btnPrev.disabled = currentPage === 0;
+        btnNext.disabled = currentPage >= totalPages - 1;
+
+        if (!allAlumnos.length) {
             notasHead.innerHTML = "";
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos en esta unidad.</td></tr>`;
             return;
@@ -132,7 +167,7 @@
         headRow += `</tr>`;
         notasHead.innerHTML = headRow;
 
-        // Filas
+        // Filas de la página actual
         let bodyHtml = "";
         alumnos.forEach(alumno => {
             bodyHtml += `<tr><td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
@@ -153,12 +188,27 @@
         notasBody.innerHTML = bodyHtml;
     }
 
+    function changePage(delta) {
+        currentPage += delta;
+        renderTable();
+    }
+
+    function changePerPage() {
+        perPage = parseInt(perPageSelect.value, 10);
+        currentPage = 0;
+        renderTable();
+    }
+
     async function loadUnidad(unidad) {
         showMessage("Cargando notas...", "info");
         try {
             const data = await window.electronExcel.getNotasUnidad({ unidad });
             if (!data) { showMessage("No se encontro el Excel. Selecciona el archivo desde el inicio.", "error"); return; }
             currentState = data;
+            currentPage = 0;
+
+            // Título desde A3 de la hoja
+            unidadTituloEl.textContent = data.titulo || "";
 
             // Poblar selector si aun no tiene opciones
             if (unidadSelect.options.length <= 1 && data.unidades && data.unidades.length) {
@@ -180,7 +230,7 @@
             showMessage("Abre esta pantalla desde la aplicacion local.", "error");
             return;
         }
-        unidadSelect.addEventListener("change", () => loadUnidad(unidadSelect.value));
+        unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
         loadUnidad("U1");
     });
 </script>

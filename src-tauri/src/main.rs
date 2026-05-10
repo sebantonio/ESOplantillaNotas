@@ -1020,8 +1020,9 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         alumnos.push(json!({ "nombre": nombre, "rowIdx": ri, "crNotas": cr_notas }));
     }
 
+    let titulo = cell_str(&rows, 2, 0);
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
-    Ok(json!({ "filePath": path, "fileName": file_name, "unidad": unidad, "unidades": unidades, "criterios": criterios_json, "alumnos": alumnos }))
+    Ok(json!({ "filePath": path, "fileName": file_name, "unidad": unidad, "titulo": titulo, "unidades": unidades, "criterios": criterios_json, "alumnos": alumnos }))
 }
 
 #[tauri::command]
