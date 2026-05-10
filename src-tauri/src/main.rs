@@ -381,55 +381,65 @@ fn excel_save_rraa_criterios(payload: Value) -> Result<Value, String> {
 // ce_list = lista de CE con su índice de columna de inicio
 // criterios = lista de CR con colIdx absoluto en PESOS
 fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Vec<Value>)> {
-    let pesos_rows = read_sheet_rows(path, "PESOS").ok()?;
+    let datos_rows = read_sheet_rows(path, "DATOS").ok()?;
 
-    // Fila 3 (idx 2): localizar columnas de inicio de cada CE
-    let ce_header_row = pesos_rows.get(2).cloned().unwrap_or_default();
+    // CE: hoja DATOS, col R(17)=nº, S(18)=descripcion, header en idx 3, datos desde idx 4
     let mut ce_list: Vec<Value> = Vec::new();
-    for (col_idx, cell) in ce_header_row.iter().enumerate() {
-        let s = cell_val_str(cell);
-        if s.to_uppercase().contains("CESPECIF") || s.to_uppercase().contains("CE") && s.to_uppercase().contains('.') || s.to_uppercase().starts_with("CE") {
-            let num: i64 = s.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or((ce_list.len() + 1) as i64);
-            ce_list.push(json!({ "numero": num, "descripcion": s.clone(), "colIdx": col_idx }));
+    for row_idx in 4..datos_rows.len() {
+        let ce_text = cell_str(&datos_rows, row_idx, 18);
+        if ce_text.is_empty() { break; }
+        let num: i64 = cell_f64(&datos_rows, row_idx, 17).map(|f| f as i64)
+            .unwrap_or((ce_list.len() + 1) as i64);
+        ce_list.push(json!({ "numero": num, "descripcion": ce_text, "colIdx": ce_list.len() }));
+    }
+
+    // CR: hoja DATOS, col V(21)=nº CE (celda combinada), W(22)=código CR, X(23)=texto CR
+    let mut criterios: Vec<Value> = Vec::new();
+    let mut current_ce_num: i64 = 0;
+    let mut empty_streak: usize = 0;
+    for row_idx in 4..datos_rows.len() {
+        let ce_col = cell_str(&datos_rows, row_idx, 21);
+        let cr_code = cell_str(&datos_rows, row_idx, 22);
+        let cr_text = cell_str(&datos_rows, row_idx, 23);
+        if !ce_col.is_empty() {
+            current_ce_num = ce_col.parse::<i64>().unwrap_or(current_ce_num);
+            empty_streak = 0;
+        }
+        if is_cr_code(&cr_code) {
+            empty_streak = 0;
+            let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(current_ce_num))
+                .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
+            criterios.push(json!({
+                "numero": criterios.len() + 1,
+                "codigo": cr_code.clone(),
+                "nombre": cr_code.clone(),
+                "originalCodigo": cr_code.clone(),
+                "raNumero": current_ce_num,
+                "raDescripcion": ce_desc,
+                "texto": cr_text,
+                "colIdx": criterios.len()
+            }));
+        } else if ce_col.is_empty() && cr_code.is_empty() {
+            empty_streak += 1;
+            if empty_streak >= 3 { break; }
         }
     }
 
-    // Fila 4 (idx 3): localizar columnas de los CR
-    let cr_header_row = pesos_rows.get(3).cloned().unwrap_or_default();
-    let mut criterios: Vec<Value> = Vec::new();
-    for (col_idx, cell) in cr_header_row.iter().enumerate() {
-        let s = cell_val_str(cell);
-        if !is_cr_code(&s) { continue; }
-        // Extraer número de CE: "CR2.3" → ceNum=2
-        let ce_num: i64 = s.chars().skip(2).take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
-        let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
-            .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
-        criterios.push(json!({
-            "numero": criterios.len() + 1,
-            "codigo": s.clone(),
-            "nombre": s.clone(),
-            "originalCodigo": s.clone(),
-            "raNumero": ce_num,
-            "raDescripcion": ce_desc,
-            "texto": "",
-            "colIdx": col_idx
-        }));
-    }
-
-    // Filas 5+ (idx 4+): una por unidad — 15 unidades máximo
+    // Ponderaciones: hoja PESOS si existe (pesos por CR y unidad)
+    let pesos_rows = read_sheet_rows(path, "PESOS").ok();
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
-    for row_idx in 4..=18usize {
-        let nombre_raw = cell_str(&pesos_rows, row_idx, 0);
+    for i in 0..15usize {
+        let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, 0)).unwrap_or_default();
         let nombre = if nombre_raw == "0" { String::new() } else { nombre_raw };
         let mut ponderaciones = serde_json::Map::new();
         for c in &criterios {
             let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
-            let pond = cell_f64(&pesos_rows, row_idx, ci).unwrap_or(0.0);
+            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, i + 4, ci)).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
         ponderaciones_unidad.push(json!({
-            "numero": row_idx - 3,
-            "rowIdx": row_idx,
+            "numero": i + 1,
+            "rowIdx": i + 4,
             "nombre": nombre,
             "ponderaciones": ponderaciones
         }));

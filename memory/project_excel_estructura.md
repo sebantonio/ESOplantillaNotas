@@ -18,7 +18,11 @@ Archivo: `CCGG PLANTILLA - RECUv45.xlsx`
 - Col N = abreviatura instrumento (PE, TD...)
 - Col O = nombre instrumento
 
-**Hoja PESOS:** Criterios de evaluación (CE) y ponderaciones. Códigos tipo CR1.1, CR2.3. Los CE van en fila 4 (0-indexed: 3), los CR en columnas variables.
+**Hoja DATOS — CE y CR (cols R-X):**
+- R(17)=Nº CE, S(18)=texto CE — header en fila 4 (idx 3), datos desde fila 5 (idx 4)
+- V(21)=nº CE (celda combinada), W(22)=código CR (CR1.1...), X(23)=texto CR
+
+**Hoja PESOS:** ponderaciones por CR y unidad (si existe). Los CE/CR NO se leen de PESOS.
 
 **Why:** El Excel ESO tiene una estructura diferente al Excel FP (plantilla313_dual). Los rangos son fijos y no hay que buscarlos por contenido.
 
