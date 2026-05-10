@@ -443,8 +443,8 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             }
         }
     }
-    // Ponderación total por CE: fila idx 22 de PESOS en la columna del primer CR de cada CE
-    // Construir mapa ce_num → columna mínima de sus CR en PESOS
+    // Ponderación total por CE (fila idx 22) y por CR (fila idx 21) en PESOS
+    // ce_first_col: ce_num → columna mínima de sus CR (puede ser col "Inst ev." anterior)
     let mut ce_first_col: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
     for c in &criterios {
         let ce_num = c["raNumero"].as_i64().unwrap_or(0);
@@ -454,14 +454,28 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             if col < *entry { *entry = col; }
         }
     }
+    // Añadir ponderacionTotal a cada CE: buscar valor no-cero en first_cr_col y first_cr_col-1
     let ce_list: Vec<Value> = ce_list.into_iter().map(|ce| {
         let ce_num = ce["numero"].as_i64().unwrap_or(0);
-        let pond_total = ce_first_col.get(&ce_num)
-            .and_then(|&col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 22, col)))
-            .unwrap_or(0.0);
-        let pond_pct = (pond_total * 100.0).round() / 100.0;
+        let pond_total = ce_first_col.get(&ce_num).and_then(|&col| {
+            pesos_rows.as_ref().and_then(|r| {
+                let v = cell_f64(r, 22, col).unwrap_or(0.0);
+                if v != 0.0 { return Some(v); }
+                if col > 0 { cell_f64(r, 22, col - 1) } else { None }
+            })
+        }).unwrap_or(0.0);
         let mut obj = ce.as_object().cloned().unwrap_or_default();
-        obj.insert("ponderacionTotal".to_string(), json!(pond_pct));
+        obj.insert("ponderacionTotal".to_string(), json!(pond_total));
+        Value::Object(obj)
+    }).collect();
+    // Añadir ponderacionCR (% individual) a cada criterio desde fila idx 21 de PESOS
+    let criterios: Vec<Value> = criterios.into_iter().map(|c| {
+        let cr_code = c["codigo"].as_str().unwrap_or("").to_string();
+        let pct = cr_col_map.get(&cr_code)
+            .and_then(|&col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 21, col)))
+            .unwrap_or(0.0);
+        let mut obj = c.as_object().cloned().unwrap_or_default();
+        obj.insert("ponderacionCR".to_string(), json!(pct));
         Value::Object(obj)
     }).collect();
 
