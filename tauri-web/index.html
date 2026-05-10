@@ -1061,13 +1061,17 @@
                 csv = 'Codigo;Nombre;Evaluacion\nU1;Introducción a la materia;1ª\nU2;Conceptos fundamentales;1ª\nU3;Aplicaciones prácticas;2ª\nU4;Proyecto integrador;3ª\n';
                 nombre = 'plantilla_unidades.csv';
             } else { return; }
-            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = nombre;
-            document.body.appendChild(a); a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 10000);
+            if (window.__TAURI__) {
+                window.__TAURI__.core.invoke('save_csv_template', { filename: nombre, content: csv });
+            } else {
+                const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = nombre;
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
         }
 
         // ===== MODAL IMPORTAR =====
