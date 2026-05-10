@@ -554,29 +554,18 @@
         }
 
         function leerUnidadesDesdeWorkbook(book) {
+            // Tabla fija I5:K20 → filas 4-19 (0-indexed), cols 8=I, 9=J, 10=K
             const sheet = book.Sheets.DATOS;
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-            const start = encontrarInicioUnidades(rows);
-
-            if (start === -1) {
-                throw new Error('No se encontró la tabla principal de unidades en DATOS.');
-            }
-
             const unidades = [];
-
-            for (let idx = 0; idx < 15; idx += 1) {
-                const row = rows[start + idx] || [];
-                const unidad = {
-                    codigo: String(row[9] || `U${idx + 1}`),
-                    nombre: String(row[10] || ''),
-                    evaluacion: String(row[11] || '')
-                };
-
-                if (unidad.codigo || unidad.nombre || unidad.evaluacion) {
-                    unidades.push(unidad);
-                }
+            for (let ri = 4; ri <= 19; ri++) {
+                const row = rows[ri] || [];
+                const codigo = String(row[8] || '').trim();
+                const nombre = String(row[9] || '').trim();
+                const evaluacion = String(row[10] || '').trim();
+                if (!codigo && !nombre) continue;
+                unidades.push({ codigo, nombre, evaluacion });
             }
-
             return unidades;
         }
 
@@ -716,23 +705,15 @@
         window.guardarCambiosAntesDeCerrar = guardarCambiosAntesDeCerrar;
 
         function escribirUnidadesEnWorkbook(book, unidades) {
+            // Tabla fija I5:K20 → filas 4-19 (0-indexed), cols 8=I, 9=J, 10=K
             const sheet = book.Sheets.DATOS;
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-            const start = encontrarInicioUnidades(rows);
-
-            if (start === -1) {
-                throw new Error('No se encontró la tabla principal de unidades en DATOS.');
+            const normalizadas = unidades.slice(0, 16);
+            for (let idx = 0; idx < 16; idx++) {
+                const unidad = normalizadas[idx] || { codigo: '', nombre: '', evaluacion: '' };
+                ponerCelda(sheet, 4 + idx, 8, unidad.codigo || '');
+                ponerCelda(sheet, 4 + idx, 9, unidad.nombre || '');
+                ponerCelda(sheet, 4 + idx, 10, unidad.evaluacion || '');
             }
-
-            const normalizadas = unidades.slice(0, 15);
-            for (let idx = 0; idx < 15; idx += 1) {
-                const unidad = normalizadas[idx] || { codigo: `U${idx + 1}`, nombre: '', evaluacion: '' };
-                ponerCelda(sheet, start + idx, 9, unidad.codigo || `U${idx + 1}`);
-                ponerCelda(sheet, start + idx, 10, unidad.nombre || '');
-                ponerCelda(sheet, start + idx, 11, unidad.evaluacion || '');
-            }
-
-            sincronizarBloquesEvaluacion(sheet, rows, normalizadas);
         }
 
         function sincronizarBloquesEvaluacion(sheet, rows, unidades) {

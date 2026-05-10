@@ -203,28 +203,26 @@ fn find_header_row(rows: &[Vec<Value>], text: &str) -> Option<usize> {
     })
 }
 
-// En el Excel ESO la tabla de unidades está en cols J(9)/K(10)/L(11)
-// con cabecera "UNIDADES" en col K. Puede haber varias filas con "UNIDADES"
-// (bloques de evaluación "UNIDADES 1ª"), así que buscamos la primera que
-// además tenga col J con "N" o vacío (cabecera de la tabla principal), no "U".
-fn find_unidades_start(rows: &[Vec<Value>]) -> Option<usize> {
-    // Primero intentar fila con "UNIDADES" exacto en col K (sin sufijo 1ª/2ª/3ª)
-    if let Some(idx) = rows.iter().position(|row| {
-        let k = row.get(10).map(|v| cell_val_str(v).trim().to_uppercase()).unwrap_or_default();
-        k == "UNIDADES" || k == "UNIDADES 1\u{00aa}" || (k.contains("UNIDADES") && !k.contains("2") && !k.contains("3"))
-    }) {
-        // Confirmar que la fila siguiente tiene datos de unidad (col J empieza con "U")
-        let next = idx + 1;
-        let next_j = cell_str(rows, next, 9);
-        if next_j.to_uppercase().starts_with('U') || next_j.is_empty() {
-            return Some(next);
+// Devuelve los índices de fila de inicio de cada bloque "UNIDADES Xª" en col K.
+// El Excel ESO tiene 3 bloques: UNIDADES 1ª, UNIDADES 2ª, UNIDADES 3ª.
+fn find_unidades_bloques(rows: &[Vec<Value>]) -> Vec<(String, usize)> {
+    let mut bloques = Vec::new();
+    for (i, row) in rows.iter().enumerate() {
+        let k = row.get(10).map(|v| cell_val_str(v).trim().to_string()).unwrap_or_default();
+        let ku = k.to_uppercase();
+        if ku.contains("UNIDADES") && (ku.contains('1') || ku.contains('2') || ku.contains('3')) {
+            let eval = if ku.contains('1') { "1\u{00aa}" }
+                       else if ku.contains('2') { "2\u{00aa}" }
+                       else { "3\u{00aa}" };
+            bloques.push((eval.to_string(), i + 1)); // start = fila siguiente a la cabecera
         }
     }
-    // Fallback: primera fila con "UNIDADES" en col K
-    let idx = rows.iter().position(|row| {
-        row.get(10).map(|v| cell_val_str(v).to_uppercase().contains("UNIDADES")).unwrap_or(false)
-    })?;
-    Some(idx + 1)
+    bloques
+}
+
+// Mantener para compatibilidad con save_unidades_to_file
+fn find_unidades_start(rows: &[Vec<Value>]) -> Option<usize> {
+    find_unidades_bloques(rows).into_iter().map(|(_, s)| s).next()
 }
 
 // No hay sección RRAA en el Excel ESO — no se usa
@@ -307,14 +305,14 @@ fn excel_save_alumnos(alumnos: Value) -> Result<Value, String> {
 // ---------------------------------------------------------------------------
 
 fn load_unidades(path: &str) -> Result<Value, String> {
+    // Tabla fija I5:K20 (0-indexed: filas 4-19, cols 8=I, 9=J, 10=K)
     let rows = read_sheet_rows(path, "DATOS")?;
-    let start = find_unidades_start(&rows).ok_or("No se encontro la seccion UNIDADES.")?;
     let mut unidades = Vec::new();
-    for idx in 0..15 {
-        let ri = start + idx;
-        let codigo = { let s = cell_str(&rows, ri, 9); if s.is_empty() { format!("U{}", idx + 1) } else { s } };
-        let nombre = cell_str(&rows, ri, 10);
-        let evaluacion = cell_str(&rows, ri, 11);
+    for ri in 4..=19 {
+        let codigo = cell_str(&rows, ri, 8);
+        let nombre = cell_str(&rows, ri, 9);
+        let evaluacion = cell_str(&rows, ri, 10);
+        if codigo.is_empty() && nombre.is_empty() { continue; }
         unidades.push(json!({ "codigo": codigo, "nombre": nombre, "evaluacion": evaluacion }));
     }
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
@@ -1271,24 +1269,22 @@ fn save_alumnos_to_file(path: &str, alumnos: &[Value]) -> Result<(), String> {
 
 // En ESO no hay bloques de evaluación separados en DATOS — sólo la tabla principal
 fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
-    let rows = read_sheet_rows(path, "DATOS")?;
-    let start = find_unidades_start(&rows).ok_or("No se encontro la seccion UNIDADES.")?;
+    // Tabla fija I5:K20 (0-indexed: filas 4-19, cols 8=I, 9=J, 10=K)
     let unidades_owned = unidades.to_vec();
-
     edit_workbook_sheets_xml(path, vec![("DATOS", Box::new(move |xml: &str| {
         let mut s = xml.to_string();
-        for idx in 0..15 {
+        for idx in 0..16 {
             let u = unidades_owned.get(idx);
-            let ri = start + idx;
-            // col J(9)=código, K(10)=nombre, L(11)=evaluación
-            let codigo = u.and_then(|v| v["codigo"].as_str()).filter(|c| !c.is_empty()).map(|c| c.to_string()).unwrap_or_else(|| format!("U{}", idx + 1));
-            s = set_xml_cell(&s, ri, 9, Some(&json!(codigo)), "text")?;
+            let ri = 4 + idx;
+            let codigo = u.and_then(|v| v["codigo"].as_str()).unwrap_or("");
+            let codigo_val = json!(codigo);
+            s = set_xml_cell(&s, ri, 8, if codigo.is_empty() { None } else { Some(&codigo_val) }, "text")?;
             let nombre = u.and_then(|v| v["nombre"].as_str()).unwrap_or("");
             let nombre_val = json!(nombre);
-            s = set_xml_cell(&s, ri, 10, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
+            s = set_xml_cell(&s, ri, 9, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
             let eval = u.and_then(|v| v["evaluacion"].as_str()).unwrap_or("");
             let eval_val = json!(eval);
-            s = set_xml_cell(&s, ri, 11, if eval.is_empty() { None } else { Some(&eval_val) }, "text")?;
+            s = set_xml_cell(&s, ri, 10, if eval.is_empty() { None } else { Some(&eval_val) }, "text")?;
         }
         Ok(s)
     }))])
