@@ -16,6 +16,7 @@ const files = [
   'informes.html',
   'diario.html',
   'gestor-instrumentos.html',
+  'asteroides.html',
   'app-bridge.js'
 ];
 
