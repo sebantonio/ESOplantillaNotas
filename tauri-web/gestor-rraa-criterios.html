@@ -1906,7 +1906,11 @@ Unidades: ${importUnidades.length} registros
             document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
         }
 
-        // Verificar carga de XLSX
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isElectronMode) seleccionarArchivoLocal();
+        });
+
+        // Verificar carga de XLSX (modo browser)
         const xlsxCheckInterval = setInterval(() => {
             if (checkXLSX()) {
                 clearInterval(xlsxCheckInterval);

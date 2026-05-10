@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\seban\\.claude\\projects\\c--OneDrive-OneDrive---Consejer-a-de-Educaci-n--Cultura-y-Deportes-Castilla-La-Mancha-Github-ESOplantillaNotas-ESOplantillaNotas\\memory"
