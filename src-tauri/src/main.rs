@@ -959,11 +959,11 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         v
     };
 
-    // Detectar códigos CR en la fila de encabezados (idx 2 o 3)
+    // Detectar códigos CR en la fila de encabezados (idx 2 o 3), scan desde col 0
     let mut cr_cols: Vec<(String, usize)> = Vec::new();
     for check_ri in 2..=3 {
         if let Some(row) = rows.get(check_ri) {
-            for ci in 4..row.len().min(110) {
+            for ci in 0..row.len().min(110) {
                 let s = cell_val_str(row.get(ci).unwrap_or(&Value::Null));
                 if is_cr_code(&s) {
                     cr_cols.push((s.to_uppercase(), ci));
