@@ -1588,7 +1588,8 @@
 
             const crs = criteriosActuales.filter(c =>
                 Number(c.raNumero) === Number(ceResumenActivo) &&
-                String(c.texto || '').trim() !== ''
+                String(c.texto || '').trim() !== '' &&
+                c.ponderacionCR > 0
             );
             const unidades = ponderacionesUnidad.filter(u => String(u.nombre || '').trim() !== '' && u.nombre !== '0');
 
