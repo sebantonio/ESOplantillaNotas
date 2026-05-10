@@ -31,6 +31,7 @@
     saveCeNotas: (payload) => invoke("excel_save_ce_notas", { payload }),
     addActividad: (payload) => invoke("excel_add_actividad", { payload }),
     getNotasUnidad: (payload) => invoke("excel_get_notas_unidad", { payload }),
+    saveNotasUnidad: (payload) => invoke("excel_save_notas_unidad", { payload }),
     getNotasEvaluacion: (payload) => invoke("excel_get_notas_evaluacion", { payload }),
     getNotasEvaluacionAlumno: (payload) => invoke("excel_get_notas_evaluacion_alumno", { payload }),
     getAlumnosInformes: () => invoke("excel_get_alumnos_informes"),
