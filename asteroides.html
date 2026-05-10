@@ -289,8 +289,6 @@
         let vidas = 3;
         let juegoActivo = false;
         let ultimoDisparo = 0;
-        let ultimaGeneracion = 0;
-        const INTERVALO_GENERACION = 2000;
 
         // Controles
         document.addEventListener('keydown', (e) => {
@@ -313,7 +311,6 @@
         function iniciarJuego() {
             document.getElementById('inicio').style.display = 'none';
             juegoActivo = true;
-            ultimaGeneracion = Date.now();
             generarAsteroides();
             bucleJuego();
         }
@@ -391,21 +388,14 @@
                 }
             }
 
-            // Generar nuevos asteroides continuamente
-            const ahora = Date.now();
-            const asteroidesGrandes = asteroides.filter(a => a.tamaño > 15).length;
-            if (ahora - ultimaGeneracion > INTERVALO_GENERACION && asteroidesGrandes < 3 + nivel) {
+            // Generar nuevos asteroides si hay menos de los requeridos
+            const asteroidesGrandes = asteroides.filter(a => a.tamaño > 18).length;
+            if (asteroidesGrandes < 3 + nivel * 2) {
                 asteroides.push(new Asteroide(
                     Math.random() * canvas.width,
-                    Math.random() * 50 - 50,
-                    20 + Math.random() * 15
+                    -50,
+                    25 + Math.random() * 10
                 ));
-                ultimaGeneracion = ahora;
-            }
-
-            // Nivel completado cuando se destruyen asteroides grandes
-            if (asteroides.length === 0 && nivel > 1) {
-                nivel++;
             }
 
             // Verificar colisión nave-asteroide
