@@ -533,16 +533,6 @@
             return;
         }
 
-        const cur = await window.electronExcel.getSelectedFile().catch(() => null);
-        if (!cur) {
-            try {
-                const recent = JSON.parse(localStorage.getItem("recentExcelFiles") || "[]");
-                for (const f of recent) {
-                    try { if (await window.electronExcel.setSelectedFile(f.path)) break; } catch {}
-                }
-            } catch {}
-        }
-
         try {
             const data = await window.electronExcel.getNotasUnidad({ unidad: "U1" });
             if (!data) throw new Error("Sin datos");
