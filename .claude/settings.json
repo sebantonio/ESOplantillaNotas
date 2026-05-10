@@ -5,7 +5,8 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(git commit *)",
-      "Bash(node scripts/prepare-tauri-web.js)"
+      "Bash(node scripts/prepare-tauri-web.js)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\seban\\.claude\\projects\\c--OneDrive-OneDrive---Consejer-a-de-Educaci-n--Cultura-y-Deportes-Castilla-La-Mancha-Github-ESOplantillaNotas-ESOplantillaNotas\\memory"
