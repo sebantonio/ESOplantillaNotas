@@ -3,6 +3,9 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const outDir = path.join(root, 'tauri-web');
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const version = pkg.version || '0.0.0';
+
 const files = [
   'index.html',
   'gestor-alumnos.html',
@@ -24,7 +27,10 @@ fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 
 files.forEach((file) => {
-  fs.copyFileSync(path.join(root, file), path.join(outDir, file));
+  const src = path.join(root, file);
+  let content = fs.readFileSync(src, 'utf8');
+  content = content.replace(/v0\.\d+\.\d+/g, `v${version}`);
+  fs.writeFileSync(path.join(outDir, file), content, 'utf8');
 });
 
-console.log(`Preparados ${files.length} archivos para Tauri en ${outDir}`);
+console.log(`Preparados ${files.length} archivos para Tauri en ${outDir} (v${version})`);

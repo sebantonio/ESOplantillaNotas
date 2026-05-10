@@ -782,7 +782,14 @@ fn find_evaluation_sheet_name(names: &[String], evaluacion: &str) -> Option<Stri
 
 fn is_eval_criterion_code(s: &str) -> bool {
     let s = s.trim();
-    is_cr_code(s) || Regex::new(r"^\d+\.?[a-z]\)?$").unwrap().is_match(s)
+    is_cr_code(s)
+        || Regex::new(r"^\d+\.?[a-z]\)?$").unwrap().is_match(s)
+        || Regex::new(r"^\d+\.\d+$").unwrap().is_match(s)
+}
+
+fn is_nota_ce_cell(v: &Value) -> bool {
+    let txt = normalize_plain(&cell_val_str(v));
+    txt == "NOTA CE" || txt.starts_with("NOTA CE") || txt == "NOTA_CE"
 }
 
 fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> {
@@ -791,16 +798,28 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         .ok_or_else(|| format!("No se encontro la hoja de la {evaluacion} evaluacion."))?;
     let rows = read_sheet_rows(path, &sheet_name)?;
 
-    // Buscar layout
+    // Buscar layout — estrategia 1: fila con "NOTA CE" seguida de CR codes (hasta 3 filas después)
+    //                  estrategia 2: fallback — fila con >= 2 códigos de criterio
     let (summary_row_idx, code_row_idx, first_student_row_idx) = {
         let mut found = None;
         for row_idx in 0..rows.len() {
-            let nota_ce_count = rows[row_idx].iter().filter(|v| normalize_plain(&cell_val_str(v)) == "NOTA CE").count();
-            if nota_ce_count == 0 { continue; }
-            let next = rows.get(row_idx + 1).cloned().unwrap_or_default();
-            if next.iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() > 0 {
-                found = Some((row_idx, row_idx + 1, row_idx + 2));
-                break;
+            if rows[row_idx].iter().filter(|v| is_nota_ce_cell(v)).count() == 0 { continue; }
+            for offset in 1..=3 {
+                if let Some(next) = rows.get(row_idx + offset) {
+                    if next.iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
+                        found = Some((row_idx, row_idx + offset, row_idx + offset + 1));
+                        break;
+                    }
+                }
+            }
+            if found.is_some() { break; }
+        }
+        if found.is_none() {
+            for row_idx in 1..rows.len() {
+                if rows[row_idx].iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
+                    found = Some((row_idx.saturating_sub(1), row_idx, row_idx + 1));
+                    break;
+                }
             }
         }
         found.ok_or("No se encontro la cabecera de notas de evaluacion.")?
@@ -809,7 +828,7 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
     let summary_row = &rows[summary_row_idx];
     let mut ra_columns: Vec<Value> = Vec::new();
     for (ci, cell) in summary_row.iter().enumerate() {
-        if normalize_plain(&cell_val_str(cell)) != "NOTA CE" { continue; }
+        if !is_nota_ce_cell(cell) { continue; }
         let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
         let ra_num = code_row[ci+1..].iter().find_map(|v| {
             let s = cell_val_str(v);
