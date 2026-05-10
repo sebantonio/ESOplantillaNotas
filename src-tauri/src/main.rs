@@ -942,9 +942,23 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         .map_err(|_| format!("No se encontró la hoja \"{unidad}\"."))?;
     let unidades = list_unit_sheets(path)?;
 
-    let name_col: usize = 1; // columna B = nombre alumno (igual que DATOS)
     let first_row: usize = 4; // fila 5 en Excel (0-indexed)
     let header_row: usize = 2; // fila 3 en Excel (códigos CR)
+
+    // Auto-detectar columna de nombre: primera col (0-4) con texto no-numérico en las primeras filas de datos
+    let name_col: usize = {
+        let mut found = 1; // fallback col B
+        'outer: for ci in 0usize..5 {
+            for ri in first_row..(first_row + 5).min(rows.len()) {
+                let s = cell_str(&rows, ri, ci);
+                if !s.is_empty() && s.parse::<f64>().is_err() {
+                    found = ci;
+                    break 'outer;
+                }
+            }
+        }
+        found
+    };
 
     // Detectar códigos CR en la fila de encabezados (idx 2 o 3)
     let mut cr_cols: Vec<(String, usize)> = Vec::new();
