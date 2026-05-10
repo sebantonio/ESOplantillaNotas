@@ -1646,6 +1646,17 @@
 
             // Pie: totales
             const footTdStyle = 'padding:6px 8px;text-align:center;font-weight:600;font-size:0.88em;background:#f3f4f6;';
+
+            // Calcular suma total de todas las ponderaciones
+            const sumaTotal = unidades.reduce((sum, u) => {
+                return sum + crs.reduce((s, cr) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
+            }, 0);
+
+            // Calcular peso total del CE (suma de todos sus CRs en todas las unidades)
+            const pesoCeTotal = unidades.reduce((sum, u) => {
+                return sum + crs.reduce((s, cr) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
+            }, 0);
+
             tfoot.innerHTML = `
                 <tr>
                     <td colspan="2" style="${footTdStyle} text-align:left;color:#374151;">Ponderación total del criterio</td>
@@ -1656,11 +1667,15 @@
                 </tr>
                 <tr>
                     <td colspan="2" style="${footTdStyle} text-align:left;color:#6366f1;">% peso del criterio</td>
-                    ${crs.map(cr => `<td style="${footTdStyle} color:#6366f1;">${cr.ponderacionCR > 0 ? (cr.ponderacionCR*100).toFixed(1)+'%' : '—'}</td>`).join('')}
+                    ${crs.map(cr => {
+                        const sumaCr = unidades.reduce((s,u) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
+                        const pct = sumaTotal > 0 ? (sumaCr / sumaTotal * 100).toFixed(1) : 0;
+                        return `<td style="${footTdStyle} color:#6366f1;">${pct}%</td>`;
+                    }).join('')}
                 </tr>
                 <tr>
                     <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:#4338ca;font-size:0.95em;">
-                        Peso total CE ${ce.numero}: <strong>${ce.ponderacionTotal > 0 ? (ce.ponderacionTotal*100).toFixed(1)+'%' : '—'}</strong>
+                        Peso total CE ${ce.numero}: <strong>${pesoCeTotal > 0 ? pesoCeTotal : '—'}</strong>
                     </td>
                 </tr>`;
         }

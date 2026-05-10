@@ -145,6 +145,7 @@
             <div id="puntos">PUNTOS: 0</div>
             <div id="nivel">NIVEL: 1</div>
             <div id="vidas">VIDAS: 3</div>
+            <button onclick="gameOver()" style="position: absolute; top: 10px; right: 10px; padding: 8px 15px; background: #f00; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">SALIR</button>
         </div>
         <div id="inicio">
             <h1>🚀 ASTEROIDES</h1>
@@ -288,6 +289,8 @@
         let vidas = 3;
         let juegoActivo = false;
         let ultimoDisparo = 0;
+        let ultimaGeneracion = 0;
+        const INTERVALO_GENERACION = 2000;
 
         // Controles
         document.addEventListener('keydown', (e) => {
@@ -387,10 +390,23 @@
                 }
             }
 
-            // Verificar si nivel completado
-            if (asteroides.length === 0) {
+            // Generar nuevos asteroides continuamente
+            const ahora = Date.now();
+            const asteroidesPequenos = asteroides.filter(a => a.tamaño < 15).length;
+            if (ahora - ultimaGeneracion > INTERVALO_GENERACION && asteroides.length < 3 + nivel) {
+                for (let i = 0; i < Math.max(1, Math.floor(nivel / 2)); i++) {
+                    asteroides.push(new Asteroide(
+                        Math.random() * canvas.width,
+                        Math.random() * 50 - 50,
+                        20 + Math.random() * 15
+                    ));
+                }
+                ultimaGeneracion = ahora;
+            }
+
+            // Nivel completado cuando se destruyen asteroides grandes
+            if (asteroides.length === 0 && nivel > 1) {
                 nivel++;
-                generarAsteroides();
             }
 
             // Verificar colisión nave-asteroide
