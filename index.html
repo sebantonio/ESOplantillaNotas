@@ -669,13 +669,13 @@
                         </div>
                     </a>
 
-                    <a class="action-card" href="visor-notas.html">
+                    <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalVerNotas').style.display='flex'">
                         <div class="action-icon">👁️</div>
                         <div>
                             <strong>Ver notas CE y Criterios</strong>
                             <span>Notas por evaluación, competencias específicas y criterios por alumno.</span>
                         </div>
-                    </a>
+                    </div>
 
                     <a class="action-card" href="visor-unidades.html">
                         <div class="action-icon">🏫</div>
@@ -1335,5 +1335,26 @@
             document.getElementById('btnImportar').disabled = false;
         }
     </script>
+
+<div id="modalVerNotas" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:14px;padding:32px 28px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+        <h2 style="margin:0 0 22px;font-size:1.1rem;color:#312e81;font-weight:800">Visualizar notas</h2>
+        <div style="display:flex;flex-direction:column;gap:12px">
+            <a href="visor-unidades.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
+                <span style="font-size:1.8rem;flex-shrink:0">📊</span>
+                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Notas de cada alumno organizadas por unidad didáctica</span></div>
+            </a>
+            <a href="visor-notas.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
+                <span style="font-size:1.8rem;flex-shrink:0">📋</span>
+                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por Evaluación</strong><span style="font-size:0.82rem;color:#6b7280">Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span></div>
+            </a>
+            <a href="informes.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
+                <span style="font-size:1.8rem;flex-shrink:0">📁</span>
+                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por CE y Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Competencias específicas y criterios desglosados por unidad</span></div>
+            </a>
+        </div>
+        <button onclick="document.getElementById('modalVerNotas').style.display='none'" style="display:block;margin-top:18px;width:100%;padding:10px;background:white;border:1px solid #d1d5db;border-radius:8px;color:#6b7280;font:inherit;font-size:0.88rem;cursor:pointer">Cerrar</button>
+    </div>
+</div>
 </body>
 </html>
