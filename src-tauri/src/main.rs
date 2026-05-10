@@ -942,58 +942,27 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         .map_err(|_| format!("No se encontró la hoja \"{unidad}\"."))?;
     let unidades = list_unit_sheets(path)?;
 
-    let nota_col: usize = 4; // columna E = nota final de la unidad
-    let name_col: usize = 3; // columna D
-    let first_row: usize = 4; // fila 5 en Excel
+    let name_col: usize = 3; // columna D = nombre alumno
+    let first_row: usize = 4; // fila 5 en Excel (0-indexed)
+    let header_row: usize = 2; // fila 3 en Excel (códigos CR)
 
-    // Detectar columnas de nota final por RA escaneando las primeras 4 filas.
-    // Las cabeceras pueden ser "NOTA RA", "RA 1", "RA1", etc.
-    let mut ra_cols: Vec<(i64, usize)> = Vec::new();
-    'outer: for scan_ri in 0..rows.len().min(4) {
-        let row = rows.get(scan_ri).cloned().unwrap_or_default();
-        for ci in (nota_col + 1)..row.len().min(110) {
-            let s = cell_val_str(row.get(ci).unwrap_or(&Value::Null));
-            let norm = normalize_plain(&s);
-            // Detecta "NOTA RA", "NOTA RA 1", "RA 1", "RA1", etc.
-            let is_ra = norm == "NOTA RA"
-                || norm.starts_with("NOTA RA ")
-                || norm.starts_with("RA ")
-                || (norm.starts_with("RA") && norm.len() >= 3
-                    && norm.chars().nth(2).map(|c| c.is_ascii_digit()).unwrap_or(false));
-            if is_ra && !ra_cols.iter().any(|(_, rc)| *rc == ci) {
-                // Extraer número del texto; si no hay, asignar posición secuencial
-                let digits: String = norm.chars()
-                    .skip_while(|c| !c.is_ascii_digit())
-                    .take_while(|c| c.is_ascii_digit())
-                    .collect();
-                let ra_num = digits.parse::<i64>().unwrap_or((ra_cols.len() + 1) as i64);
-                ra_cols.push((ra_num, ci));
+    // Detectar códigos CR en la fila de encabezados (idx 2 o 3)
+    let mut cr_cols: Vec<(String, usize)> = Vec::new();
+    for check_ri in 2..=3 {
+        if let Some(row) = rows.get(check_ri) {
+            for ci in 4..row.len().min(110) {
+                let s = cell_val_str(row.get(ci).unwrap_or(&Value::Null));
+                if is_cr_code(&s) {
+                    cr_cols.push((s.to_uppercase(), ci));
+                }
             }
         }
-        if !ra_cols.is_empty() { break 'outer; }
+        if !cr_cols.is_empty() { break; }
     }
-    ra_cols.sort_by_key(|(n, _)| *n);
 
-    let ra_cols_json: Vec<Value> = ra_cols.iter()
-        .map(|(n, ci)| json!({ "numero": n, "colIdx": ci, "label": format!("RA {n}") }))
+    let criterios_json: Vec<Value> = cr_cols.iter()
+        .map(|(code, ci)| json!({ "codigo": code, "colIdx": ci }))
         .collect();
-
-    // Detectar códigos CE entre columnas RA consecutivas.
-    // Los códigos CE están en la misma fila que "NOTA RA" (idx 2, fila 3 del Excel).
-    let ce_code_ri = first_row.saturating_sub(2);
-    let ce_code_row = rows.get(ce_code_ri).cloned().unwrap_or_default();
-    let ra_ce_cols: Vec<Vec<(String, usize)>> = ra_cols.iter().enumerate().map(|(i, (_, ra_ci))| {
-        let next_ra_ci = ra_cols.get(i + 1).map(|(_, c)| *c).unwrap_or(110);
-        let mut ces = Vec::new();
-        for ci in (ra_ci + 1)..next_ra_ci {
-            let s = cell_val_str(ce_code_row.get(ci).unwrap_or(&Value::Null));
-            let strim = s.trim().to_lowercase();
-            if strim.is_empty() { continue; }
-            let code = if strim.ends_with(')') { strim } else { format!("{strim})") };
-            if is_criterion_code(&code) { ces.push((code, ci)); }
-        }
-        ces
-    }).collect();
 
     let mut alumnos: Vec<Value> = Vec::new();
     let mut consecutive_empty = 0;
@@ -1011,27 +980,20 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
             || norm.contains("EVALUACION") || norm.contains("EVA")
             || norm.contains("PESO") || norm.contains("DATO")
             || norm.contains("SELECCIONA") || norm.contains("FINAL")
-            || norm.starts_with("U") && norm.len() <= 3
+            || (norm.starts_with("U") && norm.len() <= 3)
         { continue; }
-        let nota = cell_f64(&rows, ri, nota_col);
-        let display = cell_str(&rows, ri, nota_col);
-        let ra_notas: Vec<Value> = ra_cols.iter().enumerate().map(|(i, (ra_num, ci))| {
+
+        let cr_notas: Vec<Value> = cr_cols.iter().map(|(code, ci)| {
             let n = cell_f64(&rows, ri, *ci);
             let d = cell_str(&rows, ri, *ci);
-            let ce_notas: Vec<Value> = ra_ce_cols.get(i).map(|ces| {
-                ces.iter().map(|(code, ce_ci)| {
-                    let ce_n = cell_f64(&rows, ri, *ce_ci);
-                    let ce_d = cell_str(&rows, ri, *ce_ci);
-                    json!({ "codigo": code, "nota": ce_n, "display": ce_d })
-                }).collect()
-            }).unwrap_or_default();
-            json!({ "numero": ra_num, "nota": n, "display": d, "ceNotas": ce_notas })
+            json!({ "codigo": code, "colIdx": ci, "nota": n, "display": d })
         }).collect();
-        alumnos.push(json!({ "nombre": nombre, "nota": nota, "display": display, "raNotas": ra_notas }));
+
+        alumnos.push(json!({ "nombre": nombre, "rowIdx": ri, "crNotas": cr_notas }));
     }
 
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
-    Ok(json!({ "filePath": path, "fileName": file_name, "unidad": unidad, "unidades": unidades, "raColumnas": ra_cols_json, "alumnos": alumnos }))
+    Ok(json!({ "filePath": path, "fileName": file_name, "unidad": unidad, "unidades": unidades, "criterios": criterios_json, "alumnos": alumnos }))
 }
 
 #[tauri::command]
@@ -1495,6 +1457,40 @@ fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
     }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
 
     load_notas_actividad(&path_clone, &unidad_clone, &tipo_clone, actividad, None)
+}
+
+// ---------------------------------------------------------------------------
+// excel_save_notas_unidad — ESO
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
+    let path = require_selected_path()?;
+    let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
+    let notas = payload["notas"].as_array().ok_or("Falta notas")?.clone();
+
+    edit_workbook_sheets_xml(&path, vec![(&unidad, Box::new(move |xml: &str| {
+        let mut s = xml.to_string();
+        for nota_item in &notas {
+            if let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) {
+                if let Some(cr_notas) = nota_item["crNotas"].as_object() {
+                    for (_code, val_obj) in cr_notas {
+                        if let Some(ci) = val_obj.get("colIdx").and_then(|v| v.as_u64()).map(|n| n as usize) {
+                            if let Some(val) = val_obj.get("nota") {
+                                match normalize_grade(val) {
+                                    Some(n) => { s = set_xml_cell(&s, ri, ci, Some(&json!(n)), "number")?; }
+                                    None    => { s = set_xml_cell(&s, ri, ci, None, "number")?; }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(s)
+    }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+
+    load_notas_unidad(&path, &unidad)
 }
 
 // ---------------------------------------------------------------------------
@@ -2094,7 +2090,7 @@ fn main() {
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
-            excel_get_notas_unidad, excel_get_alumnos_informes, app_open_external,
+            excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template
         ])
