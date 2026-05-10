@@ -868,6 +868,7 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
             })
         })
         .unwrap_or_else(|| col_index("CB")); // columna CB fija en plantilla ESO
+    let final_cb_xml = read_col_values_from_xml(path, &sheet_name, col_index("CB"));
 
     let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
     // Fila de sub-etiquetas "Rec" está justo debajo de la fila de cabecera
@@ -912,7 +913,11 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
                 "recDisplay": rec_ci.map(|r| cell_str(&rows, row_idx, r)).unwrap_or_default(),
             })
         }).collect();
-        alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": cell_f64(&rows, row_idx, final_col), "finalDisplay": cell_str(&rows, row_idx, final_col), "rraa": rraa_vals, "criterios": crit_vals }));
+        let final_display = final_cb_xml.get(&row_idx).cloned()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| cell_str(&rows, row_idx, final_col));
+        let final_f64 = final_display.parse::<f64>().unwrap_or_else(|_| cell_f64(&rows, row_idx, final_col));
+        alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": final_f64, "finalDisplay": final_display, "rraa": rraa_vals, "criterios": crit_vals }));
     }
 
     // Filtrar RRAA y criterios sin ningún dato de alumno (columnas vacías = inactivos)
@@ -1289,6 +1294,37 @@ fn find_worksheet_path_in_zip(workbook_xml: &str, rels_xml: &str, sheet_name: &s
         }
     }
     Err(format!("No se encontro la hoja \"{sheet_name}\" dentro del libro."))
+}
+
+// Lee los valores cacheados de una columna directamente del XML del ZIP
+// (calamine puede no alcanzar columnas lejanas si el rango detectado es corto)
+fn read_col_values_from_xml(path: &str, sheet_name: &str, col: usize) -> HashMap<usize, String> {
+    let mut result = HashMap::new();
+    let input = match std::fs::read(path) { Ok(b) => b, Err(_) => return result };
+    let cursor = std::io::Cursor::new(input);
+    let mut zip = match zip::ZipArchive::new(cursor) { Ok(z) => z, Err(_) => return result };
+    let mut files: HashMap<String, Vec<u8>> = HashMap::new();
+    for i in 0..zip.len() {
+        let mut f = match zip.by_index(i) { Ok(f) => f, Err(_) => continue };
+        let name = f.name().to_string();
+        if !name.contains("workbook") && !name.contains("worksheet") { continue; }
+        let mut buf = Vec::new();
+        let _ = f.read_to_end(&mut buf);
+        files.insert(name, buf);
+    }
+    let wb = match files.get("xl/workbook.xml") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    let rels = match files.get("xl/_rels/workbook.xml.rels") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    let sheet_path = match find_worksheet_path_in_zip(&wb, &rels, sheet_name) { Ok(p) => p, Err(_) => return result };
+    let xml = match files.get(&sheet_path) { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    let col_str = col_name(col);
+    let pattern = format!(r#"<c\b[^>]*\br="{}(\d+)"[^>]*>[\s\S]*?<v>([^<]+)</v>"#, regex::escape(&col_str));
+    let re = match Regex::new(&pattern) { Ok(r) => r, Err(_) => return result };
+    for cap in re.captures_iter(&xml) {
+        let row_1: usize = match cap[1].parse() { Ok(n) => n, Err(_) => continue };
+        let val = cap[2].trim().to_string();
+        if !val.is_empty() { result.insert(row_1 - 1, val); }
+    }
+    result
 }
 
 fn assert_worksheet_xml_safe(sheet_xml: &str, sheet_name: &str) -> Result<(), String> {
