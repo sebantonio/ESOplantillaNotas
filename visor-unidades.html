@@ -41,6 +41,9 @@
         .grade-empty { background: #f3f4f6; color: #9ca3af; }
         .th-cr-disabled { background: #f3f4f6; color: #9ca3af; }
         .td-cr-disabled { background: #f9fafb; }
+        .th-ce { font-size: 0.78em; font-weight: 800; text-align: center; padding: 4px 6px; border-left: 3px solid #fff; }
+        .ce-sep th, .ce-sep td { border-left: 3px solid #c7d2fe; }
+        .ce-sep-body { border-left: 3px solid #c7d2fe !important; }
         .empty-msg { padding: 40px; text-align: center; color: #9ca3af; font-style: italic; }
         .pagination { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #fafbff; }
         .pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
@@ -153,34 +156,76 @@
             return;
         }
 
-        // Cabecera
-        let headRow = `<tr><th class="th-nombre">Alumno</th>`;
-        criterios.forEach(cr => {
+        // Agrupar CRs por CE (CR1.x → CE "1", CR2.x → CE "2")
+        function ceOf(codigo) {
+            const m = codigo.match(/^CR(\d+)\./i);
+            return m ? m[1] : codigo;
+        }
+        // Calcular grupos CE: [{ce, count, firstIdx}]
+        const ceGroups = [];
+        criterios.forEach((cr, i) => {
+            const ce = ceOf(cr.codigo);
+            if (!ceGroups.length || ceGroups[ceGroups.length - 1].ce !== ce) {
+                ceGroups.push({ ce, count: 1, firstIdx: i });
+            } else {
+                ceGroups[ceGroups.length - 1].count++;
+            }
+        });
+        // Paleta de colores por CE (cicla si hay más de 6)
+        const CE_COLORS = [
+            { bg: "#eef2ff", fg: "#3730a3", border: "#818cf8" },
+            { bg: "#fdf4ff", fg: "#7e22ce", border: "#c084fc" },
+            { bg: "#fff7ed", fg: "#9a3412", border: "#fb923c" },
+            { bg: "#f0fdf4", fg: "#166534", border: "#4ade80" },
+            { bg: "#fff1f2", fg: "#9f1239", border: "#fb7185" },
+            { bg: "#f0f9ff", fg: "#075985", border: "#38bdf8" },
+        ];
+        const ceColorMap = {};
+        ceGroups.forEach((g, i) => { ceColorMap[g.ce] = CE_COLORS[i % CE_COLORS.length]; });
+        const isFirstInCe = criterios.map((cr, i) => ceGroups.some(g => g.firstIdx === i));
+
+        // Fila 1: grupos CE con colspan
+        let headRow1 = `<tr><th class="th-nombre" rowspan="2">Alumno</th>`;
+        ceGroups.forEach(g => {
+            const c = ceColorMap[g.ce];
+            headRow1 += `<th colspan="${g.count}" class="th-ce" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">CE${g.ce}</th>`;
+        });
+        headRow1 += `</tr>`;
+
+        // Fila 2: columnas CR individuales
+        let headRow2 = `<tr>`;
+        criterios.forEach((cr, i) => {
             const pond = cr.ponderacion || 0;
             const tieneP = pond > 0;
+            const ce = ceOf(cr.codigo);
+            const c = ceColorMap[ce];
             const pctTxt = tieneP
                 ? `<div style="font-size:0.85em;color:#6366f1;font-weight:600;margin-top:2px">${Math.round(pond)}%</div>`
                 : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
-            const cls = tieneP ? "" : " th-cr-disabled";
-            headRow += `<th style="width:80px;font-size:0.72em;padding:6px 4px;" class="${cls}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+            const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
+            const bgStyle = tieneP ? "" : "background:#f3f4f6;color:#9ca3af;";
+            headRow2 += `<th style="width:80px;font-size:0.72em;padding:6px 4px;${sepStyle}${bgStyle}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
         });
-        headRow += `</tr>`;
-        notasHead.innerHTML = headRow;
+        headRow2 += `</tr>`;
+        notasHead.innerHTML = headRow1 + headRow2;
 
         // Filas de la página actual
         let bodyHtml = "";
         alumnos.forEach(alumno => {
             bodyHtml += `<tr><td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
-            criterios.forEach(cr => {
+            criterios.forEach((cr, i) => {
                 const tieneP = (cr.ponderacion || 0) > 0;
+                const ce = ceOf(cr.codigo);
+                const c = ceColorMap[ce];
                 const crNota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);
                 const display = crNota ? crNota.display : "";
                 const cls = gradeClass(display);
                 const val = (display && display !== "") ? escapeHtml(display) : "—";
+                const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
                 if (tieneP) {
-                    bodyHtml += `<td><span class="grade ${cls}">${val}</span></td>`;
+                    bodyHtml += `<td style="${sepStyle}"><span class="grade ${cls}">${val}</span></td>`;
                 } else {
-                    bodyHtml += `<td class="td-cr-disabled"><span class="grade grade-empty">—</span></td>`;
+                    bodyHtml += `<td style="background:#f9fafb;${sepStyle}"><span class="grade grade-empty">—</span></td>`;
                 }
             });
             bodyHtml += `</tr>`;
