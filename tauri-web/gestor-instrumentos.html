@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Instrumentos de Evaluación</title>
+    <title>Gestor de Instrumentos de EvaluaciÃ³n</title>
     <script src="app-bridge.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -201,37 +201,37 @@
     <div id="saveStatus" class="save-status" style="display:none;"></div>
 
     <div class="container">
-        <nav class="page-nav" aria-label="Navegación">
+        <nav class="page-nav" aria-label="NavegaciÃ³n">
             <div class="nav-group">
-                <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
-                <a class="nav-link" href="index.html">⌂ Inicio</a>
+                <button class="nav-button" type="button" onclick="window.history.back()">â† AtrÃ¡s</button>
+                <a class="nav-link" href="index.html">âŒ‚ Inicio</a>
             </div>
         </nav>
 
         <div class="header">
-            <h1>📊 Instrumentos de Evaluación</h1>
-            <p>Configuración de los instrumentos usados en la hoja PESOS</p>
+            <h1>ðŸ“Š Instrumentos de EvaluaciÃ³n</h1>
+            <p>ConfiguraciÃ³n de los instrumentos usados en la hoja PESOS</p>
         </div>
 
         <div class="content">
             <div id="message" class="message"></div>
 
             <div class="info-box">
-                <strong>¿Qué son los instrumentos de evaluación?</strong>
-                Los instrumentos definen cómo se recoge la evidencia de cada criterio: PE (Pruebas escritas),
-                TD (Tareas diarias), TI (Trabajo de investigación), TG (Trabajo en grupo), L (Laboratorio).
-                Estos códigos y nombres se almacenan en la hoja DATOS, columnas N y O (filas 5–9).
+                <strong>Â¿QuÃ© son los instrumentos de evaluaciÃ³n?</strong>
+                Los instrumentos definen cÃ³mo se recoge la evidencia de cada criterio: PE (Pruebas escritas),
+                TD (Tareas diarias), TI (Trabajo de investigaciÃ³n), TG (Trabajo en grupo), L (Laboratorio).
+                Estos cÃ³digos y nombres se almacenan en la hoja DATOS, columnas N y O (filas 5â€“9).
             </div>
 
             <div class="section">
-                <h2>Instrumentos (máx. 5)</h2>
+                <h2>Instrumentos (mÃ¡x. 10)</h2>
                 <div class="table-container">
                     <table id="instrumentosTable">
                         <thead>
                             <tr>
-                                <th class="num-cell">Nº</th>
-                                <th class="codigo-cell">Código</th>
-                                <th>Nombre / Descripción</th>
+                                <th class="num-cell">NÂº</th>
+                                <th class="codigo-cell">CÃ³digo</th>
+                                <th>Nombre / DescripciÃ³n</th>
                             </tr>
                         </thead>
                         <tbody id="instrumentosBody"></tbody>
@@ -240,8 +240,8 @@
             </div>
 
             <div class="actions">
-                <button onclick="guardarInstrumentos()">💾 Guardar Cambios</button>
-                <button class="secondary" onclick="cargarInstrumentos()">🔄 Recargar desde Excel</button>
+                <button onclick="guardarInstrumentos()">ðŸ’¾ Guardar Cambios</button>
+                <button class="secondary" onclick="cargarInstrumentos()">ðŸ”„ Recargar desde Excel</button>
             </div>
 
             <div class="loading" id="loading">
@@ -252,7 +252,7 @@
     </div>
 
     <script>
-        const MAX_INSTRUMENTOS = 5;
+        const MAX_INSTRUMENTOS = 10;
         let instrumentosActuales = [];
         const isElectronMode = Boolean(window.electronExcel);
 
@@ -292,7 +292,7 @@
                 instrumentosActuales = [
                     { codigo: 'PE', nombre: 'Pruebas escritas' },
                     { codigo: 'TD', nombre: 'Tareas diarias' },
-                    { codigo: 'TI', nombre: 'Trabajo de investigación' },
+                    { codigo: 'TI', nombre: 'Trabajo de investigaciÃ³n' },
                     { codigo: 'TG', nombre: 'Trabajo en grupo' },
                     { codigo: 'L',  nombre: 'Laboratorio' }
                 ];
@@ -305,7 +305,7 @@
             try {
                 const result = await window.electronExcel.getInstrumentos();
                 if (!result) {
-                    mostrarMensaje('No se encontró un archivo Excel activo.', 'error');
+                    mostrarMensaje('No se encontrÃ³ un archivo Excel activo.', 'error');
                     mostrarLoading(false);
                     return;
                 }
@@ -333,10 +333,10 @@
                     instrumentosActuales = result.instrumentos || instrumentosActuales;
                     renderTabla();
                 }
-                mostrarEstadoGuardado('saved', '✅ Guardado');
-                mostrarMensaje('✅ Instrumentos guardados en el Excel.', 'success');
+                mostrarEstadoGuardado('saved', 'âœ… Guardado');
+                mostrarMensaje('âœ… Instrumentos guardados en el Excel.', 'success');
             } catch (err) {
-                mostrarEstadoGuardado('error', '❌ Error al guardar');
+                mostrarEstadoGuardado('error', 'âŒ Error al guardar');
                 mostrarMensaje('Error al guardar: ' + err.message, 'error');
             }
             mostrarLoading(false);
@@ -382,8 +382,9 @@
                 .replace(/"/g, '&quot;');
         }
 
-        // Carga automática al abrir
+        // Carga automÃ¡tica al abrir
         window.addEventListener('DOMContentLoaded', cargarInstrumentos);
     </script>
 </body>
 </html>
+
