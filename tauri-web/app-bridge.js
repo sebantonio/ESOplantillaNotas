@@ -14,6 +14,7 @@
   window.electronExcel = {
     selectFile: () => invoke("excel_select_file"),
     getSelectedFile: () => invoke("excel_get_selected_file"),
+    getAlumnos: () => invoke("excel_get_alumnos"),
     saveAlumnos: (alumnos) => invoke("excel_save_alumnos", { alumnos }),
     getUnidades: () => invoke("excel_get_unidades"),
     saveUnidades: (unidades) => invoke("excel_save_unidades", { unidades }),
