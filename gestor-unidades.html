@@ -255,7 +255,7 @@
 
         .form-grid {
             display: grid;
-            grid-template-columns: 120px minmax(260px, 1fr) 150px 110px auto;
+            grid-template-columns: 120px minmax(260px, 1fr) 150px auto;
             gap: 12px;
             align-items: end;
         }
@@ -406,7 +406,6 @@
                                     <th style="width: 90px;">Nº</th>
                                     <th>Unidad</th>
                                     <th style="width: 150px;">Evaluación</th>
-                                    <th style="width: 110px;">Horas</th>
                                     <th style="width: 80px;">Acción</th>
                                 </tr>
                             </thead>
@@ -425,7 +424,6 @@
                             <option value="2ª">2ª</option>
                             <option value="3ª">3ª</option>
                         </select>
-                        <input type="number" id="unidadHoras" placeholder="Horas" min="0" step="1" />
                         <button type="button" onclick="agregarUnidad()">Añadir</button>
                     </div>
                 </div>
@@ -571,11 +569,10 @@
                 const unidad = {
                     codigo: String(row[9] || `U${idx + 1}`),
                     nombre: String(row[10] || ''),
-                    evaluacion: String(row[11] || ''),
-                    horas: row[12] === undefined || row[12] === null ? '' : String(row[12])
+                    evaluacion: String(row[11] || '')
                 };
 
-                if (unidad.codigo || unidad.nombre || unidad.evaluacion || unidad.horas) {
+                if (unidad.codigo || unidad.nombre || unidad.evaluacion) {
                     unidades.push(unidad);
                 }
             }
@@ -597,7 +594,6 @@
                             <option value="3ª" ${unidad.evaluacion === '3ª' ? 'selected' : ''}>3ª</option>
                         </select>
                     </td>
-                    <td><input type="number" value="${escaparHtml(unidad.horas)}" min="0" step="1" onchange="actualizarUnidad(${idx}, 'horas', this.value)" /></td>
                     <td><button class="delete" type="button" onclick="eliminarUnidad(${idx})">🗑️</button></td>
                 </tr>
             `).join('');
@@ -613,7 +609,6 @@
             const codigo = document.getElementById('unidadCodigo').value.trim();
             const nombre = document.getElementById('unidadNombre').value.trim();
             const evaluacion = document.getElementById('unidadEvaluacion').value;
-            const horas = document.getElementById('unidadHoras').value.trim();
 
             if (!codigo || !nombre) {
                 mostrarMensaje('Indica al menos el número y el nombre de la unidad.', 'error');
@@ -625,9 +620,8 @@
                 return;
             }
 
-            unidadesActuales.push({ codigo, nombre, evaluacion, horas });
+            unidadesActuales.push({ codigo, nombre, evaluacion });
             document.getElementById('unidadNombre').value = '';
-            document.getElementById('unidadHoras').value = '';
             mostrarTablaUnidades();
             actualizarStats();
             prepararCodigoSiguiente();
@@ -730,13 +724,12 @@
                 throw new Error('No se encontró la tabla principal de unidades en DATOS.');
             }
 
-            const normalizadas = unidades.slice(0, 16);
-            for (let idx = 0; idx < 16; idx += 1) {
-                const unidad = normalizadas[idx] || { codigo: `U${idx + 1}`, nombre: '', evaluacion: '', horas: '' };
-                ponerCelda(sheet, start + idx, 8, unidad.codigo || `U${idx + 1}`);
-                ponerCelda(sheet, start + idx, 9, unidad.nombre || '');
-                ponerCelda(sheet, start + idx, 10, unidad.evaluacion || '');
-                ponerCelda(sheet, start + idx, 11, unidad.horas || '');
+            const normalizadas = unidades.slice(0, 15);
+            for (let idx = 0; idx < 15; idx += 1) {
+                const unidad = normalizadas[idx] || { codigo: `U${idx + 1}`, nombre: '', evaluacion: '' };
+                ponerCelda(sheet, start + idx, 9, unidad.codigo || `U${idx + 1}`);
+                ponerCelda(sheet, start + idx, 10, unidad.nombre || '');
+                ponerCelda(sheet, start + idx, 11, unidad.evaluacion || '');
             }
 
             sincronizarBloquesEvaluacion(sheet, rows, normalizadas);

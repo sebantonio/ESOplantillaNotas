@@ -300,8 +300,7 @@ fn load_unidades(path: &str) -> Result<Value, String> {
         let codigo = { let s = cell_str(&rows, ri, 9); if s.is_empty() { format!("U{}", idx + 1) } else { s } };
         let nombre = cell_str(&rows, ri, 10);
         let evaluacion = cell_str(&rows, ri, 11);
-        let horas = cell_str(&rows, ri, 12);
-        unidades.push(json!({ "codigo": codigo, "nombre": nombre, "evaluacion": evaluacion, "horas": horas }));
+        unidades.push(json!({ "codigo": codigo, "nombre": nombre, "evaluacion": evaluacion }));
     }
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
     Ok(json!({ "filePath": path, "fileName": file_name, "unidades": unidades }))
@@ -1266,7 +1265,7 @@ fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
         for idx in 0..15 {
             let u = unidades_owned.get(idx);
             let ri = start + idx;
-            // col J(9)=código, K(10)=nombre, L(11)=evaluación, M(12)=horas
+            // col J(9)=código, K(10)=nombre, L(11)=evaluación
             let codigo = u.and_then(|v| v["codigo"].as_str()).filter(|c| !c.is_empty()).map(|c| c.to_string()).unwrap_or_else(|| format!("U{}", idx + 1));
             s = set_xml_cell(&s, ri, 9, Some(&json!(codigo)), "text")?;
             let nombre = u.and_then(|v| v["nombre"].as_str()).unwrap_or("");
@@ -1275,13 +1274,6 @@ fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
             let eval = u.and_then(|v| v["evaluacion"].as_str()).unwrap_or("");
             let eval_val = json!(eval);
             s = set_xml_cell(&s, ri, 11, if eval.is_empty() { None } else { Some(&eval_val) }, "text")?;
-            let horas_str = u.and_then(|v| v["horas"].as_str()).unwrap_or("");
-            if horas_str.is_empty() {
-                s = set_xml_cell(&s, ri, 12, None, "number")?;
-            } else {
-                let h: f64 = horas_str.parse().unwrap_or(0.0);
-                s = set_xml_cell(&s, ri, 12, Some(&json!(h)), "number")?;
-            }
         }
         Ok(s)
     }))])
@@ -1903,7 +1895,7 @@ fn load_instrumentos(path: &str) -> Result<Value, String> {
     let rows = read_sheet_rows(path, "DATOS")?;
     let mut instrumentos: Vec<Value> = Vec::new();
     // DATOS filas 5-9 (0-indexed 4-8): col N(13)=código, O(14)=nombre
-    for ri in 4..=8usize {
+    for ri in 4..=13usize {
         let codigo = cell_str(&rows, ri, 13);
         let nombre = cell_str(&rows, ri, 14);
         if codigo.is_empty() && nombre.is_empty() { continue; }
@@ -1917,7 +1909,7 @@ fn save_instrumentos_to_file(path: &str, instrumentos: &[Value]) -> Result<(), S
     let instrumentos_owned = instrumentos.to_vec();
     edit_workbook_sheets_xml(path, vec![("DATOS", Box::new(move |xml: &str| {
         let mut s = xml.to_string();
-        for slot in 0..5usize {
+        for slot in 0..10usize {
             let ri = 4 + slot;
             if let Some(inst) = instrumentos_owned.get(slot) {
                 let codigo = inst["codigo"].as_str().unwrap_or("");
