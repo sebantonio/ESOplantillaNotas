@@ -658,6 +658,7 @@
                     <button class="tab-btn active" onclick="cambiarTab('rraa')">🎯 Comp. Específicas</button>
                     <button class="tab-btn" onclick="cambiarTab('criterios')">✓ Criterios</button>
                     <button class="tab-btn" onclick="cambiarTab('ponderaciones')">⚖ Ponderación por unidad</button>
+                    <button class="tab-btn" onclick="cambiarTab('resumen')">📊 Resumen por CE</button>
                 </div>
 
                 <!-- TAB: RRAA -->
@@ -781,6 +782,24 @@
                                     </tr>
                                 </thead>
                                 <tbody id="ponderacionesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: RESUMEN POR CE -->
+                <div id="tab-resumen" class="tab-content">
+                    <div class="section">
+                        <h2>📊 Resumen por CE</h2>
+                        <div style="margin-bottom:14px;">
+                            <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
+                            <select id="ceResumenSelect" onchange="seleccionarCeResumen(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
+                        </div>
+                        <div class="table-container" style="overflow-x:auto;">
+                            <table id="resumenTable" style="min-width:600px; border-collapse:collapse; width:100%;">
+                                <thead id="resumenTableHead"></thead>
+                                <tbody id="resumenTableBody"></tbody>
+                                <tfoot id="resumenTableFoot"></tfoot>
                             </table>
                         </div>
                     </div>
@@ -1541,6 +1560,115 @@
         }
 
         // ===== CAMBIAR TAB =====
+        // ===== TAB RESUMEN POR CE =====
+        let ceResumenActivo = null;
+
+        function actualizarSelectCeResumen() {
+            const sel = document.getElementById('ceResumenSelect');
+            if (!sel) return;
+            sel.innerHTML = raaaActuales.map(ce =>
+                `<option value="${ce.numero}" ${Number(ce.numero) === Number(ceResumenActivo) ? 'selected' : ''}>CE ${ce.numero} - ${escaparHtml(ce.descripcion)}</option>`
+            ).join('');
+            if (!ceResumenActivo && raaaActuales.length > 0) ceResumenActivo = raaaActuales[0].numero;
+        }
+
+        function seleccionarCeResumen(val) {
+            ceResumenActivo = Number(val);
+            mostrarTablaResumen();
+        }
+
+        function mostrarTablaResumen() {
+            const thead = document.getElementById('resumenTableHead');
+            const tbody = document.getElementById('resumenTableBody');
+            const tfoot = document.getElementById('resumenTableFoot');
+            if (!thead || !tbody || !tfoot) return;
+
+            const ce = raaaActuales.find(r => Number(r.numero) === Number(ceResumenActivo));
+            if (!ce) { thead.innerHTML = tbody.innerHTML = tfoot.innerHTML = ''; return; }
+
+            const crs = criteriosActuales.filter(c =>
+                Number(c.raNumero) === Number(ceResumenActivo) &&
+                String(c.texto || '').trim() !== ''
+            );
+            const unidades = ponderacionesUnidad.filter(u => String(u.nombre || '').trim() !== '' && u.nombre !== '0');
+
+            const thStyle = 'background:#6366f1;color:white;padding:8px 10px;text-align:center;font-size:0.88em;white-space:nowrap;';
+            const thLStyle = 'background:#6366f1;color:white;padding:8px 12px;text-align:left;font-size:0.88em;';
+
+            // Fila 1: CE header
+            thead.innerHTML = `
+                <tr>
+                    <th colspan="2" style="${thLStyle}">CE ${ce.numero} — ${escaparHtml(ce.descripcion)}</th>
+                    ${crs.map(cr => `<th style="${thStyle}" title="${escaparHtml(cr.texto)}">${escaparHtml(cr.codigo)}</th>`).join('')}
+                </tr>
+                <tr style="background:#ede9fe;">
+                    <th style="padding:5px 12px;text-align:left;font-size:0.8em;color:#4338ca;font-weight:600;">Unidad</th>
+                    <th style="padding:5px 10px;text-align:center;font-size:0.8em;color:#4338ca;font-weight:600;">Inst. ev.</th>
+                    ${crs.map(cr => {
+                        const pct = cr.ponderacionCR > 0 ? `<div style="font-size:0.75em;color:#7c3aed;">${(cr.ponderacionCR*100).toFixed(1)}%</div>` : '';
+                        return `<th style="padding:5px 10px;text-align:center;font-size:0.8em;color:#4338ca;font-weight:600;">${pct}</th>`;
+                    }).join('')}
+                </tr>`;
+
+            // Filas de unidades
+            const instrOpts = '<option value="">—</option>' + instrumentosDisponibles.map(i =>
+                `<option value="${i.codigo}">${i.codigo}</option>`
+            ).join('');
+            const tdStyle = 'border-bottom:1px solid #e5e7eb;padding:6px 8px;text-align:center;';
+            tbody.innerHTML = unidades.map(u => {
+                const instrActual = (u.instrPorCe && u.instrPorCe[String(ceResumenActivo)]) || '';
+                const instrCodigo = typeof instrActual === 'object' ? instrActual.codigo : instrActual;
+                const optsConSelected = instrOpts.replace(
+                    `value="${instrCodigo}"`, `value="${instrCodigo}" selected`
+                );
+                return `<tr>
+                    <td style="${tdStyle} text-align:left;font-weight:500;">${escaparHtml(u.nombre)}</td>
+                    <td style="${tdStyle}">
+                        <select onchange="cambiarInstrumentoResumen(${u.rowIdx},${ce.instrColIdx||0},this.value)"
+                            style="padding:3px 6px;border:1px solid #c7d2fe;border-radius:5px;font-size:0.88em;background:#f8f9ff;">
+                            ${optsConSelected}
+                        </select>
+                    </td>
+                    ${crs.map(cr => {
+                        const val = (u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0;
+                        return `<td style="${tdStyle}">
+                            <input type="number" value="${val}" min="0" step="1"
+                                style="width:60px;text-align:center;border:1px solid #c7d2fe;border-radius:5px;padding:3px;"
+                                onchange="actualizarPonderacionUnidad(${u.rowIdx},${cr.colIdx},'ponderacion',this.value)" />
+                        </td>`;
+                    }).join('')}
+                </tr>`;
+            }).join('');
+
+            // Pie: totales
+            const footTdStyle = 'padding:6px 8px;text-align:center;font-weight:600;font-size:0.88em;background:#f3f4f6;';
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="2" style="${footTdStyle} text-align:left;color:#374151;">Ponderación total del criterio</td>
+                    ${crs.map(cr => {
+                        const total = unidades.reduce((s,u) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
+                        return `<td style="${footTdStyle}">${total}</td>`;
+                    }).join('')}
+                </tr>
+                <tr>
+                    <td colspan="2" style="${footTdStyle} text-align:left;color:#6366f1;">% peso del criterio</td>
+                    ${crs.map(cr => `<td style="${footTdStyle} color:#6366f1;">${cr.ponderacionCR > 0 ? (cr.ponderacionCR*100).toFixed(1)+'%' : '—'}</td>`).join('')}
+                </tr>
+                <tr>
+                    <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:#4338ca;font-size:0.95em;">
+                        Peso total CE ${ce.numero}: <strong>${ce.ponderacionTotal > 0 ? (ce.ponderacionTotal*100).toFixed(1)+'%' : '—'}</strong>
+                    </td>
+                </tr>`;
+        }
+
+        function cambiarInstrumentoResumen(rowIdx, instrColIdx, codigo) {
+            const unidad = ponderacionesUnidad.find(u => Number(u.rowIdx) === Number(rowIdx));
+            if (!unidad) return;
+            if (!unidad.instrPorCe) unidad.instrPorCe = {};
+            unidad.instrPorCe[String(ceResumenActivo)] = { codigo, colIdx: instrColIdx };
+            activarAutoguardado();
+        }
+
         function cambiarTab(tab) {
             // Ocultar todos los tabs
             document.querySelectorAll('.tab-content').forEach(el => {
@@ -1563,6 +1691,9 @@
             } else if (tab === 'ponderaciones') {
                 actualizarOpcionesPonderacion();
                 mostrarTablaPonderacionesUnidad();
+            } else if (tab === 'resumen') {
+                actualizarSelectCeResumen();
+                mostrarTablaResumen();
             }
         }
 
