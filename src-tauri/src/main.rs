@@ -1004,6 +1004,37 @@ fn excel_save_eval_rec(payload: Value) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn excel_save_eval_recs_batch(payload: Value) -> Result<(), String> {
+    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
+    let path = match get_selected_path() { Some(p) => p, None => return Err("No hay archivo Excel seleccionado.".to_string()) };
+    let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
+    let changes = payload["changes"].as_array().ok_or("changes requerido")?;
+    if changes.is_empty() { return Ok(()); }
+    let names = sheet_names(&path)?;
+    let sheet_name = find_evaluation_sheet_name(&names, &evaluacion)
+        .ok_or_else(|| format!("No se encontró la hoja de la {} evaluación.", evaluacion))?;
+    let cells: Vec<(usize, usize, String)> = changes.iter().filter_map(|c| {
+        let row = c["rowIdx"].as_u64()? as usize;
+        let col = c["colIdx"].as_u64()? as usize;
+        let val = c["value"].as_str().unwrap_or("").trim().to_string();
+        Some((row, col, val))
+    }).collect();
+    edit_workbook_sheets_xml(&path, vec![(&sheet_name, Box::new(move |xml: &str| {
+        let mut result = xml.to_string();
+        for (row_idx, col_idx, value_raw) in &cells {
+            result = if value_raw.is_empty() {
+                set_xml_cell(&result, *row_idx, *col_idx, None, "number")?
+            } else {
+                let n: f64 = value_raw.replace(",", ".").parse()
+                    .map_err(|_| format!("Valor no válido: {}", value_raw))?;
+                set_xml_cell(&result, *row_idx, *col_idx, Some(&json!(n)), "number")?
+            };
+        }
+        Ok(result)
+    }))])
+}
+
+#[tauri::command]
 fn excel_get_notas_evaluacion_alumno(payload: Value) -> Result<Value, String> {
     if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
     let path = match get_selected_path() { Some(p) => p, None => return Ok(Value::Null) };
@@ -2232,7 +2263,7 @@ fn main() {
             excel_save_unidades, excel_get_rraa_criterios, excel_save_rraa_criterios,
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
-            excel_get_notas_evaluacion, excel_save_eval_rec, excel_get_notas_evaluacion_alumno,
+            excel_get_notas_evaluacion, excel_save_eval_rec, excel_save_eval_recs_batch, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template

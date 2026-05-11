@@ -205,39 +205,61 @@
         return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
     }
 
-    async function saveRec(rowIdx, colIdx, value) {
+    let savingAll = false;
+    let autoSaveTimer = null;
+    let reloadTimer = null;
+
+    async function reloadState() {
         try {
-            await window.electronExcel.saveEvalRec({
-                evaluacion: evalSelect.value,
-                rowIdx, colIdx, value,
-            });
-        } catch (e) {
-            showMessage("Error al guardar Rec: " + (e.message || e), "error");
-        }
+            const data = await window.electronExcel.getNotasEvaluacion({ evaluacion: evalSelect.value });
+            if (data) { currentState = data; renderStats(); renderTable(); }
+        } catch {}
+    }
+
+    function scheduleReload() {
+        if (reloadTimer) clearTimeout(reloadTimer);
+        reloadTimer = setTimeout(reloadState, 400);
     }
 
     function saveRecFromInput(input) {
+        if (savingAll) return;
         const rowIdx = parseInt(input.dataset.row, 10);
         const colIdx = parseInt(input.dataset.col, 10);
-        saveRec(rowIdx, colIdx, input.value.trim());
+        if (isNaN(rowIdx) || isNaN(colIdx)) return;
+        window.electronExcel.saveEvalRec({
+            evaluacion: evalSelect.value,
+            rowIdx, colIdx, value: input.value.trim(),
+        }).then(() => scheduleReload()).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
     }
 
-    let autoSaveTimer = null;
-
     async function saveAllRec() {
+        if (savingAll) return;
         const inputs = document.querySelectorAll('.rec-input');
         if (!inputs.length) return;
+        const changes = [];
+        for (const inp of inputs) {
+            const rowIdx = parseInt(inp.dataset.row, 10);
+            const colIdx = parseInt(inp.dataset.col, 10);
+            if (!isNaN(rowIdx) && !isNaN(colIdx)) {
+                changes.push({ rowIdx, colIdx, value: inp.value.trim() });
+            }
+        }
+        if (!changes.length) return;
+        savingAll = true;
         const btn = document.getElementById('btnSave');
         const status = document.getElementById('saveStatus');
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
         try {
-            for (const inp of inputs) {
-                await saveRec(parseInt(inp.dataset.row, 10), parseInt(inp.dataset.col, 10), inp.value.trim());
-            }
+            await window.electronExcel.saveEvalRecsBatch({
+                evaluacion: evalSelect.value,
+                changes,
+            });
             if (status) status.textContent = 'Guardado ' + new Date().toLocaleTimeString();
+            await reloadState();
         } catch(e) {
             showMessage('Error al guardar: ' + (e.message || e), 'error');
         } finally {
+            savingAll = false;
             if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
         }
     }
