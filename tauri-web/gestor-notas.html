@@ -1052,6 +1052,22 @@
                 }
             });
 
+            notasBody.addEventListener("keydown", (e) => {
+                const inp = e.target;
+                if (!inp.classList.contains("nota-cr") || inp.disabled) return;
+                const inputs = Array.from(notasBody.querySelectorAll(".nota-cr:not([disabled])"));
+                const i = inputs.indexOf(inp);
+                if (i === -1) return;
+                const cols = notasBody.querySelector("tr")?.querySelectorAll(".nota-cr:not([disabled])").length || 1;
+                let delta = null;
+                if (e.key === "ArrowDown" || e.key === "Enter") delta = cols;
+                else if (e.key === "ArrowUp") delta = -cols;
+                else if (e.key === "ArrowRight" && inp.selectionStart === inp.value.length) delta = 1;
+                else if (e.key === "ArrowLeft" && inp.selectionStart === 0) delta = -1;
+                if (delta === null) return;
+                e.preventDefault();
+                inputs[i + delta]?.focus();
+            });
 
             loadNotas();
         });

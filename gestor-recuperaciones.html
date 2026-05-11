@@ -428,7 +428,7 @@
                     bodyHtml += `<td style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
                     if (Number(cr.recColIdx) >= 0) {
                         const recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
-                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input" type="text" placeholder="—" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)" onkeydown="if(event.key==='Enter')this.blur()"></td>`;
+                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input" type="text" placeholder="—" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)"></td>`;
                     }
                 });
             });
@@ -491,6 +491,23 @@
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
         searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
         alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
+        notasBody.addEventListener("keydown", (e) => {
+            const inp = e.target;
+            if (!inp.classList.contains("rec-input")) return;
+            const inputs = Array.from(notasBody.querySelectorAll(".rec-input"));
+            const i = inputs.indexOf(inp);
+            if (i === -1) return;
+            const cols = notasBody.querySelector("tr")?.querySelectorAll(".rec-input").length || 1;
+            let delta = null;
+            if (e.key === "Enter" || e.key === "ArrowDown") delta = cols;
+            else if (e.key === "ArrowUp") delta = -cols;
+            else if (e.key === "ArrowRight" && inp.selectionStart === inp.value.length) delta = 1;
+            else if (e.key === "ArrowLeft" && inp.selectionStart === 0) delta = -1;
+            if (delta === null) return;
+            e.preventDefault();
+            if (e.key === "Enter") inp.blur();
+            inputs[i + delta]?.focus();
+        });
         loadEvaluacion("1");
     });
 </script>
