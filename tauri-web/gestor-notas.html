@@ -788,6 +788,11 @@
         }
         .modal-close:hover { border-color: #6366f1; color: #4338ca; }
 
+        .col-sticky-n    { position: sticky; left: 0;    z-index: 2; background: white; }
+        .col-sticky-name { position: sticky; left: 40px; z-index: 2; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
+        thead .col-sticky-n, thead .col-sticky-name { z-index: 3; background: #eef2ff; }
+        tr:hover .col-sticky-n, tr:hover .col-sticky-name { background: #f8f9ff; }
+
         .pagination-bar {
             display: flex;
             align-items: center;
@@ -1215,6 +1220,31 @@
             renderTable();
         }
 
+        const CE_COLORS = [
+            { bg: '#eef2ff', border: '#818cf8', header: '#dde3fb', fg: '#3730a3' },
+            { bg: '#f0fdf4', border: '#4ade80', header: '#bbf7d0', fg: '#166534' },
+            { bg: '#fff7ed', border: '#fb923c', header: '#fed7aa', fg: '#9a3412' },
+            { bg: '#fdf4ff', border: '#c084fc', header: '#f5d0fe', fg: '#7e22ce' },
+            { bg: '#f0f9ff', border: '#38bdf8', header: '#bae6fd', fg: '#075985' },
+            { bg: '#fefce8', border: '#facc15', header: '#fef08a', fg: '#854d0e' },
+        ];
+
+        function getCeNum(codigo) {
+            const m = /^CR(\d+)\./i.exec(codigo);
+            return m ? m[1] : '?';
+        }
+
+        function buildCeGroups(criterios) {
+            const groups = [];
+            const map = {};
+            criterios.forEach(cr => {
+                const key = getCeNum(cr.codigo);
+                if (!map[key]) { map[key] = { key, criterios: [] }; groups.push(map[key]); }
+                map[key].criterios.push(cr);
+            });
+            return groups;
+        }
+
         function renderTable() {
             if (!currentNotes.length) {
                 notasBody.innerHTML = '<tr><td class="empty" colspan="999">No hay alumnos en esta unidad.</td></tr>';
@@ -1223,20 +1253,44 @@
             }
 
             const criterios = currentState.criterios || [];
-            const headers = [
-                '<th style="width:40px;text-align:center;font-size:0.8em;padding:8px 4px">N</th>',
-                '<th style="width:200px;min-width:160px;text-align:left;font-size:0.82em;padding:8px 10px">Alumno</th>'
-            ];
-            criterios.forEach((cr) => {
-                const pond = cr.ponderacion || 0;
-                const tieneP = pond > 0;
-                const pctTxt = tieneP ? `<div style="font-size:0.85em;color:#6366f1;font-weight:600;margin-top:2px">${Math.round(pond)}%</div>` : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
-                const bgH = tieneP ? '' : 'background:#f3f4f6;color:#9ca3af;';
-                headers.push(`<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;${bgH}">${escapeHtml(cr.codigo)}${pctTxt}</th>`);
-            });
+            const ceGroups = buildCeGroups(criterios);
 
-            const thead = document.querySelector("table thead tr");
-            if (thead) thead.innerHTML = headers.join('');
+            // Cabecera: 2 filas — fila1: N(rs2) + Alumno(rs2) + CE groups; fila2: CRs
+            let head1 = '<tr>';
+            head1 += '<th rowspan="2" class="col-sticky-n" style="width:40px;text-align:center;font-size:0.8em;padding:8px 4px;vertical-align:middle">N</th>';
+            head1 += '<th rowspan="2" class="col-sticky-name" style="width:200px;min-width:160px;text-align:left;font-size:0.82em;padding:8px 10px;vertical-align:middle">Alumno</th>';
+            ceGroups.forEach((g, gi) => {
+                const c = CE_COLORS[gi % CE_COLORS.length];
+                head1 += `<th colspan="${g.criterios.length}" style="text-align:center;font-size:0.78em;font-weight:800;padding:5px 6px;background:${c.header};color:${c.fg};border-left:3px solid ${c.border}">CE ${g.key}</th>`;
+            });
+            head1 += '</tr>';
+
+            let head2 = '<tr>';
+            ceGroups.forEach((g, gi) => {
+                const c = CE_COLORS[gi % CE_COLORS.length];
+                g.criterios.forEach((cr, ci) => {
+                    const pond = cr.ponderacion || 0;
+                    const tieneP = pond > 0;
+                    const pctTxt = tieneP
+                        ? `<div style="font-size:0.85em;color:${c.fg};font-weight:600;margin-top:2px">${Math.round(pond)}%</div>`
+                        : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
+                    const borderL = ci === 0 ? `border-left:3px solid ${c.border};` : '';
+                    const bg = tieneP ? c.bg : '#f3f4f6';
+                    const fg = tieneP ? c.fg : '#9ca3af';
+                    head2 += `<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;background:${bg};color:${fg};${borderL}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+                });
+            });
+            head2 += '</tr>';
+
+            const thead = document.querySelector("table thead");
+            if (thead) thead.innerHTML = head1 + head2;
+
+            // Mapa CR → color CE para las celdas del cuerpo
+            const crColor = {};
+            ceGroups.forEach((g, gi) => {
+                const c = CE_COLORS[gi % CE_COLORS.length];
+                g.criterios.forEach((cr, ci) => { crColor[cr.codigo] = { c, firstInGroup: ci === 0 }; });
+            });
 
             const startIdx = currentPage * perPage;
             const pageNotes = currentNotes.slice(startIdx, startIdx + perPage);
@@ -1248,31 +1302,32 @@
                 row.dataset.studentIdx = globalIdx;
                 row.dataset.rowIdx = alumno.rowIdx;
 
-                let html = `<td style="text-align:center;font-size:0.82em;padding:6px 4px">${globalIdx + 1}</td>`;
-                html += `<td style="font-size:0.85em;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(alumno.nombre)}</td>`;
+                let html = `<td class="col-sticky-n" style="text-align:center;font-size:0.82em;padding:6px 4px">${globalIdx + 1}</td>`;
+                html += `<td class="col-sticky-name" style="font-size:0.85em;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(alumno.nombre)}</td>`;
 
                 criterios.forEach((cr) => {
                     const tieneP = (cr.ponderacion || 0) > 0;
                     const nota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);
                     const notaVal = nota ? nota.display || "" : "";
+                    const cc = crColor[cr.codigo] || {};
+                    const cellBg = tieneP ? (cc.c ? cc.c.bg : '') : '#f3f4f6';
+                    const borderL = cc.firstInGroup ? `border-left:3px solid ${cc.c ? cc.c.border : '#ccc'};` : '';
                     if (tieneP) {
-                        html += `<td style="text-align:center;padding:6px 4px">
+                        html += `<td style="text-align:center;padding:6px 4px;background:${cellBg};${borderL}">
                             <input type="text" inputmode="decimal" class="nota-cr"
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
                                 value="${escapeHtml(String(notaVal))}"
                                 style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #d7d7d7;border-radius:5px;min-height:32px"
-                            />
-                        </td>`;
+                            /></td>`;
                     } else {
-                        html += `<td style="text-align:center;padding:6px 4px;background:#f3f4f6">
+                        html += `<td style="text-align:center;padding:6px 4px;background:#f3f4f6;${borderL}">
                             <input type="text" class="nota-cr" disabled
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
                                 value="${escapeHtml(String(notaVal))}"
                                 style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #e5e7eb;border-radius:5px;min-height:32px;background:#f3f4f6;color:#9ca3af;cursor:not-allowed"
-                            />
-                        </td>`;
+                            /></td>`;
                     }
                 });
 
