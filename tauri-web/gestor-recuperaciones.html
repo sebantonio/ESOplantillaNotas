@@ -207,18 +207,59 @@
 
     let savingAll = false;
     let autoSaveTimer = null;
-    let reloadTimer = null;
 
-    async function reloadState() {
-        try {
-            const data = await window.electronExcel.getNotasEvaluacion({ evaluacion: evalSelect.value });
-            if (data) { currentState = data; renderStats(); renderTable(); }
-        } catch {}
+    function parseNote(v) {
+        if (v === null || v === undefined || v === '') return null;
+        const n = parseFloat(String(v).replace(',', '.'));
+        return isNaN(n) ? null : n;
     }
 
-    function scheduleReload() {
-        if (reloadTimer) clearTimeout(reloadTimer);
-        reloadTimer = setTimeout(reloadState, 400);
+    function recomputeAlumno(alumno) {
+        const raColumns = currentState.raColumns || [];
+        const criteria  = currentState.criteria  || [];
+        for (const ra of (alumno.rraa || [])) {
+            const raCrits = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
+            if (!raCrits.length) continue;
+            let wsum = 0, wtotal = 0;
+            for (const cr of raCrits) {
+                const crData = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+                if (!crData) continue;
+                const rec  = parseNote(crData.recDisplay);
+                const base = parseNote(crData.nota) ?? parseNote(crData.display);
+                const eff  = (rec !== null && rec > 0) ? rec : base;
+                if (eff === null || eff <= 0) continue;
+                const p = parseNote(cr.peso) || 1;
+                wsum += eff * p; wtotal += p;
+            }
+            if (wtotal > 0) { ra.nota = wsum / wtotal; ra.display = ra.nota.toFixed(2).replace('.', ','); }
+        }
+        let wsum = 0, wtotal = 0;
+        for (const ra of (alumno.rraa || [])) {
+            const n = typeof ra.nota === 'number' ? ra.nota : parseNote(ra.display);
+            if (!n || n <= 0) continue;
+            const raMeta = raColumns.find(r => Number(r.colIdx) === Number(ra.colIdx));
+            const p = parseNote(raMeta?.peso) || 1;
+            wsum += n * p; wtotal += p;
+        }
+        if (wtotal > 0) { alumno.final = wsum / wtotal; alumno.finalDisplay = alumno.final.toFixed(2).replace('.', ','); }
+    }
+
+    function updateAlumnoDOM(alumno) {
+        const finalTd = document.querySelector(`[data-final="${alumno.rowIdx}"]`);
+        if (finalTd) {
+            const fDisp = formatNote(alumno.finalDisplay);
+            const fCls  = gradeClass(alumno.finalDisplay);
+            finalTd.innerHTML = `<span class="grade ${fCls}">${fDisp || "—"}</span>`;
+        }
+        for (const ra of (alumno.rraa || [])) {
+            const ceTd = document.querySelector(`[data-ce="${alumno.rowIdx}-${ra.colIdx}"]`);
+            if (ceTd) {
+                const ceDisp = formatNote(ra.display);
+                const ceCls  = gradeClass(ra.display);
+                const span = ceTd.querySelector('span');
+                if (span) { span.className = `grade ${ceCls}`; span.textContent = ceDisp || "—"; }
+            }
+        }
     }
 
     function saveRecFromInput(input) {
@@ -226,10 +267,20 @@
         const rowIdx = parseInt(input.dataset.row, 10);
         const colIdx = parseInt(input.dataset.col, 10);
         if (isNaN(rowIdx) || isNaN(colIdx)) return;
+        const value = input.value.trim();
         window.electronExcel.saveEvalRec({
             evaluacion: evalSelect.value,
-            rowIdx, colIdx, value: input.value.trim(),
-        }).then(() => scheduleReload()).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
+            rowIdx, colIdx, value,
+        }).then(() => {
+            const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
+            if (alumno) {
+                const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === colIdx);
+                if (cr) cr.recDisplay = value;
+                recomputeAlumno(alumno);
+                updateAlumnoDOM(alumno);
+                renderStats();
+            }
+        }).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
     }
 
     async function saveAllRec() {
@@ -254,8 +305,19 @@
                 evaluacion: evalSelect.value,
                 changes,
             });
+            for (const ch of changes) {
+                const alumno = (currentState.alumnos || []).find(a => a.rowIdx === ch.rowIdx);
+                if (!alumno) continue;
+                const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === ch.colIdx);
+                if (cr) cr.recDisplay = ch.value;
+            }
+            const affected = [...new Set(changes.map(ch => ch.rowIdx))];
+            for (const ri of affected) {
+                const alumno = (currentState.alumnos || []).find(a => a.rowIdx === ri);
+                if (alumno) { recomputeAlumno(alumno); updateAlumnoDOM(alumno); }
+            }
+            renderStats();
             if (status) status.textContent = 'Guardado ' + new Date().toLocaleTimeString();
-            await reloadState();
         } catch(e) {
             showMessage('Error al guardar: ' + (e.message || e), 'error');
         } finally {
@@ -348,13 +410,13 @@
             bodyHtml += `<td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
             const fDisp = formatNote(alumno.finalDisplay);
             const fCls  = gradeClass(alumno.finalDisplay);
-            bodyHtml += `<td class="td-final"><span class="grade ${fCls}">${fDisp || "—"}</span></td>`;
+            bodyHtml += `<td class="td-final" data-final="${alumno.rowIdx}"><span class="grade ${fCls}">${fDisp || "—"}</span></td>`;
             ceGroups.forEach(g => {
                 const c = g.color;
                 const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
                 const ceDisp = formatNote(raVal ? raVal.display : "");
                 const ceCls  = gradeClass(raVal ? raVal.display : "");
-                bodyHtml += `<td style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
+                bodyHtml += `<td data-ce="${alumno.rowIdx}-${g.ra.colIdx}" style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
                 g.criterios.forEach((cr, crIdx) => {
                     const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
                     const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
