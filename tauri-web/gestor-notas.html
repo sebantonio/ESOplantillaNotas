@@ -788,6 +788,32 @@
         }
         .modal-close:hover { border-color: #6366f1; color: #4338ca; }
 
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            flex-wrap: wrap;
+        }
+        .pag-btn {
+            min-height: 32px;
+            padding: 4px 12px;
+            color: #374151;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .pag-btn:disabled { opacity: 0.4; cursor: default; }
+        .pag-btn:not(:disabled):hover { border-color: #6366f1; background: #f5f3ff; color: #4338ca; }
+        .pag-info { font-size: 0.88rem; color: #374151; white-space: nowrap; }
+        .per-page-sel { min-height: 32px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; font-size: 0.88rem; background: white; cursor: pointer; width: auto; min-width: unset; }
+        .pagination-bottom-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .pagination-bottom-row .button-row { margin-top: 0; }
+
         @media (max-width: 800px) {
             body {
                 padding: 10px;
@@ -917,6 +943,7 @@
             </section>
 
             <section>
+                <div id="paginationTop" class="pagination-bar"></div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -934,10 +961,12 @@
                         </tbody>
                     </table>
                 </div>
-
-                <div class="button-row">
-                    <button class="secondary" type="button" id="clearButton">Vaciar notas</button>
-                    <button type="button" id="saveButton">Guardar notas</button>
+                <div class="pagination-bottom-row">
+                    <div id="paginationBottom" class="pagination-bar"></div>
+                    <div class="button-row">
+                        <button class="secondary" type="button" id="clearButton">Vaciar notas</button>
+                        <button type="button" id="saveButton">Guardar notas</button>
+                    </div>
                 </div>
             </section>
         </main>
@@ -949,6 +978,8 @@
         let currentCriteriosState = null;
         let autoSaveTimeout = null;
         let hayCambiosSinGuardar = false;
+        let currentPage = 0;
+        let perPage = 15;
         const AUTO_SAVE_DELAY_MS = 15000;
         const _notasCache = new Map();
 
@@ -1064,6 +1095,7 @@
                 currentState = data;
                 currentNotes = (data.alumnos || []).map((item) => ({ ...item }));
                 hayCambiosSinGuardar = false;
+                currentPage = 0;
                 if (autoSaveTimeout) {
                     clearTimeout(autoSaveTimeout);
                     autoSaveTimeout = null;
@@ -1156,9 +1188,37 @@
             return `${included}/${type.total || 0}`;
         }
 
+        function renderPagination() {
+            const total = currentNotes.length;
+            const totalPages = Math.max(1, Math.ceil(total / perPage));
+            if (currentPage >= totalPages) currentPage = totalPages - 1;
+            const prevDis = currentPage === 0 ? ' disabled' : '';
+            const nextDis = currentPage >= totalPages - 1 ? ' disabled' : '';
+            const info = `${currentPage + 1}/${totalPages} &middot; ${total} alumnos`;
+            const opts = [10, 15, 20, 25, 50].map(n =>
+                `<option value="${n}"${n === perPage ? ' selected' : ''}>${n}</option>`
+            ).join('');
+            const html = `<button class="pag-btn"${prevDis} onclick="changePage(-1)">&#8249;</button><span class="pag-info">${info}</span><button class="pag-btn"${nextDis} onclick="changePage(1)">&#8250;</button><select class="per-page-sel" onchange="changePerPage(this.value)">${opts}</select>`;
+            document.getElementById('paginationTop').innerHTML = html;
+            document.getElementById('paginationBottom').innerHTML = html;
+        }
+
+        function changePage(delta) {
+            const totalPages = Math.max(1, Math.ceil(currentNotes.length / perPage));
+            currentPage = Math.max(0, Math.min(currentPage + delta, totalPages - 1));
+            renderTable();
+        }
+
+        function changePerPage(val) {
+            perPage = parseInt(val, 10) || 15;
+            currentPage = 0;
+            renderTable();
+        }
+
         function renderTable() {
             if (!currentNotes.length) {
                 notasBody.innerHTML = '<tr><td class="empty" colspan="999">No hay alumnos en esta unidad.</td></tr>';
+                renderPagination();
                 return;
             }
 
@@ -1175,20 +1235,20 @@
                 headers.push(`<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;${bgH}">${escapeHtml(cr.codigo)}${pctTxt}</th>`);
             });
 
-            // Reescribir headers
             const thead = document.querySelector("table thead tr");
-            if (thead) {
-                thead.innerHTML = headers.join('');
-            }
+            if (thead) thead.innerHTML = headers.join('');
 
-            // Usar DocumentFragment para batch de reflows
+            const startIdx = currentPage * perPage;
+            const pageNotes = currentNotes.slice(startIdx, startIdx + perPage);
+
             const fragment = document.createDocumentFragment();
-            currentNotes.forEach((alumno, idx) => {
+            pageNotes.forEach((alumno, localIdx) => {
+                const globalIdx = startIdx + localIdx;
                 const row = document.createElement("tr");
-                row.dataset.studentIdx = idx;
+                row.dataset.studentIdx = globalIdx;
                 row.dataset.rowIdx = alumno.rowIdx;
 
-                let html = `<td style="text-align:center;font-size:0.82em;padding:6px 4px">${idx + 1}</td>`;
+                let html = `<td style="text-align:center;font-size:0.82em;padding:6px 4px">${globalIdx + 1}</td>`;
                 html += `<td style="font-size:0.85em;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(alumno.nombre)}</td>`;
 
                 criterios.forEach((cr) => {
@@ -1220,9 +1280,9 @@
                 fragment.appendChild(row);
             });
 
-            // Una sola operación de DOM en lugar de N
             notasBody.textContent = '';
             notasBody.appendChild(fragment);
+            renderPagination();
         }
 
         async function saveNotas(options = {}) {
