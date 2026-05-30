@@ -31,7 +31,7 @@ Devuelve solo:
 - Haz commit y push
 
 
-**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.76 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
+**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.81 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
 
 ## Estructura
 
@@ -114,6 +114,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - `excel_get_notas_evaluacion`, `excel_get_notas_evaluacion_alumno`
 - `excel_get_notas_unidad`, `excel_save_notas_unidad`
 - `excel_save_eval_rec` — guarda nota de recuperación en celda de hoja de evaluación
+- `excel_save_eval_recs_batch` — guarda TODAS las Rec de una evaluación en una sola escritura ZIP
 - `excel_get_alumnos_informes`
 - `excel_get_diario`, `excel_save_diario_entrada`, `excel_delete_diario_entrada`
 - `app_open_external`
@@ -127,10 +128,10 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 | gestor-rraa-criterios.html | Gestión de CE y criterios (ESO: sin RA) |
 | gestor-unidades.html | Gestión de unidades (sin columna Horas) |
 | gestor-instrumentos.html | Instrumentos de evaluación (max 10) |
-| gestor-notas.html | Introducir notas: selector unidad + tabla Alumno×CR con autosave |
-| gestor-recuperaciones.html | Introducir recuperaciones: igual que visor-notas pero con Rec editable + guardar |
-| visor-notas.html | Ver notas por evaluación — SOLO LECTURA (Rec como texto, sin guardar) |
-| visor-unidades.html | Ver notas por unidad — solo lectura; PENDIENTE: sticky nombre alumno |
+| gestor-notas.html | Introducir notas: paginación 15/pág (top+bottom), agrupación CE con colores, columna alumno sticky |
+| gestor-recuperaciones.html | Introducir recuperaciones: Rec editable, batch save, autosave silencioso, CE/Final se recalculan en JS |
+| visor-notas.html | Ver notas por evaluación — SOLO LECTURA, columna alumno sticky |
+| visor-unidades.html | Ver notas por unidad — solo lectura, columna alumno sticky |
 | informes.html | Informes finales por alumno |
 | diario.html | Diario de clase |
 
@@ -143,13 +144,17 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - **Nota Final (col CB)**: calamine puede no alcanzar col 79 si el rango detectado es corto → usar `read_col_values_from_xml` que lee el ZIP/XML directamente
 - **cell_f64 retorna `Option<f64>`** — siempre hacer `.unwrap_or(0.0)`
 - **prepare-tauri-web.js**: reemplaza versión vX.X.X en todos los HTML al copiar a tauri-web/
+- **Sticky columnas**: usar `overflow: clip` (NO `overflow: hidden`) en `.container` — hidden crea scroll container implícito que anula position:sticky
+- **CE/Final en recuperaciones**: calamine lee caché de fórmulas (stale) — los valores se recalculan en JS con `recomputeAlumno()` usando `criteria[].peso` y `raColumns[].peso` del estado cargado
+- **Batch save recuperaciones**: `saveAllRec` usa `excel_save_eval_recs_batch` (1 escritura ZIP para todas las celdas); autosave es silencioso (no reconstruye DOM). `saveRecFromInput` guarda celda + actualiza DOM sin rebuild.
+- **Paginación gestor-notas**: `currentPage`/`perPage` globales; `renderTable()` usa `currentNotes.slice(startIdx, startIdx+perPage)`; `data-studentIdx` es índice global (no local de página)
 
 ## Pendientes
 
-- **visor-unidades.html**: columna nombre alumno sticky (position: sticky; left: 0) con scroll horizontal para ver todos los CRs
+*(ninguno)*
 
 ## Contexto adicional
 
 Ver carpeta `memory/` para estado detallado, decisiones de diseño y preferencias de trabajo.
 
-**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-10 (sesión 3)
+**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-11 (sesión 4)
