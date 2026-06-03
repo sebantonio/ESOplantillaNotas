@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de RRAA y Criterios - Excel</title>
     <script src="app-bridge.js"></script>
+    <link rel="stylesheet" href="ux-common.css">
+    <script src="ux-common.js" defer></script>
     <!-- XLSX - Librería principal -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js" integrity="sha512-UQnhkjV2gIt8VYN8GjJ3xAVDQ7KZ4dKxPm0zw4yNdaWCSxbV9LJfMTXvx9qgHKmCHQCoKkJaAxCp4A9O3cZUg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <!-- XLSX - Librería alternativa -->
@@ -618,25 +620,91 @@
                 width: auto;
             }
         }
+
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            padding: 2px 9px;
+            background: #6366f1;
+            color: white;
+            border-radius: 999px;
+            font-size: 0.6em;
+            font-weight: 800;
+            vertical-align: middle;
+            margin-left: 8px;
+            line-height: 1.6;
+        }
+
+        .stats.compact-stats {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .stats.compact-stats .stat-card {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            width: auto;
+            min-width: 180px;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        .stats.compact-stats .stat-card h3 {
+            margin: 0;
+            font-size: 0.82em;
+        }
+
+        .stats.compact-stats .stat-card .number {
+            margin-left: auto;
+            font-size: 1.55em;
+            line-height: 1;
+        }
+
+        .btn-guardar-flotante {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 200;
+            display: none;
+            padding: 12px 22px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 0.97rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 18px rgba(99,102,241,0.45);
+            transition: background 0.15s, box-shadow 0.15s;
+        }
+
+        .btn-guardar-flotante:hover { background: #4f46e5; box-shadow: 0 6px 22px rgba(99,102,241,0.55); }
+        .btn-guardar-flotante.visible { display: block; }
     </style>
 </head>
-<body>
+<body class="ux-app-shell ux-page-gestor-rraa-criterios">
     <div id="saveStatus" class="save-status" style="display: none;"></div>
 
-    <div class="container">
-        <nav class="page-nav" aria-label="Navegación">
-            <div class="nav-group">
-                <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
-                <a class="nav-link" href="index.html">⌂ Inicio</a>
+    <div class="container ux-shell">
+        <nav class="page-nav ux-page-nav" aria-label="Navegación">
+            <div class="nav-group ux-nav-group">
+                <button class="nav-button ux-button" type="button" onclick="window.history.back()">← Atrás</button>
+                <a class="nav-link ux-link-button primary" href="index.html">⌂ Inicio</a>
             </div>
         </nav>
 
-        <div class="header">
+        <div class="header ux-page-header">
             <h1>📚 Gestor de CE y Criterios</h1>
             <p>Competencias Específicas y Criterios de Evaluación</p>
         </div>
 
-        <div class="content">
+        <div class="content ux-content">
             <!-- MENSAJES -->
             <div id="message" class="message"></div>
 
@@ -654,28 +722,22 @@
             <!-- SECCIÓN 2: GESTIÓN DE RRAA Y CRITERIOS (inicialmente oculta) -->
             <div id="mainContent" style="display: none;">
                 <!-- TABS -->
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="cambiarTab('rraa')">🎯 Comp. Específicas</button>
-                    <button class="tab-btn" onclick="cambiarTab('criterios')">✓ Criterios</button>
-                    <button class="tab-btn" onclick="cambiarTab('ponderaciones')">⚖ Ponderación por unidad</button>
-                    <button class="tab-btn" onclick="cambiarTab('resumen')">📊 Resumen por CE</button>
+                <div class="tabs ux-tabs">
+                    <button class="tab-btn active ux-tab" onclick="cambiarTab('rraa')">🎯 Comp. Específicas</button>
+                    <button class="tab-btn ux-tab" onclick="cambiarTab('criterios')">✓ Criterios</button>
+                    <button class="tab-btn ux-tab" onclick="cambiarTab('ponderaciones')">⚖ Ponderación por unidad</button>
+                    <button class="tab-btn ux-tab" onclick="cambiarTab('resumen')">📊 Resumen por CE</button>
                 </div>
 
                 <!-- TAB: RRAA -->
                 <div id="tab-rraa" class="tab-content active">
                     <div class="section">
-                        <h2>2️⃣ Competencias Específicas (CE)</h2>
-                        <div class="stats">
-                            <div class="stat-card">
-                                <h3>Total CE</h3>
-                                <div class="number" id="totalRRAA">0</div>
-                            </div>
-                        </div>
+                        <h2>2️⃣ Competencias Específicas (CE) <span class="count-badge" id="totalRRAA">0</span></h2>
 
                         <!-- TABLA CE -->
                         <h3>Competencias Específicas Actuales</h3>
-                        <div class="table-container">
-                            <table id="rraaTable">
+                        <div class="table-container ux-table-wrap">
+                            <table id="rraaTable" class="ux-table">
                                 <thead>
                                     <tr>
                                         <th style="width: 50px;">Nº</th>
@@ -705,8 +767,8 @@
                 <div id="tab-criterios" class="tab-content">
                     <div class="section">
                         <h2>2️⃣ Criterios de Evaluación</h2>
-                        <div class="stats">
-                            <div class="stat-card">
+                        <div class="stats compact-stats ux-summary">
+                            <div class="stat-card ux-stat">
                                 <h3>Total Criterios</h3>
                                 <div class="number" id="totalCriterios">0</div>
                             </div>
@@ -714,12 +776,14 @@
 
                         <!-- TABLA CRITERIOS -->
                         <h3>Criterios Actuales</h3>
-                        <div style="margin-bottom:14px;">
-                            <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
-                            <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
+                        <div class="form-group" style="align-items:center; margin-bottom:15px;">
+                            <button class="secondary" type="button" onclick="alternarMenuRA()" style="width:auto;">☰ CE</button>
+                            <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="flex:1; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
+                            <input type="search" id="criterioSearchInput" placeholder="Buscar criterio por código o texto" autocomplete="off" style="flex:1;" />
                         </div>
-                        <div class="table-container">
-                            <table id="criteriosTable">
+                        <p class="ux-field-help">Selecciona una CE para filtrar sus criterios. Usa el buscador para localizar un criterio por código o texto.</p>
+                        <div class="table-container ux-table-wrap">
+                            <table id="criteriosTable" class="ux-table">
                                 <thead>
                                     <tr>
                                         <th class="col-numero">Nº</th>
@@ -770,8 +834,8 @@
                             <select id="instrPorCeSelect" onchange="cambiarInstrumentoCE(this.value)" style="flex:1; padding:7px 10px; border:1px solid #c7d2fe; border-radius:6px; font-size:0.95em; color:#1e1b4b; background:white; cursor:pointer;"></select>
                         </div>
 
-                        <div class="table-container">
-                            <table id="ponderacionesTable">
+                        <div class="table-container ux-table-wrap">
+                            <table id="ponderacionesTable" class="ux-table">
                                 <thead>
                                     <tr>
                                         <th class="col-ra">CE</th>
@@ -811,6 +875,7 @@
                         <div class="actions-left">
                             <button class="secondary" onclick="cargarNuevo()">🔄 Cargar Otro Archivo</button>
                             <button class="secondary" onclick="mostrarOpcionesImportacion()">📂 Importar CE, Criterios, Unidades</button>
+                            <button class="secondary" type="button" onclick="refrescarDesdeExcel()" style="width:auto;">↻ Actualizar desde Excel</button>
                             <button onclick="guardarCambiosForzado()" style="background: #17a2b8; color: white;">💾 Guardar Cambios Ahora</button>
                         </div>
                         <div class="actions-right">
@@ -818,6 +883,9 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Botón guardar flotante (visible cuando hay cambios sin guardar) -->
+                <button class="btn-guardar-flotante" id="btnGuardarFlotante" onclick="guardarCambiosForzado()">💾 Guardar</button>
             </div>
 
             <!-- LOADING -->
@@ -844,6 +912,10 @@
         let autoSaveTimeout = null;
         let hayChangesSinGuardar = false;
         const AUTO_SAVE_DELAY_MS = 15000;
+        const _BASE_TITLE = document.title;
+        let archivoModificadoUnix = 0;
+        let comprobandoActualizacion = false;
+        let criterioBusqueda = '';
 
         // ===== VERIFICACIÓN DE LIBRERÍA XLSX =====
         function checkXLSX() {
@@ -914,13 +986,13 @@
             }
         });
 
-        async function seleccionarArchivoLocal() {
+        async function seleccionarArchivoLocal(options = {}) {
             try {
-                mostrarLoading(true);
+                if (!options.silent) mostrarLoading(true);
                 const result = await window.electronExcel.getRraaCriterios();
 
                 if (!result) {
-                    mostrarMensaje('No se encontrÃ³ un Excel en el directorio de la app.', 'error');
+                    mostrarMensaje(options.auto ? 'Selecciona un Excel local para cargar CE y criterios.' : 'No se encontró un Excel activo.', options.auto ? 'info' : 'error');
                     mostrarLoading(false);
                     return;
                 }
@@ -942,14 +1014,60 @@
                 actualizarStatsCriterios();
                 actualizarOpcionesRA();
                 actualizarOpcionesPonderacion();
+                await actualizarMarcaArchivo();
                 document.getElementById('uploadArea').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
-                mostrarMensaje(`Archivo conectado: ${result.fileName}`, 'success');
-                mostrarLoading(false);
+                if (!options.silent) {
+                    const accion = options.refresh ? 'Datos actualizados desde Excel' : (options.auto ? 'Archivo activo cargado' : 'Archivo conectado');
+                    mostrarMensaje(`${accion}: ${result.fileName}`, 'success');
+                    mostrarLoading(false);
+                }
             } catch (error) {
-                mostrarMensaje('Error al abrir RRAA/CE: ' + error.message, 'error');
-                mostrarLoading(false);
+                if (!options.silent) {
+                    mostrarMensaje('Error al abrir RRAA/CE: ' + error.message, 'error');
+                    mostrarLoading(false);
+                }
             }
+        }
+
+        async function actualizarMarcaArchivo() {
+            if (!isElectronMode || !window.electronExcel.getFileStatus) return null;
+            try {
+                const status = await window.electronExcel.getFileStatus();
+                archivoModificadoUnix = Number(status && status.modifiedAtUnix) || archivoModificadoUnix || 0;
+                return status;
+            } catch { return null; }
+        }
+
+        async function refrescarDesdeExcel(options = {}) {
+            if (!isElectronMode) { mostrarMensaje('Para refrescar, vuelve a seleccionar el archivo.', 'info'); return; }
+            if (hayChangesSinGuardar) {
+                if (options.auto) return;
+                const ok = window.appUx && window.appUx.confirm
+                    ? await window.appUx.confirm('Hay cambios sin guardar. Si actualizas desde Excel se descartarán.', { title: 'Actualizar desde Excel', confirmText: 'Actualizar' })
+                    : confirm('Hay cambios sin guardar. ¿Actualizar de todos modos?');
+                if (!ok) return;
+                hayChangesSinGuardar = false;
+                document.getElementById('btnGuardarFlotante')?.classList.remove('visible');
+                if (autoSaveTimeout) { clearTimeout(autoSaveTimeout); autoSaveTimeout = null; }
+            }
+            await seleccionarArchivoLocal({ refresh: true, silent: Boolean(options.silent), auto: Boolean(options.auto) });
+        }
+
+        async function comprobarActualizacionExterna() {
+            if (!isElectronMode || !archivoOriginal || hayChangesSinGuardar || comprobandoActualizacion) return;
+            comprobandoActualizacion = true;
+            try {
+                const status = await window.electronExcel.getFileStatus();
+                const modified = Number(status && status.modifiedAtUnix) || 0;
+                if (archivoModificadoUnix && modified > archivoModificadoUnix) {
+                    mostrarMensaje('El Excel ha cambiado fuera de la pantalla. Actualizando datos...', 'info');
+                    await refrescarDesdeExcel({ auto: true, silent: true });
+                    mostrarMensaje('Datos actualizados desde Excel.', 'success');
+                } else if (!archivoModificadoUnix) {
+                    archivoModificadoUnix = modified;
+                }
+            } catch {} finally { comprobandoActualizacion = false; }
         }
 
         fileInput.addEventListener('change', (e) => {
@@ -1156,7 +1274,10 @@
             const emptyState = document.getElementById('emptyStateCriterios');
             const criteriosVisibles = criteriosActuales.filter((crit) =>
                 Number(crit.raNumero) === Number(criterioRaActivo) &&
-                String(crit.texto || "").trim() !== ""
+                String(crit.texto || "").trim() !== "" &&
+                (!criterioBusqueda ||
+                    normalizarBusqueda(crit.codigo).includes(criterioBusqueda) ||
+                    normalizarBusqueda(crit.texto).includes(criterioBusqueda))
             );
 
             if (criteriosVisibles.length === 0) {
@@ -1540,9 +1661,12 @@
         }
 
         // ===== ELIMINAR RRAA =====
-        function eliminarRRAA(idx) {
+        async function eliminarRRAA(idx) {
             const desc = raaaActuales[idx].descripcion.substring(0, 50);
-            if (confirm(`¿Eliminar esta CE?\n"${desc}..."`)) {
+            const ok = window.appUx && window.appUx.confirm
+                ? await window.appUx.confirm(`¿Eliminar esta CE?\n"${desc}..."`, { title: 'Eliminar CE', confirmText: 'Eliminar' })
+                : confirm(`¿Eliminar esta CE?\n"${desc}..."`);
+            if (ok) {
                 raaaActuales.splice(idx, 1);
                 mostrarTablaRRAA();
                 actualizarStatsRRAA();
@@ -1552,8 +1676,11 @@
         }
 
         // ===== ELIMINAR CRITERIO =====
-        function eliminarCriterio(idx) {
-            if (confirm(`¿Eliminar "${criteriosActuales[idx].nombre}"?`)) {
+        async function eliminarCriterio(idx) {
+            const ok = window.appUx && window.appUx.confirm
+                ? await window.appUx.confirm(`¿Eliminar "${criteriosActuales[idx].nombre}"?`, { title: 'Eliminar criterio', confirmText: 'Eliminar' })
+                : confirm(`¿Eliminar "${criteriosActuales[idx].nombre}"?`);
+            if (ok) {
                 criteriosActuales.splice(idx, 1);
                 mostrarTablaCriterios();
                 actualizarStatsCriterios();
@@ -1805,16 +1932,9 @@
         // ===== GUARDADO AUTOMÁTICO =====
         function marcarCambio() {
             hayChangesSinGuardar = true;
-
-            // Cancelar timeout anterior si existe
-            if (autoSaveTimeout) {
-                clearTimeout(autoSaveTimeout);
-            }
-
-            // Guardar automaticamente despues de 30 segundos de inactividad
-            autoSaveTimeout = setTimeout(() => {
-                guardarCambiosAutomaticamente();
-            }, AUTO_SAVE_DELAY_MS);
+            document.getElementById('btnGuardarFlotante')?.classList.add('visible');
+            if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => guardarCambiosAutomaticamente(), AUTO_SAVE_DELAY_MS);
         }
 
         function mostrarEstadoGuardado(estado, mensaje) {
@@ -1853,6 +1973,7 @@
                 }
 
                 hayChangesSinGuardar = false;
+                document.getElementById('btnGuardarFlotante')?.classList.remove('visible');
                 if (autoSaveTimeout) {
                     clearTimeout(autoSaveTimeout);
                     autoSaveTimeout = null;
@@ -1927,12 +2048,11 @@
         }
 
         // ===== IMPORTACIÓN DE ARCHIVOS =====
-        function mostrarOpcionesImportacion() {
-            const opcion = confirm('¿Deseas importar datos de otro archivo Excel?\n\nOK = Seleccionar archivo\nCancelar = Cancelar');
-            if (opcion) {
-                const fileInput = document.getElementById('fileInput');
-                fileInput.click();
-            }
+        async function mostrarOpcionesImportacion() {
+            const ok = window.appUx && window.appUx.confirm
+                ? await window.appUx.confirm('¿Deseas importar datos de otro archivo Excel?', { title: 'Importar datos', confirmText: 'Seleccionar archivo' })
+                : confirm('¿Deseas importar datos de otro archivo Excel?');
+            if (ok) document.getElementById('fileInput').click();
         }
 
         function importarDesdeArchivo(file) {
@@ -2091,7 +2211,26 @@ Unidades: ${importUnidades.length} registros
             document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
         }
 
-        if (isElectronMode) seleccionarArchivoLocal();
+        function normalizarBusqueda(text) {
+            return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isElectronMode) seleccionarArchivoLocal({ auto: true });
+
+            const searchInput = document.getElementById('criterioSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    criterioBusqueda = normalizarBusqueda(searchInput.value);
+                    mostrarTablaCriterios();
+                });
+            }
+        });
+
+        window.addEventListener('focus', () => comprobarActualizacionExterna());
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) comprobarActualizacionExterna();
+        });
 
         // Verificar carga de XLSX (modo browser)
         const xlsxCheckInterval = setInterval(() => {
