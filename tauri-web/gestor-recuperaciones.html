@@ -212,6 +212,12 @@
 
     let savingAll = false;
     let autoSaveTimer = null;
+    let _hayPendientes = false;
+    const _BASE_TITLE = document.title;
+
+    window.addEventListener('beforeunload', (e) => {
+        if (_hayPendientes) { e.preventDefault(); e.returnValue = ''; }
+    });
 
     function parseNote(v) {
         if (v === null || v === undefined || v === '') return null;
@@ -322,6 +328,8 @@
                 if (alumno) { recomputeAlumno(alumno); updateAlumnoDOM(alumno); }
             }
             renderStats();
+            _hayPendientes = false;
+            document.title = _BASE_TITLE;
             if (status) status.textContent = 'Guardado ' + new Date().toLocaleTimeString();
         } catch(e) {
             showMessage('Error al guardar: ' + (e.message || e), 'error');
@@ -515,6 +523,14 @@
             next?.focus();
         });
         loadEvaluacion("1");
+
+        // Marcar cambios al editar cualquier rec-input
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('rec-input')) {
+                _hayPendientes = true;
+                if (!document.title.startsWith('*')) document.title = '* ' + _BASE_TITLE;
+            }
+        });
     });
 </script>
 </body>

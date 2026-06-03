@@ -778,14 +778,6 @@
             display: none !important;
         }
 
-        /* ESO: ocultar items de resumen no relevantes */
-        .summary-item:has(#totalPracticas),
-        .summary-item:has(#totalMemorias),
-        .summary-item:has(#totalOtros),
-        .summary-item:has(#totalControles) {
-            display: none !important;
-        }
-
         /* Ajustar grid para solo unidad */
         .controls {
             grid-template-columns: minmax(180px, 1fr) auto auto !important;
@@ -953,6 +945,10 @@
                         </label>
                     </div>
                 </div>
+                <div class="field">
+                    <label for="studentSearchInput">Buscar alumno</label>
+                    <input type="search" id="studentSearchInput" placeholder="Nombre..." autocomplete="off" />
+                </div>
                 <button class="secondary" type="button" id="reloadButton">Recargar</button>
             </section>
 
@@ -1001,25 +997,6 @@
                     <div class="summary-pill danger">
                         <span class="pill-label">Errores</span>
                         <span class="pill-value" id="invalidCount">0</span>
-                    </div>
-                </div>
-                <div class="summary-row">
-                    <span class="pill-label" style="font-size:0.8em;color:#9ca3af;padding-left:4px">Incluidas:</span>
-                    <div class="summary-pill">
-                        <span class="pill-label">Prácticas</span>
-                        <span class="pill-value" id="totalPracticas">0</span>
-                    </div>
-                    <div class="summary-pill">
-                        <span class="pill-label">Memorias</span>
-                        <span class="pill-value" id="totalMemorias">0</span>
-                    </div>
-                    <div class="summary-pill">
-                        <span class="pill-label">Otras</span>
-                        <span class="pill-value" id="totalOtros">0</span>
-                    </div>
-                    <div class="summary-pill">
-                        <span class="pill-label">Controles</span>
-                        <span class="pill-value" id="totalControles">0</span>
                     </div>
                 </div>
             </section>
@@ -1080,6 +1057,8 @@
         let currentCriteriosState = null;
         let autoSaveTimeout = null;
         let hayCambiosSinGuardar = false;
+        const _BASE_TITLE = document.title;
+        let studentSearch = '';
         let currentPage = 0;
         let perPage = 15;
         const AUTO_SAVE_DELAY_MS = 15000;
@@ -1098,10 +1077,7 @@
         const gradedCount = document.getElementById("gradedCount");
         const pendingCount = document.getElementById("pendingCount");
         const invalidCount = document.getElementById("invalidCount");
-        const totalPracticas = document.getElementById("totalPracticas");
-        const totalMemorias = document.getElementById("totalMemorias");
-        const totalOtros = document.getElementById("totalOtros");
-        const totalControles = document.getElementById("totalControles");
+        const studentSearchInput = document.getElementById("studentSearchInput");
         const saveButton = document.getElementById("saveButton");
         const reloadButton = document.getElementById("reloadButton");
         const clearButton = document.getElementById("clearButton");
@@ -1123,6 +1099,12 @@
             clearButton.addEventListener("click", clearNotas);
             unidadSelect.addEventListener("change", () => loadNotasConGuardado());
             setupQuickFilters();
+            studentSearchInput?.addEventListener('input', () => {
+                studentSearch = studentSearchInput.value.trim().toLowerCase();
+                currentPage = 0;
+                renderTable();
+                renderPagination();
+            });
 
             // Event delegation para inputs de notas CR (optimización: 1 listener en lugar de N)
             notasBody.addEventListener("input", (event) => {
@@ -1218,6 +1200,7 @@
                 currentState = data;
                 currentNotes = (data.alumnos || []).map((item) => ({ ...item }));
                 hayCambiosSinGuardar = false;
+                document.title = _BASE_TITLE;
                 currentPage = 0;
                 if (autoSaveTimeout) {
                     clearTimeout(autoSaveTimeout);
@@ -1352,31 +1335,26 @@
             });
         }
 
-        function formatIncludedTotal(type, data) {
-            if (!type) {
-                return "0";
-            }
-
-            let included = type.incluidas || 0;
-            const isCurrentType = data && data.tipo === type.key;
-            const selectedActivity = isCurrentType
-                ? (type.actividades || []).find((item) => Number(item.numero) === Number(data.actividad))
-                : null;
-
-            if (selectedActivity && data.block) {
-                included += Number(Boolean(data.block.incluida)) - Number(Boolean(selectedActivity.incluida));
-            }
-
-            return `${included}/${type.total || 0}`;
+        function getNotesToRender() {
+            if (!studentSearch) return currentNotes;
+            const q = studentSearch.toLowerCase();
+            return currentNotes.filter(n => (n.nombre || '').toLowerCase().includes(q));
         }
 
         function renderPagination() {
-            const total = currentNotes.length;
+            const visible = getNotesToRender();
+            const total = visible.length;
             const totalPages = Math.max(1, Math.ceil(total / perPage));
             if (currentPage >= totalPages) currentPage = totalPages - 1;
             const prevDis = currentPage === 0 ? ' disabled' : '';
             const nextDis = currentPage >= totalPages - 1 ? ' disabled' : '';
-            const info = `${currentPage + 1}/${totalPages} &middot; ${total} alumnos`;
+            const stats = getNotesStats();
+            const extras = [
+                stats.pending > 0 ? `<span style="color:#b45309;font-weight:700">${stats.pending} pend.</span>` : '',
+                stats.invalid > 0 ? `<span style="color:#b91c1c;font-weight:700">${stats.invalid} err.</span>` : '',
+                studentSearch ? `<span style="color:#6366f1;font-weight:700">filtrado</span>` : ''
+            ].filter(Boolean).join(' · ');
+            const info = `${currentPage + 1}/${totalPages} &middot; ${total} alumnos${extras ? ' &middot; ' + extras : ''}`;
             const opts = [10, 15, 20, 25, 50].map(n =>
                 `<option value="${n}"${n === perPage ? ' selected' : ''}>${n}</option>`
             ).join('');
@@ -1474,8 +1452,9 @@
                 g.criterios.forEach((cr, ci) => { crColor[cr.codigo] = { c, firstInGroup: ci === 0 }; });
             });
 
+            const visibleNotes = getNotesToRender();
             const startIdx = currentPage * perPage;
-            const pageNotes = currentNotes.slice(startIdx, startIdx + perPage);
+            const pageNotes = visibleNotes.slice(startIdx, startIdx + perPage);
 
             const fragment = document.createDocumentFragment();
             pageNotes.forEach((alumno, localIdx) => {
@@ -1561,6 +1540,7 @@
                 renderSummary(data);
                 renderTable();
                 hayCambiosSinGuardar = false;
+                document.title = _BASE_TITLE;
                 if (autoSaveTimeout) {
                     clearTimeout(autoSaveTimeout);
                     autoSaveTimeout = null;
@@ -2008,14 +1988,9 @@
 
         function marcarCambio() {
             hayCambiosSinGuardar = true;
-
-            if (autoSaveTimeout) {
-                clearTimeout(autoSaveTimeout);
-            }
-
-            autoSaveTimeout = setTimeout(() => {
-                guardarCambiosAutomaticamente();
-            }, AUTO_SAVE_DELAY_MS);
+            if (!document.title.startsWith('*')) document.title = '* ' + _BASE_TITLE;
+            if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => guardarCambiosAutomaticamente(), AUTO_SAVE_DELAY_MS);
         }
 
         async function guardarCambiosAutomaticamente() {
@@ -2042,6 +2017,13 @@
         }
 
         window.guardarCambiosAntesDeCerrar = guardarCambiosAntesDeCerrar;
+
+        window.addEventListener('beforeunload', (e) => {
+            if (hayCambiosSinGuardar) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
 
         function setDisabled(disabled) {
             [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, reloadButton, clearButton, saveCriteriosButton].forEach((element) => {
