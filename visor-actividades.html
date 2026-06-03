@@ -171,6 +171,37 @@
             opacity: 0.6;
         }
 
+        .toolbar-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82em;
+            color: #4b5563;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .toggle-filter input {
+            width: 15px;
+            height: 15px;
+            min-height: unset;
+            margin: 0;
+        }
+
+        .sync-note {
+            color: #6b7280;
+            font-size: 0.8em;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -450,7 +481,15 @@
                     <label for="searchInput">Buscar alumno</label>
                     <input id="searchInput" type="search" placeholder="Nombre del alumno">
                 </div>
-                <button type="button" id="reloadButton">Recargar</button>
+                <div class="toolbar-inline">
+                    <button type="button" id="reloadButton">Recargar</button>
+                    <button type="button" id="clearSearchButton" title="Limpiar búsqueda">Limpiar</button>
+                    <label class="toggle-filter" for="onlyFailingInput">
+                        <input id="onlyFailingInput" type="checkbox">
+                        Solo pendientes
+                    </label>
+                    <span id="lastSync" class="sync-note">Sin sincronizar</span>
+                </div>
             </section>
 
             <section class="stats" aria-label="Resumen">
@@ -511,6 +550,9 @@
         const tipoSelect = document.getElementById("tipoSelect");
         const searchInput = document.getElementById("searchInput");
         const reloadButton = document.getElementById("reloadButton");
+        const clearSearchButton = document.getElementById("clearSearchButton");
+        const onlyFailingInput = document.getElementById("onlyFailingInput");
+        const lastSync = document.getElementById("lastSync");
         const notesHead = document.getElementById("notesHead");
         const notesBody = document.getElementById("notesBody");
         const fileName = document.getElementById("fileName");
@@ -519,6 +561,7 @@
         const activityCount = document.getElementById("activityCount");
         const gradedCount = document.getElementById("gradedCount");
         const averageGrade = document.getElementById("averageGrade");
+        let autoRefreshTimer = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             if (!window.electronExcel) {
@@ -531,6 +574,16 @@
             unidadSelect.addEventListener("change", () => loadType());
             tipoSelect.addEventListener("change", () => loadType());
             searchInput.addEventListener("input", () => { renderTable(); renderRaPanel(); });
+            clearSearchButton.addEventListener("click", () => {
+                searchInput.value = "";
+                renderAll();
+            });
+            onlyFailingInput.addEventListener("change", () => { renderTable(); renderRaPanel(); renderAll(); });
+
+            window.addEventListener("focus", () => {
+                clearTimeout(autoRefreshTimer);
+                autoRefreshTimer = setTimeout(() => loadType({ force: true }), 300);
+            });
             loadInitial();
         });
 
@@ -582,6 +635,7 @@
                     state = typeCache.get(cacheKey);
                     renderControls(state);
                     renderAll();
+                    lastSync.textContent = `Sincronizado ${new Date().toLocaleTimeString()} · cache`;
                     showMessage("Tipo de actividades cargado desde cache.", "success");
                     return;
                 }
@@ -604,6 +658,7 @@
                 typeCache.set(`${state.unidad}:${state.tipo}`, state);
                 renderControls(state);
                 renderAll();
+                lastSync.textContent = `Sincronizado ${new Date().toLocaleTimeString()} · parcial`;
                 showMessage("Primera actividad cargada. Leyendo el tipo completo...", "info");
                 setDisabled(false);
                 loadTypeBatchInBackground(firstData, token);
@@ -636,6 +691,7 @@
                 typeCache.set(`${state.unidad}:${state.tipo}`, state);
                 renderControls(state);
                 renderAll();
+                lastSync.textContent = `Sincronizado ${new Date().toLocaleTimeString()} · completo`;
                 showMessage("Notas del tipo seleccionado cargadas.", "success");
             } catch (error) {
                 showMessage(error.message || "No se pudo cargar el tipo completo.", "error");
@@ -785,7 +841,20 @@
 
         function getVisibleStudents() {
             const query = normalize(searchInput.value);
-            return (state.alumnos || []).filter((alumno) => !query || normalize(alumno.nombre).includes(query));
+            const onlyFailing = Boolean(onlyFailingInput && onlyFailingInput.checked);
+            return (state.alumnos || []).filter((alumno) => {
+                if (query && !normalize(alumno.nombre).includes(query)) {
+                    return false;
+                }
+                if (!onlyFailing) {
+                    return true;
+                }
+                const hasFailing = (state.activities || []).some((activity) => {
+                    const numeric = parseGrade(alumno.notas[activityKey(activity)]);
+                    return numeric !== null && numeric < 5;
+                });
+                return hasFailing;
+            });
         }
 
         function getUnitLabel(codigo) {
@@ -932,7 +1001,10 @@
         }
 
         function showMessage(text, type = "info") {
-            messageBox.textContent = text;
+            const pretty = (type === "error" && window.appUx && window.appUx.hintError)
+                ? window.appUx.hintError(text)
+                : text;
+            messageBox.textContent = pretty;
             messageBox.className = `message show ${type}`;
         }
 
