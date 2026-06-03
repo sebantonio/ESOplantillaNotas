@@ -848,6 +848,7 @@
 
                 <div class="file-actions">
                     <button class="small-button" type="button" id="changeFileBtn">Cambiar archivo</button>
+                    <button class="small-button" type="button" id="refreshFileBtn" title="Recargar estado del archivo activo">Recargar estado</button>
                     <a
                         class="online-link"
                         href="https://crfpcastilla-my.sharepoint.com/:x:/g/personal/sslm07_educastillalamancha_es/IQCcqkwxp64ZQ7zaAT65YnDDAUq1WmRzaTsFUgF8vd8QcSw?e=MDXWht"
@@ -855,6 +856,7 @@
                         rel="noopener noreferrer"
                     >OneDrive ↗</a>
                 </div>
+                <span class="file-mtime" id="fileVerifyState" style="display:none"></span>
 
                 <div>
                     <div class="section-kicker" id="recentKicker" style="display:none">
@@ -1042,6 +1044,7 @@
         const RECENT_KEY = "recentExcelFiles";
         const LAST_VISIT_KEY = "lastQuickAccess";
         const FILE_TS_KEY = "fileActiveTs";
+        const FILE_PATH_KEY = "fileActivePath";
         const MAX_RECENT = 6;
 
         function getRecentFiles() {
@@ -1155,10 +1158,10 @@
                 });
             });
 
-            clearBtn.addEventListener("click", (e) => {
+            clearBtn.onclick = (e) => {
                 e.stopPropagation();
                 clearAllRecentFiles();
-            });
+            };
         }
 
         async function activateFile(filePath) {
@@ -1179,10 +1182,65 @@
         function setFileActive(fileName, filePath) {
             document.getElementById("activeFileName").textContent = fileName;
             localStorage.setItem(FILE_TS_KEY, Date.now().toString());
+            localStorage.setItem(FILE_PATH_KEY, filePath || "");
             refreshActiveSince();
             renderRecentFiles(filePath);
             loadFileStats();
             loadAlertas();
+            refreshFileHealth(filePath);
+        }
+
+        function setNoActiveFile(text) {
+            document.getElementById("activeFileName").textContent = text || "Sin archivo seleccionado";
+            document.getElementById("fileActiveSince").style.display = "none";
+            const verifyEl = document.getElementById("fileVerifyState");
+            if (verifyEl) verifyEl.style.display = "none";
+            const statsEl = document.getElementById("fileStats");
+            if (statsEl) statsEl.style.display = "none";
+            const alertPanel = document.getElementById("alertasPanel");
+            if (alertPanel) alertPanel.style.display = "none";
+            localStorage.removeItem(FILE_PATH_KEY);
+            renderRecentFiles(null);
+        }
+
+        async function refreshFileHealth(filePath) {
+            const verifyEl = document.getElementById("fileVerifyState");
+            if (!verifyEl || !filePath) {
+                if (verifyEl) verifyEl.style.display = "none";
+                return;
+            }
+            verifyEl.style.display = "";
+            verifyEl.style.color = "var(--muted)";
+            verifyEl.textContent = "Comprobando acceso al archivo...";
+            const exists = await verifyFileExists(filePath);
+            if (exists) {
+                verifyEl.style.color = "#166534";
+                verifyEl.textContent = "Archivo accesible";
+            } else {
+                verifyEl.style.color = "#b45309";
+                verifyEl.textContent = "Archivo no encontrado";
+            }
+        }
+
+        async function refreshCurrentFileState(showToast = false) {
+            if (!window.electronExcel) return;
+            try {
+                const result = await window.electronExcel.getSelectedFile();
+                if (!result || !result.filePath) {
+                    setNoActiveFile("Sin archivo seleccionado");
+                    return;
+                }
+                saveRecentFile(result.filePath, result.fileName);
+                setFileActive(result.fileName, result.filePath);
+                if (showToast && window.appUx) {
+                    window.appUx.showStatus("Estado del archivo actualizado", "success", 2500);
+                }
+            } catch (err) {
+                if (showToast) {
+                    if (window.appUx) window.appUx.showStatus("No se pudo recargar el estado: " + err, "error", 5000);
+                    else alert("No se pudo recargar el estado:\n" + err);
+                }
+            }
         }
 
         function refreshActiveSince() {
@@ -1307,6 +1365,7 @@
             if (!window.electronExcel) return;
 
             const changeBtn = document.getElementById("changeFileBtn");
+            const refreshBtn = document.getElementById("refreshFileBtn");
             changeBtn.addEventListener("click", async () => {
                 try {
                     const result = await window.electronExcel.selectFile();
@@ -1319,6 +1378,12 @@
                     else alert("Error al seleccionar archivo:\n" + err);
                 }
             });
+            refreshBtn.addEventListener("click", () => refreshCurrentFileState(true));
+
+            window.addEventListener("focus", () => { refreshCurrentFileState(false); });
+            document.addEventListener("visibilitychange", () => {
+                if (!document.hidden) refreshCurrentFileState(false);
+            });
 
             try {
                 const result = await window.electronExcel.getSelectedFile();
@@ -1326,12 +1391,10 @@
                     saveRecentFile(result.filePath, result.fileName);
                     setFileActive(result.fileName, result.filePath);
                 } else {
-                    document.getElementById("activeFileName").textContent = "Sin archivo seleccionado";
-                    renderRecentFiles(null);
+                    setNoActiveFile("Sin archivo seleccionado");
                 }
             } catch {
-                document.getElementById("activeFileName").textContent = "Sin archivo";
-                renderRecentFiles(null);
+                setNoActiveFile("Sin archivo");
             }
         });
     </script>
