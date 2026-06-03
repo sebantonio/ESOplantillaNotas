@@ -119,7 +119,7 @@
 
         .controls {
             display: grid;
-            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 220px) minmax(220px, 1fr) auto auto;
+            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 220px) minmax(220px, 1fr) auto auto auto;
             gap: 14px;
             align-items: end;
             margin-bottom: 22px;
@@ -1001,6 +1001,7 @@
                     <input type="search" id="studentSearchInput" placeholder="Nombre..." autocomplete="off" />
                 </div>
                 <button class="secondary" type="button" id="reloadButton">Recargar</button>
+                <button class="secondary" type="button" id="clearFiltersButton">Limpiar filtros</button>
             </section>
 
             <section id="criteriosSection" class="criterios-section" style="display:none" aria-label="Criterios de evaluacion">
@@ -1031,6 +1032,10 @@
                     <div class="summary-pill wide">
                         <span class="pill-label">Actividad</span>
                         <span class="pill-value" id="activityName">-</span>
+                    </div>
+                    <div class="summary-pill wide">
+                        <span class="pill-label">Sincronizacion</span>
+                        <span class="pill-value" id="lastSyncStatus">Sin sincronizar</span>
                     </div>
                     <div class="summary-divider"></div>
                     <div class="summary-pill">
@@ -1119,9 +1124,11 @@
         let currentPage = 0;
         let perPage = 15;
         const AUTO_SAVE_DELAY_MS = 15000;
+        const VIEW_PREFS_KEY = "gestorNotasViewPrefs";
         const _notasCache = new Map();
         let busyCount = 0;
         let busyDelayTimer = null;
+        let currentQuickFilter = "all";
 
         const messageBox = document.getElementById("message");
         const unidadSelect = document.getElementById("unidadSelect");
@@ -1139,6 +1146,7 @@
         const studentSearchInput = document.getElementById("studentSearchInput");
         const saveButton = document.getElementById("saveButton");
         const reloadButton = document.getElementById("reloadButton");
+        const clearFiltersButton = document.getElementById("clearFiltersButton");
         const clearButton = document.getElementById("clearButton");
         const criteriosSection = document.getElementById("criteriosSection");
         const criteriosContent = document.getElementById("criteriosContent");
@@ -1147,6 +1155,7 @@
         const raDescBox = document.getElementById("raDescBox");
         const busyOverlay = document.getElementById("busyOverlay");
         const busyText = document.getElementById("busyText");
+        const lastSyncStatus = document.getElementById("lastSyncStatus");
 
         document.addEventListener("DOMContentLoaded", () => {
             if (!window.electronExcel) {
@@ -1158,13 +1167,34 @@
             reloadButton.addEventListener("click", () => loadNotasConGuardado());
             saveButton.addEventListener("click", saveNotas);
             clearButton.addEventListener("click", clearNotas);
-            unidadSelect.addEventListener("change", () => loadNotasConGuardado());
+            unidadSelect.addEventListener("change", () => {
+                saveViewPrefs();
+                loadNotasConGuardado();
+            });
             setupQuickFilters();
             studentSearchInput?.addEventListener('input', () => {
                 studentSearch = studentSearchInput.value.trim().toLowerCase();
                 currentPage = 0;
+                saveViewPrefs();
                 renderTable();
                 renderPagination();
+            });
+
+            clearFiltersButton?.addEventListener("click", () => {
+                studentSearch = "";
+                studentSearchInput.value = "";
+                currentQuickFilter = "all";
+                currentPage = 0;
+                saveViewPrefs();
+                renderTable();
+                renderPagination();
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.ctrlKey && event.key.toLowerCase() === "s") {
+                    event.preventDefault();
+                    saveNotas();
+                }
             });
 
             // Event delegation para inputs de notas CR (optimización: 1 listener en lugar de N)
@@ -1216,7 +1246,15 @@
                 next?.focus();
             });
 
-            loadNotas();
+            const prefs = getViewPrefs();
+            const initialPerPage = Number(prefs.perPage || perPage);
+            perPage = [10, 15, 20, 25, 50].includes(initialPerPage) ? initialPerPage : perPage;
+            if (prefs.search) {
+                studentSearch = String(prefs.search || "").toLowerCase();
+                studentSearchInput.value = prefs.search;
+            }
+            currentQuickFilter = prefs.quickFilter || "all";
+            loadNotas({ unidad: prefs.unidad || "U1" });
         });
 
         async function loadNotasConGuardado(options = {}) {
@@ -1231,7 +1269,7 @@
                 setDisabled(true);
                 beginBusy("Cargando notas de la unidad...");
 
-                const unidad = unidadSelect.value || "U1";
+                const unidad = options.unidad || unidadSelect.value || "U1";
                 const cacheKey = `${unidad}`;
 
                 let data;
@@ -1273,6 +1311,11 @@
                 renderControls(data);
                 renderSummary(data);
                 renderTable();
+                if (lastSyncStatus) {
+                    const fileInfo = data.fileName ? ` · ${data.fileName}` : "";
+                    lastSyncStatus.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileInfo}`;
+                }
+                saveViewPrefs();
                 showMessage("Unidad cargada correctamente.", "success");
             } catch (error) {
                 showMessage(error.message || "No se pudieron cargar las notas.", "error");
@@ -1382,22 +1425,59 @@
         function setupQuickFilters() {
             document.querySelectorAll("#noteQuickFilters .quick-filter").forEach((btn) => {
                 btn.addEventListener("click", () => {
-                    document.querySelectorAll("#noteQuickFilters .quick-filter").forEach(b => b.classList.remove("active"));
-                    btn.classList.add("active");
-                    const filter = btn.dataset.noteFilter;
-                    const rows = notasBody.querySelectorAll("tr[data-student-idx]");
-                    rows.forEach((row) => {
-                        const inputs = Array.from(row.querySelectorAll(".nota-cr:not([disabled])"));
-                        const values = inputs.map(i => parseFloat(i.value.replace(",", ".")) || 0);
-                        let show = true;
-                        if (filter === "pending") show = values.every(v => v === 0);
-                        else if (filter === "invalid") show = row.classList.contains("invalid-note");
-                        else if (filter === "fail") show = values.some(v => v > 0 && v < 5);
-                        else if (filter === "pass") show = values.some(v => v >= 5) && !values.some(v => v > 0 && v < 5);
-                        row.style.display = show ? "" : "none";
-                    });
+                    setQuickFilter(btn.dataset.noteFilter || "all", true);
                 });
             });
+        }
+
+        function setQuickFilter(filter, persist = false) {
+            currentQuickFilter = filter || "all";
+            document.querySelectorAll("#noteQuickFilters .quick-filter").forEach((button) => button.classList.remove("active"));
+            const activeButton = document.querySelector(`#noteQuickFilters [data-note-filter='${currentQuickFilter}']`)
+                || document.querySelector("#noteQuickFilters [data-note-filter='all']");
+            if (activeButton) {
+                activeButton.classList.add("active");
+            }
+            applyQuickFilter(currentQuickFilter);
+            if (persist) {
+                saveViewPrefs();
+            }
+        }
+
+        function applyQuickFilter(filter) {
+            const rows = notasBody.querySelectorAll("tr[data-student-idx]");
+            rows.forEach((row) => {
+                const inputs = Array.from(row.querySelectorAll(".nota-cr:not([disabled])"));
+                const values = inputs.map((input) => parseFloat(input.value.replace(",", ".")) || 0);
+                let show = true;
+                if (filter === "pending") show = values.every((value) => value === 0);
+                else if (filter === "invalid") show = row.classList.contains("invalid-note");
+                else if (filter === "fail") show = values.some((value) => value > 0 && value < 5);
+                else if (filter === "pass") show = values.some((value) => value >= 5) && !values.some((value) => value > 0 && value < 5);
+                row.style.display = show ? "" : "none";
+            });
+        }
+
+        function saveViewPrefs() {
+            try {
+                const prefs = {
+                    unidad: unidadSelect.value || (currentState && currentState.unidad) || "U1",
+                    search: studentSearchInput.value || "",
+                    perPage,
+                    quickFilter: currentQuickFilter || "all"
+                };
+                localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
+            } catch {
+                // Ignorar errores de localStorage
+            }
+        }
+
+        function getViewPrefs() {
+            try {
+                return JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || "null") || {};
+            } catch {
+                return {};
+            }
         }
 
         function getNotesToRender() {
@@ -1431,12 +1511,14 @@
         function changePage(delta) {
             const totalPages = Math.max(1, Math.ceil(currentNotes.length / perPage));
             currentPage = Math.max(0, Math.min(currentPage + delta, totalPages - 1));
+            saveViewPrefs();
             renderTable();
         }
 
         function changePerPage(val) {
             perPage = parseInt(val, 10) || 15;
             currentPage = 0;
+            saveViewPrefs();
             renderTable();
         }
 
@@ -1563,6 +1645,7 @@
 
             notasBody.textContent = '';
             notasBody.appendChild(fragment);
+            setQuickFilter(currentQuickFilter, false);
             renderPagination();
         }
 
@@ -1615,6 +1698,11 @@
                 if (!options.silent) {
                     showMessage("Notas guardadas. Excel recalculara las formulas al abrirse.", "success");
                 }
+                if (lastSyncStatus) {
+                    const fileInfo = data.fileName ? ` · ${data.fileName}` : "";
+                    lastSyncStatus.textContent = `Guardado ${new Date().toLocaleTimeString()}${fileInfo}`;
+                }
+                saveViewPrefs();
                 return true;
             } catch (error) {
                 showMessage(error.message || "No se pudieron guardar las notas.", "error");
@@ -2137,13 +2225,16 @@
         }
 
         function setDisabled(disabled) {
-            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, reloadButton, clearButton, saveCriteriosButton].forEach((element) => {
+            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, reloadButton, clearFiltersButton, clearButton, saveCriteriosButton].forEach((element) => {
                 element.disabled = disabled;
             });
         }
 
         function showMessage(text, type) {
-            messageBox.textContent = text;
+            const friendly = (type === "error" && window.appUx && window.appUx.hintError)
+                ? window.appUx.hintError(text)
+                : text;
+            messageBox.textContent = friendly;
             messageBox.className = `message ${type} show`;
         }
 
