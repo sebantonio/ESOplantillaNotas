@@ -208,6 +208,28 @@
             border-radius: 8px;
         }
 
+        .units-toolbar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) 160px auto auto;
+            gap: 10px;
+            align-items: end;
+            margin-top: 12px;
+        }
+
+        .units-toolbar .status-chip {
+            min-height: 40px;
+            padding: 8px 10px;
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            color: #374151;
+            background: #ffffff;
+            font-size: 0.85em;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -334,6 +356,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .units-toolbar {
+                grid-template-columns: 1fr;
+            }
+
             .actions,
             .page-nav {
                 align-items: stretch;
@@ -401,6 +427,23 @@
 
                 <div class="section">
                     <h2>2️⃣ Unidades Actuales</h2>
+                    <div class="units-toolbar">
+                        <div>
+                            <label for="searchUnidadInput">Buscar unidad</label>
+                            <input type="search" id="searchUnidadInput" placeholder="Código o nombre">
+                        </div>
+                        <div>
+                            <label for="filterEvalSelect">Evaluación</label>
+                            <select id="filterEvalSelect">
+                                <option value="">Todas</option>
+                                <option value="1ª">1ª</option>
+                                <option value="2ª">2ª</option>
+                                <option value="3ª">3ª</option>
+                            </select>
+                        </div>
+                        <span id="pendingStatus" class="status-chip">Sin cambios pendientes</span>
+                        <span id="lastSyncStatus" class="status-chip">Sin sincronizar</span>
+                    </div>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -456,8 +499,14 @@
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
+        const searchUnidadInput = document.getElementById('searchUnidadInput');
+        const filterEvalSelect = document.getElementById('filterEvalSelect');
+        const pendingStatus = document.getElementById('pendingStatus');
+        const lastSyncStatus = document.getElementById('lastSyncStatus');
 
         document.addEventListener('DOMContentLoaded', () => {
+            searchUnidadInput.addEventListener('input', () => mostrarTablaUnidades());
+            filterEvalSelect.addEventListener('change', () => mostrarTablaUnidades());
             if (isElectronMode) {
                 cargarUnidadesLocales();
             }
@@ -511,6 +560,7 @@
                 hayCambiosSinGuardar = false;
                 limpiarTemporizadorAutoguardado();
                 mostrarContenido(result.fileName);
+                setLastSync(`Sincronizado ${new Date().toLocaleTimeString()} · ${result.fileName}`);
                 mostrarLoading(false);
             } catch (error) {
                 mostrarMensaje('Error al leer unidades: ' + error.message, 'error');
@@ -552,6 +602,7 @@
             mostrarTablaUnidades();
             actualizarStats();
             prepararCodigoSiguiente();
+            refreshPendingStatus();
             mostrarMensaje(`Archivo conectado: ${fileName}`, 'success');
         }
 
@@ -573,7 +624,23 @@
 
         function mostrarTablaUnidades() {
             const tbody = document.getElementById('unidadesTableBody');
-            tbody.innerHTML = unidadesActuales.map((unidad, idx) => `
+            const query = normalize(searchUnidadInput.value);
+            const evalFilter = String(filterEvalSelect.value || '').trim();
+            const filtradas = unidadesActuales
+                .map((unidad, idx) => ({ unidad, idx }))
+                .filter(({ unidad }) => {
+                    const byEval = !evalFilter || unidad.evaluacion === evalFilter;
+                    if (!byEval) return false;
+                    if (!query) return true;
+                    return normalize(unidad.codigo).includes(query) || normalize(unidad.nombre).includes(query);
+                });
+
+            if (!filtradas.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#6b7280;padding:16px;">Sin resultados para el filtro actual.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtradas.map(({ unidad, idx }) => `
                 <tr>
                     <td><input type="text" value="${escaparHtml(unidad.codigo)}" onchange="actualizarUnidad(${idx}, 'codigo', this.value)" /></td>
                     <td><textarea onchange="actualizarUnidad(${idx}, 'nombre', this.value)">${escaparHtml(unidad.nombre)}</textarea></td>
@@ -621,13 +688,19 @@
         }
 
         function eliminarUnidad(idx) {
-            if (confirm(`¿Eliminar ${unidadesActuales[idx].codigo}?`)) {
+            const runDelete = async () => {
+                const question = `¿Eliminar ${unidadesActuales[idx].codigo}?`;
+                const ok = window.appUx && window.appUx.confirm
+                    ? await window.appUx.confirm(question, { title: 'Eliminar unidad', confirmText: 'Eliminar' })
+                    : confirm(question);
+                if (!ok) return;
                 unidadesActuales.splice(idx, 1);
                 mostrarTablaUnidades();
                 actualizarStats();
                 prepararCodigoSiguiente();
                 marcarCambio();
-            }
+            };
+            runDelete();
         }
 
         async function guardarExcel() {
@@ -641,6 +714,8 @@
                     prepararCodigoSiguiente();
                     hayCambiosSinGuardar = false;
                     limpiarTemporizadorAutoguardado();
+                    refreshPendingStatus();
+                    setLastSync(`Guardado ${new Date().toLocaleTimeString()} · ${result.fileName}`);
                     mostrarMensaje(`Unidades guardadas en ${result.fileName}`, 'success');
                     mostrarLoading(false);
                     return true;
@@ -663,6 +738,8 @@
                 mostrarMensaje('Excel actualizado con las unidades en DATOS.', 'success');
                 hayCambiosSinGuardar = false;
                 limpiarTemporizadorAutoguardado();
+                refreshPendingStatus();
+                setLastSync(`Guardado ${new Date().toLocaleTimeString()}`);
                 return true;
             } catch (error) {
                 mostrarMensaje('Error al guardar: ' + error.message, 'error');
@@ -672,6 +749,7 @@
 
         function marcarCambio() {
             hayCambiosSinGuardar = true;
+            refreshPendingStatus();
             limpiarTemporizadorAutoguardado();
             autoSaveTimeout = setTimeout(() => {
                 guardarCambiosAutomaticamente();
@@ -796,9 +874,32 @@
 
         function mostrarMensaje(texto, tipo) {
             const message = document.getElementById('message');
-            message.textContent = texto;
+            const pretty = (tipo === 'error' && window.appUx && window.appUx.hintError)
+                ? window.appUx.hintError(texto)
+                : texto;
+            message.textContent = pretty;
             message.className = `message ${tipo} show`;
             setTimeout(() => message.classList.remove('show'), 6000);
+        }
+
+        function refreshPendingStatus() {
+            if (!pendingStatus) return;
+            pendingStatus.textContent = hayCambiosSinGuardar ? 'Cambios pendientes' : 'Sin cambios pendientes';
+            pendingStatus.style.color = hayCambiosSinGuardar ? '#b45309' : '#166534';
+            pendingStatus.style.borderColor = hayCambiosSinGuardar ? '#fcd34d' : '#86efac';
+        }
+
+        function setLastSync(text) {
+            if (!lastSyncStatus) return;
+            lastSyncStatus.textContent = text || 'Sin sincronizar';
+        }
+
+        function normalize(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
         }
 
         function mostrarLoading(show) {
