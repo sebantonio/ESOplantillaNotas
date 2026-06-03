@@ -110,8 +110,10 @@
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
+        <button class="pag-btn" id="btnRefresh" type="button" title="Recargar evaluación actual">Recargar</button>
         <button id="btnSave" class="btn-save" onclick="saveAllRec()">Guardar</button>
         <span id="saveStatus" class="save-status"></span>
+        <span id="lastSync" class="save-status">Sin sincronizar</span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
             <span id="pageInfoTop" style="font-size:0.82rem;color:#374151;white-space:nowrap;"></span>
@@ -168,6 +170,8 @@
     const btnNext         = document.getElementById("btnNext");
     const perPageSelect   = document.getElementById("perPageSelect");
     const headerTitulo    = document.getElementById("headerTitulo");
+    const btnRefresh      = document.getElementById("btnRefresh");
+    const lastSyncEl      = document.getElementById("lastSync");
 
     let currentState = null;
     let currentPage  = 0;
@@ -183,7 +187,10 @@
     ];
 
     function showMessage(text, type) {
-        messageEl.textContent = text;
+        const pretty = (type === "error" && window.appUx && window.appUx.hintError)
+            ? window.appUx.hintError(text)
+            : text;
+        messageEl.textContent = pretty;
         messageEl.className = "message " + type + " show";
     }
 
@@ -219,7 +226,13 @@
     const _BASE_TITLE = document.title;
 
     window.addEventListener('beforeunload', (e) => {
-        if (_hayPendientes) { e.preventDefault(); e.returnValue = ''; }
+        if (_hayPendientes) {
+            e.preventDefault();
+            const pending = document.querySelectorAll('.rec-input.dirty-rec').length;
+            e.returnValue = pending > 0
+                ? `Hay ${pending} recuperación(es) pendiente(s) de guardar.`
+                : 'Hay cambios pendientes de guardar.';
+        }
     });
 
     function parseNote(v) {
@@ -486,6 +499,12 @@
             renderStats();
             renderTable();
             resetAutoSave();
+            if (lastSyncEl) {
+                const fileLabel = data.fileName ? ` · ${data.fileName}` : '';
+                lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileLabel}`;
+            }
+            const status = document.getElementById('saveStatus');
+            if (status) status.textContent = 'Sin cambios pendientes';
             showMessage("Notas cargadas.", "success");
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
@@ -509,6 +528,7 @@
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
         searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
         alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
+        btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
         notasBody.addEventListener("keydown", (e) => {
             const inp = e.target;
             if (!inp.classList.contains("rec-input")) return;
@@ -553,7 +573,7 @@
         _hayPendientes = pending > 0;
         document.title = _hayPendientes ? '* ' + _BASE_TITLE : _BASE_TITLE;
         const status = document.getElementById('saveStatus');
-        if (status && _hayPendientes) status.textContent = `${pending} cambio(s) pendiente(s)`;
+        if (status) status.textContent = _hayPendientes ? `${pending} cambio(s) pendiente(s)` : 'Sin cambios pendientes';
     }
 </script>
 </body>
