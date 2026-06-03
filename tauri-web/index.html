@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Notas ESO</title>
+    <link rel="stylesheet" href="ux-common.css">
+    <script src="ux-common.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -628,6 +630,133 @@
                 min-height: 124px;
             }
         }
+
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 12px;
+            border: 2px solid rgba(67, 56, 202, 0.32);
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(255, 255, 255, 0.6));
+        }
+
+        .file-mtime {
+            font-size: 0.82rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .file-stats {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .stat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.22);
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .continue-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.22);
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .continue-banner-link {
+            flex: 1;
+            color: var(--primary-dark);
+            font-weight: 700;
+            font-size: 0.88rem;
+            text-decoration: none;
+        }
+
+        .continue-banner-link:hover { text-decoration: underline; }
+
+        .continue-dismiss {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--muted);
+            font-size: 0.8rem;
+            padding: 2px 5px;
+            border-radius: 4px;
+            line-height: 1;
+        }
+
+        .continue-dismiss:hover { background: rgba(0,0,0,0.07); }
+
+        .alertas-panel {
+            background: rgba(255, 255, 255, 0.94);
+            border: 1px solid rgba(216, 225, 238, 0.9);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 14px 16px;
+            margin-bottom: 22px;
+        }
+
+        .alertas-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .alertas-header .section-kicker { margin-bottom: 0; }
+
+        .alertas-eva-select {
+            margin-left: auto;
+            padding: 3px 8px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font: inherit;
+            font-size: 0.8rem;
+            background: white;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .alertas-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .alerta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .alerta-item.bad  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .alerta-item.warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .alerta-item:hover { filter: brightness(0.95); }
+        .alerta-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .alerta-dot.bad  { background: #ef4444; }
+        .alerta-dot.warn { background: #f59e0b; }
+        .alertas-ok { color: var(--muted); font-size: 0.83rem; font-style: italic; }
+        .alertas-loading { color: var(--muted); font-size: 0.83rem; }
     </style>
 </head>
 <body>
@@ -645,7 +774,7 @@
                     <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
                     <a class="nav-link" href="index.html">⌂ Inicio</a>
                 </nav>
-                <div class="version">v0.1.84</div>
+                <div class="version" id="appVersionBadge">v0.1.86</div>
             </div>
         </header>
 
@@ -656,6 +785,11 @@
                 <p>
                     Accede rápido a las tareas habituales: registrar calificaciones y añadir actividades evaluables.
                 </p>
+
+                <div class="continue-banner" id="continueBanner">
+                    <a class="continue-banner-link" href="#" id="continueLink">↩ Continuar</a>
+                    <button class="continue-dismiss" type="button" id="continueDismiss" title="Cerrar" aria-label="Cerrar acceso rapido">✕</button>
+                </div>
 
                 <div class="primary-actions">
                     <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">
@@ -686,9 +820,14 @@
             </div>
 
             <aside class="side-panel" aria-labelledby="excel-title">
-                <div>
+                <div class="file-meta">
                     <div class="section-kicker">Archivo activo</div>
                     <p class="file-name" id="activeFileName">Cargando...</p>
+                    <span class="file-mtime" id="fileActiveSince" style="display:none"></span>
+                    <div class="file-stats" id="fileStats" style="display:none">
+                        <span class="stat-pill" id="statAlumnos">👥 —</span>
+                        <span class="stat-pill" id="statUnidades">📚 —</span>
+                    </div>
                 </div>
 
                 <div class="file-actions">
@@ -731,6 +870,22 @@
                     </a>
                 </div>
             </aside>
+        </section>
+
+        <section class="alertas-panel" id="alertasPanel" style="display:none" aria-label="Alertas de evaluación">
+            <div class="alertas-header">
+                <div class="section-kicker">Alertas</div>
+                <select class="alertas-eva-select" id="alertasEvaSelect" onchange="loadAlertas()">
+                    <option value="1">1ª EVA</option>
+                    <option value="2">2ª EVA</option>
+                    <option value="3">3ª EVA</option>
+                    <option value="final">Final</option>
+                </select>
+                <a href="visor-notas.html" style="font-size:0.78rem; color:var(--primary); font-weight:700; text-decoration:none; margin-left:8px;">Ver todos →</a>
+            </div>
+            <div class="alertas-list" id="alertasList">
+                <span class="alertas-loading">Cargando...</span>
+            </div>
         </section>
 
         <section class="setup-panel" aria-labelledby="setup-title">
@@ -869,6 +1024,8 @@
     <script src="app-bridge.js"></script>
     <script>
         const RECENT_KEY = "recentExcelFiles";
+        const LAST_VISIT_KEY = "lastQuickAccess";
+        const FILE_TS_KEY = "fileActiveTs";
         const MAX_RECENT = 6;
 
         function getRecentFiles() {
@@ -888,8 +1045,14 @@
             renderRecentFiles(null);
         }
 
-        function clearAllRecentFiles() {
-            if (confirm("¿Deseas eliminar todos los archivos recientes?")) {
+        async function clearAllRecentFiles() {
+            const ok = window.appUx && window.appUx.confirm
+                ? await window.appUx.confirm("¿Deseas eliminar todos los archivos recientes?", {
+                    title: "Limpiar historial",
+                    confirmText: "Eliminar"
+                })
+                : confirm("¿Deseas eliminar todos los archivos recientes?");
+            if (ok) {
                 localStorage.setItem(RECENT_KEY, JSON.stringify([]));
                 renderRecentFiles(null);
             }
@@ -989,12 +1152,127 @@
                 if (result) {
                     const recent = getRecentFiles().find((f) => f.path === filePath);
                     saveRecentFile(filePath, result.fileName || recent?.name || filePath.split(/[\\/]/).pop());
-                    document.getElementById("activeFileName").textContent = result.fileName || filePath.split(/[\\/]/).pop();
-                    renderRecentFiles(filePath);
+                    setFileActive(result.fileName || filePath.split(/[\\/]/).pop(), filePath);
                 }
             } catch (err) {
-                alert("No se pudo activar el archivo:\n" + err);
+                if (window.appUx) window.appUx.showStatus("No se pudo activar el archivo: " + err, "error", 6000);
+                else alert("No se pudo activar el archivo:\n" + err);
             }
+        }
+
+        function setFileActive(fileName, filePath) {
+            document.getElementById("activeFileName").textContent = fileName;
+            localStorage.setItem(FILE_TS_KEY, Date.now().toString());
+            refreshActiveSince();
+            renderRecentFiles(filePath);
+            loadFileStats();
+            loadAlertas();
+        }
+
+        function refreshActiveSince() {
+            const el = document.getElementById("fileActiveSince");
+            if (!el) return;
+            const raw = localStorage.getItem(FILE_TS_KEY);
+            if (!raw) { el.style.display = "none"; return; }
+            const diffMin = Math.floor((Date.now() - parseInt(raw)) / 60000);
+            let text;
+            if (diffMin < 1) text = "Justo ahora";
+            else if (diffMin < 60) text = `Hace ${diffMin} min`;
+            else if (diffMin < 1440) text = `Hace ${Math.floor(diffMin / 60)} h`;
+            else text = new Date(parseInt(raw)).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+            el.textContent = `Activo: ${text}`;
+            el.style.display = "";
+        }
+
+        async function loadFileStats() {
+            if (!window.electronExcel) return;
+            try {
+                const [alumnos, unidades] = await Promise.all([
+                    window.electronExcel.loadAlumnos().catch(() => null),
+                    window.electronExcel.loadUnidades().catch(() => null),
+                ]);
+                const statsEl = document.getElementById("fileStats");
+                if (!statsEl) return;
+                if (alumnos) document.getElementById("statAlumnos").textContent = `👥 ${alumnos.length} alumnos`;
+                if (unidades) document.getElementById("statUnidades").textContent = `📚 ${unidades.filter(u => u && u.nombre).length} unidades`;
+                statsEl.style.display = "flex";
+            } catch {}
+        }
+
+        function saveLastVisit(href, label) {
+            localStorage.setItem(LAST_VISIT_KEY, JSON.stringify({ href, label, ts: Date.now() }));
+        }
+
+        function showContinueBanner() {
+            try {
+                const visit = JSON.parse(localStorage.getItem(LAST_VISIT_KEY) || "null");
+                if (!visit) return;
+                if (Date.now() - visit.ts > 7 * 24 * 60 * 60 * 1000) return;
+                const banner = document.getElementById("continueBanner");
+                const link = document.getElementById("continueLink");
+                link.href = visit.href;
+                link.textContent = `↩ Continuar: ${visit.label}`;
+                banner.style.display = "flex";
+            } catch {}
+        }
+
+        function initContinueBanner() {
+            showContinueBanner();
+            document.getElementById("continueDismiss").addEventListener("click", () => {
+                document.getElementById("continueBanner").style.display = "none";
+                localStorage.removeItem(LAST_VISIT_KEY);
+            });
+            document.querySelectorAll(".action-card").forEach((card) => {
+                card.addEventListener("click", () => {
+                    const label = card.querySelector("strong")?.textContent || "página";
+                    if (card.href) saveLastVisit(card.href, label);
+                });
+            });
+        }
+
+        async function loadAlertas() {
+            if (!window.electronExcel) return;
+            const panel = document.getElementById("alertasPanel");
+            const list = document.getElementById("alertasList");
+            const eva = document.getElementById("alertasEvaSelect").value;
+            list.innerHTML = '<span class="alertas-loading">Cargando...</span>';
+            try {
+                const data = await window.electronExcel.getNotasEvaluacion({ evaluacion: eva });
+                if (!data || !data.alumnos) { panel.style.display = "none"; return; }
+
+                const alertas = data.alumnos
+                    .map((a) => {
+                        const grades = (a.rraa || []).map((r) => r.nota).filter((v) => typeof v === "number" && v > 0);
+                        const minGrade = grades.length ? Math.min(...grades) : null;
+                        if (minGrade === null || minGrade >= 5) return null;
+                        return { nombre: a.nombre, min: minGrade, status: minGrade < 3 ? "bad" : "warn" };
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => a.min - b.min);
+
+                panel.style.display = "";
+                if (!alertas.length) {
+                    list.innerHTML = '<span class="alertas-ok">✓ Todos los alumnos aprueban todos los CE en esta evaluación</span>';
+                    return;
+                }
+                list.innerHTML = alertas.map((a) => `
+                    <a class="alerta-item ${a.status}" href="visor-notas.html" title="Mínimo CE: ${a.min.toFixed(2).replace(".", ",")}">
+                        <span class="alerta-dot ${a.status}"></span>
+                        ${escapeHtml(a.nombre)}
+                        <span style="opacity:0.7">${a.min.toFixed(1).replace(".", ",")}</span>
+                    </a>`).join("");
+            } catch {
+                panel.style.display = "none";
+            }
+        }
+
+        async function updateVersionBadge() {
+            const badge = document.getElementById("appVersionBadge");
+            if (!badge || !window.electronExcel || typeof window.electronExcel.getVersionInfo !== "function") return;
+            try {
+                const info = await window.electronExcel.getVersionInfo();
+                if (info && info.version) badge.textContent = `v${info.version}`;
+            } catch {}
         }
 
         function escapeHtml(str) {
@@ -1006,6 +1284,10 @@
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
+            await updateVersionBadge();
+            initContinueBanner();
+            refreshActiveSince();
+
             if (!window.electronExcel) return;
 
             const changeBtn = document.getElementById("changeFileBtn");
@@ -1014,11 +1296,11 @@
                     const result = await window.electronExcel.selectFile();
                     if (result) {
                         saveRecentFile(result.filePath, result.fileName);
-                        document.getElementById("activeFileName").textContent = result.fileName;
-                        renderRecentFiles(result.filePath);
+                        setFileActive(result.fileName, result.filePath);
                     }
                 } catch (err) {
-                    alert("Error al seleccionar archivo:\n" + err);
+                    if (window.appUx) window.appUx.showStatus("Error al seleccionar archivo: " + err, "error", 5000);
+                    else alert("Error al seleccionar archivo:\n" + err);
                 }
             });
 
@@ -1026,8 +1308,7 @@
                 const result = await window.electronExcel.getSelectedFile();
                 if (result) {
                     saveRecentFile(result.filePath, result.fileName);
-                    document.getElementById("activeFileName").textContent = result.fileName;
-                    renderRecentFiles(result.filePath);
+                    setFileActive(result.fileName, result.filePath);
                 } else {
                     document.getElementById("activeFileName").textContent = "Sin archivo seleccionado";
                     renderRecentFiles(null);
