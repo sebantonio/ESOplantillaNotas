@@ -780,6 +780,7 @@
                             <button class="secondary" type="button" onclick="alternarMenuRA()" style="width:auto;">☰ CE</button>
                             <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="flex:1; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
                             <input type="search" id="criterioSearchInput" placeholder="Buscar criterio por código o texto" autocomplete="off" style="flex:1;" />
+                            <button class="secondary" type="button" id="clearCriterioSearchButton" style="width:auto;">Limpiar</button>
                         </div>
                         <p class="ux-field-help">Selecciona una CE para filtrar sus criterios. Usa el buscador para localizar un criterio por código o texto.</p>
                         <div class="table-container ux-table-wrap">
@@ -916,6 +917,7 @@
         let archivoModificadoUnix = 0;
         let comprobandoActualizacion = false;
         let criterioBusqueda = '';
+        const VIEW_PREFS_KEY = 'gestorRraaCriteriosViewPrefs';
 
         // ===== VERIFICACIÓN DE LIBRERÍA XLSX =====
         function checkXLSX() {
@@ -1535,10 +1537,17 @@
                 const nombre = rraa && rraa.descripcion ? ` - ${rraa.descripcion}` : '';
                 return `<option value="${raNumero}" ${Number(raNumero) === Number(criterioRaActivo) ? 'selected' : ''}>CE ${raNumero}${escaparHtml(nombre)}</option>`;
             }).join('');
+
+            const prefs = loadViewPrefs();
+            if (prefs.raNumero && numeros.includes(Number(prefs.raNumero))) {
+                criterioRaActivo = Number(prefs.raNumero);
+                filtro.value = String(criterioRaActivo);
+            }
         }
 
         function seleccionarRAFiltro(value) {
             criterioRaActivo = Number(value);
+            saveViewPrefs();
             mostrarTablaCriterios();
         }
 
@@ -2220,16 +2229,64 @@ Unidades: ${importUnidades.length} registros
             return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
         }
 
+        function saveViewPrefs() {
+            try {
+                localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify({
+                    criterioSearch: criterioBusqueda || '',
+                    raNumero: criterioRaActivo || null
+                }));
+            } catch {}
+        }
+
+        function loadViewPrefs() {
+            try {
+                return JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || 'null') || {};
+            } catch {
+                return {};
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             if (isElectronMode) seleccionarArchivoLocal({ auto: true });
 
             const searchInput = document.getElementById('criterioSearchInput');
+            const clearSearchButton = document.getElementById('clearCriterioSearchButton');
+            const prefs = loadViewPrefs();
+            if (prefs.criterioSearch && searchInput) {
+                searchInput.value = prefs.criterioSearch;
+                criterioBusqueda = normalizarBusqueda(prefs.criterioSearch);
+            }
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
                     criterioBusqueda = normalizarBusqueda(searchInput.value);
+                    saveViewPrefs();
                     mostrarTablaCriterios();
                 });
             }
+
+            if (clearSearchButton) {
+                clearSearchButton.addEventListener('click', () => {
+                    criterioBusqueda = '';
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    saveViewPrefs();
+                    mostrarTablaCriterios();
+                });
+            }
+
+            document.addEventListener('keydown', (event) => {
+                if (event.ctrlKey && event.key.toLowerCase() === 's') {
+                    event.preventDefault();
+                    guardarCambiosForzado();
+                }
+            });
+
+            window.addEventListener('beforeunload', (event) => {
+                if (!hayChangesSinGuardar) return;
+                event.preventDefault();
+                event.returnValue = 'Hay cambios de CE/criterios pendientes de guardar.';
+            });
         });
 
         window.addEventListener('focus', () => comprobarActualizacionExterna());
