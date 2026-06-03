@@ -358,6 +358,9 @@
             <!-- Entradas completas del día -->
             <div class="card">
                 <div class="card-title">Historial del día</div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <input type="search" id="entriesSearch" placeholder="Buscar en actividad, tarea o incidencia...">
+                </div>
                 <div id="selectedDateLabel">Selecciona un día en el calendario</div>
                 <div id="entriesList"></div>
             </div>
@@ -380,6 +383,7 @@
     let selectedEstado = null;
     let moduleName = '';
     let allEntries = [];
+    let entriesSearch = '';
 
     async function init() {
         if (!bridge) { showToast('No hay conexión con el archivo Excel.', true); return; }
@@ -525,7 +529,12 @@
         if (!selectedDate) { label.innerHTML = '—'; list.innerHTML = ''; return; }
         const [y,m,d] = selectedDate.split('-');
         label.innerHTML = `<span>${d}/${m}/${y}</span>`;
-        const day = allEntries.filter(e => e.fecha === selectedDate);
+        const q = entriesSearch.toLowerCase();
+        const day = allEntries.filter(e => e.fecha === selectedDate).filter(e => {
+            if (!q) return true;
+            const hay = `${e.texto || ''} ${e.tarea || ''} ${e.incidenciaTipo || ''} ${e.incidenciaDesc || ''} ${e.incidenciaAlumno || ''}`.toLowerCase();
+            return hay.includes(q);
+        });
         if (!day.length) { list.innerHTML = '<div class="mini-empty">Sin entradas</div>'; return; }
         list.innerHTML = '';
         day.forEach(e => {
@@ -542,7 +551,12 @@
         if (!selectedDate) { label.innerHTML = 'Selecciona un día en el calendario'; container.innerHTML = ''; return; }
         const [y,m,d] = selectedDate.split('-');
         label.innerHTML = `Historial del <span class="selected-date-display">${d}/${m}/${y}</span>`;
-        const day = allEntries.filter(e => e.fecha === selectedDate);
+        const q = entriesSearch.toLowerCase();
+        const day = allEntries.filter(e => e.fecha === selectedDate).filter(e => {
+            if (!q) return true;
+            const hay = `${e.texto || ''} ${e.tarea || ''} ${e.incidenciaTipo || ''} ${e.incidenciaDesc || ''} ${e.incidenciaAlumno || ''}`.toLowerCase();
+            return hay.includes(q);
+        });
         if (!day.length) { container.innerHTML = '<div class="entries-empty">No hay entradas para este día.</div>'; return; }
         container.innerHTML = '';
         day.forEach(entry => {
@@ -589,6 +603,12 @@
     }
 
     init();
+
+    document.getElementById('entriesSearch')?.addEventListener('input', (e) => {
+        entriesSearch = (e.target.value || '').trim();
+        renderMiniEntries();
+        renderEntries();
+    });
 })();
 </script>
 </body>

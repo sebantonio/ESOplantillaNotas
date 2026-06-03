@@ -54,7 +54,7 @@
         .grade-empty{ background: #f3f4f6; color: #9ca3af; }
         .th-ce-group { font-size: 0.78em; font-weight: 800; text-align: center; padding: 4px 6px; }
         .th-ce-nota  { font-size: 0.72em; font-weight: 800; }
-        .th-rec { font-size: 0.68em; color: #b45309; font-weight: 700; background: #fffbeb !important; }
+        .th-rec { font-size: 0.68em; color: #92400e; font-weight: 700; background: #fef3c7 !important; }
         .td-rec { background: #fffbeb; }
         .rec-val { display: inline-block; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 0.88rem; min-width: 42px; background: #fef3c7; color: #92400e; }
         .pag-btn { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; }
@@ -91,17 +91,20 @@
     <div class="toolbar">
         <label for="evalSelect">Evaluación:</label>
         <select id="evalSelect">
-            <option value="1">1ª Evaluación</option>
-            <option value="2">2ª Evaluación (acumulada)</option>
-            <option value="2solo">2ª Evaluación (solo 2ª)</option>
-            <option value="3">3ª Evaluación (acumulada)</option>
-            <option value="3solo">3ª Evaluación (solo 3ª)</option>
-            <option value="final">Final</option>
+            <option value="1" title="Solo datos de la 1ª evaluación">1ª Evaluación</option>
+            <option value="2" title="Incluye lo acumulado hasta 2ª evaluación">2ª Evaluación (acumulada)</option>
+            <option value="2solo" title="Solo criterios de la 2ª evaluación">2ª Evaluación (solo 2ª)</option>
+            <option value="3" title="Incluye lo acumulado hasta 3ª evaluación">3ª Evaluación (acumulada)</option>
+            <option value="3solo" title="Solo criterios de la 3ª evaluación">3ª Evaluación (solo 3ª)</option>
+            <option value="final" title="Vista final global">Final</option>
         </select>
+        <span style="font-size:0.8rem;color:#6b7280;max-width:340px;line-height:1.3;">Acumulada: incluye evaluaciones anteriores. Solo: muestra únicamente esa evaluación.</span>
         <label for="searchInput">Buscar:</label>
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
+        <button class="pag-btn" id="btnRefresh" type="button" title="Recargar datos de la evaluación actual">Recargar</button>
+        <span id="lastSync" style="font-size:0.8rem;color:#6b7280;white-space:nowrap;">Sin sincronizar</span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
             <span id="pageInfoTop" style="font-size:0.82rem;color:#374151;white-space:nowrap;"></span>
@@ -158,6 +161,8 @@
     const btnNext         = document.getElementById("btnNext");
     const perPageSelect   = document.getElementById("perPageSelect");
     const headerTitulo    = document.getElementById("headerTitulo");
+    const btnRefresh      = document.getElementById("btnRefresh");
+    const lastSyncEl      = document.getElementById("lastSync");
 
     let currentState = null;
     let currentPage  = 0;
@@ -237,7 +242,7 @@
         const _bt = document.getElementById('btnPrevTop'), _bn = document.getElementById('btnNextTop'), _pi = document.getElementById('pageInfoTop');
         if (_bt) _bt.disabled = currentPage === 0;
         if (_bn) _bn.disabled = currentPage >= totalPages - 1;
-        if (_pi) _pi.textContent = `${currentPage + 1}/${totalPages} · ${allAlumnos.length} alumnos`;
+        if (_pi) _pi.textContent = `Pagina ${currentPage + 1} de ${totalPages} · ${allAlumnos.length} alumnos`;
 
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
@@ -343,6 +348,7 @@
 
             renderStats();
             renderTable();
+            if (lastSyncEl) lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}`;
             showMessage("Notas cargadas.", "success");
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
@@ -367,6 +373,7 @@
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
         searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
         alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
+        btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
         loadEvaluacion("1");
     });
 </script>
