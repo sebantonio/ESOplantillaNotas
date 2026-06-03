@@ -500,6 +500,10 @@
                         <h3>Total de Alumnos</h3>
                         <div class="number" id="totalAlumnos">0</div>
                     </div>
+                    <div class="stat-card">
+                        <h3>Sincronizacion</h3>
+                        <div id="syncStatus">Sin sincronizar</div>
+                    </div>
                 </div>
 
                 <!-- TABLA DE ALUMNOS EXISTENTES -->
@@ -507,6 +511,7 @@
                     <h2>2️⃣ Alumnos Actuales</h2>
                     <div class="form-group" style="margin-top:0; margin-bottom:10px;">
                         <input type="search" id="alumnoSearchInput" placeholder="Buscar alumno por nombre..." />
+                        <button type="button" class="secondary" id="clearAlumnoSearchButton">Limpiar filtro</button>
                     </div>
                     <div class="table-container">
                         <table id="alumnosTable">
@@ -568,6 +573,7 @@
         let hayCambiosSinGuardar = false;
         let alumnosBusqueda = '';
         const AUTO_SAVE_DELAY_MS = 15000;
+        const ALUMNOS_VIEW_PREFS_KEY = 'gestorAlumnosViewPrefs';
 
         // ===== VERIFICACIÓN DE LIBRERÍA XLSX =====
         function checkXLSX() {
@@ -660,6 +666,7 @@
                 document.getElementById('uploadArea').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 mostrarMensaje(`Archivo conectado: ${result.fileName}`, 'success');
+                setSyncStatus(`Sincronizado ${new Date().toLocaleTimeString()}`);
                 mostrarLoading(false);
             } catch (error) {
                 mostrarLoading(false);
@@ -686,6 +693,7 @@
                 document.getElementById('uploadArea').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
                 mostrarMensaje(`Archivo conectado: ${result.fileName}`, 'success');
+                setSyncStatus(`Sincronizado ${new Date().toLocaleTimeString()}`);
                 mostrarLoading(false);
             } catch (error) {
                 mostrarMensaje('Error al abrir el Excel local: ' + error.message, 'error');
@@ -817,6 +825,7 @@
 
             // Guardar alumnos en global para usarlos después
             window.alumnosActuales = alumnos;
+            saveViewPrefs();
         }
 
         // ===== ACTUALIZAR ESTADÍSTICAS =====
@@ -964,6 +973,7 @@
                 hayCambiosSinGuardar = false;
                 limpiarTemporizadorAutoguardado();
                 mostrarMensaje(`Guardado directamente en: ${result.fileName}`, 'success');
+                setSyncStatus(`Guardado ${new Date().toLocaleTimeString()}`);
                 mostrarLoading(false);
                 return true;
             } catch (error) {
@@ -1030,6 +1040,29 @@
             document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
         }
 
+        function saveViewPrefs() {
+            try {
+                localStorage.setItem(ALUMNOS_VIEW_PREFS_KEY, JSON.stringify({ search: alumnosBusqueda || '' }));
+            } catch {
+                // Ignorar errores de localStorage
+            }
+        }
+
+        function loadViewPrefs() {
+            try {
+                return JSON.parse(localStorage.getItem(ALUMNOS_VIEW_PREFS_KEY) || 'null') || {};
+            } catch {
+                return {};
+            }
+        }
+
+        function setSyncStatus(text) {
+            const sync = document.getElementById('syncStatus');
+            if (sync) {
+                sync.textContent = text || 'Sin sincronizar';
+            }
+        }
+
         function formatearFecha(fecha) {
             if (!fecha) return '-';
             if (typeof fecha === 'number') {
@@ -1050,17 +1083,53 @@
             document.querySelector('.upload-text').innerHTML = '<strong>Selecciona otro archivo Excel</strong>';
             document.querySelector('.upload-hint').textContent = 'El archivo reciente se carga automáticamente al abrir';
             document.querySelector('.actions-right button').textContent = 'Guardar cambios en el Excel';
+            setSyncStatus('Listo para sincronizar');
         }
 
         if (isElectronMode) cargarAlumnosDesdeSeleccionado();
 
         const alumnoSearchInput = document.getElementById('alumnoSearchInput');
+        const clearAlumnoSearchButton = document.getElementById('clearAlumnoSearchButton');
+        const prefs = loadViewPrefs();
+        if (prefs.search && alumnoSearchInput) {
+            alumnosBusqueda = String(prefs.search);
+            alumnoSearchInput.value = alumnosBusqueda;
+        }
         if (alumnoSearchInput) {
             alumnoSearchInput.addEventListener('input', () => {
                 alumnosBusqueda = alumnoSearchInput.value;
+                saveViewPrefs();
                 mostrarTablaAlumnos(window.alumnosActuales || []);
             });
         }
+
+        if (clearAlumnoSearchButton) {
+            clearAlumnoSearchButton.addEventListener('click', () => {
+                alumnosBusqueda = '';
+                if (alumnoSearchInput) {
+                    alumnoSearchInput.value = '';
+                }
+                saveViewPrefs();
+                mostrarTablaAlumnos(window.alumnosActuales || []);
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.ctrlKey && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                if (isElectronMode) {
+                    guardarExcelLocal();
+                }
+            }
+        });
+
+        window.addEventListener('beforeunload', (event) => {
+            if (!hayCambiosSinGuardar) {
+                return;
+            }
+            event.preventDefault();
+            event.returnValue = 'Hay cambios de alumnos pendientes de guardar.';
+        });
 
         // Verificar carga de XLSX cada 500ms hasta que esté listo (modo browser)
         const xlsxCheckInterval = setInterval(() => {
