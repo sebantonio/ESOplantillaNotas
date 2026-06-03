@@ -136,6 +136,20 @@
             background: #f0fdf4;
         }
 
+        .file-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 6px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
         .panel {
             background: rgba(255, 255, 255, 0.92);
             border: 1px solid var(--line);
@@ -458,6 +472,7 @@
                 <div class="section-kicker">Informes</div>
                 <h1>Informes de alumnos</h1>
                 <p>Resumen imprimible por alumno, evolución por evaluaciones, medias del grupo y detalle de RRAA.</p>
+                <div id="activeFileBadge" class="file-badge">📂 Archivo: —</div>
             </div>
         </header>
 
@@ -553,6 +568,7 @@
         const finalGrade = document.getElementById("finalGrade");
         const averageGrade = document.getElementById("averageGrade");
         const passedEvaluations = document.getElementById("passedEvaluations");
+        const activeFileBadge = document.getElementById("activeFileBadge");
         const evolutionChart = document.getElementById("evolutionChart");
         const summaryBody = document.getElementById("summaryBody");
         const focusTitle = document.getElementById("focusTitle");
@@ -596,6 +612,9 @@
         async function loadEvaluation(value) {
             const evalConfig = EVALUATIONS.find((e) => e.value === value);
             const data = await window.electronExcel.getNotasEvaluacion({ evaluacion: value });
+            if (activeFileBadge && data?.fileName) {
+                activeFileBadge.textContent = `📂 Archivo: ${data.fileName}`;
+            }
             _evaluationsCache.set(value, { ...evalConfig, data });
             state.evaluations = EVALUATIONS
                 .filter((e) => _evaluationsCache.has(e.value))
@@ -624,7 +643,7 @@
 
                 renderStudentSelect();
                 renderReport();
-                showMessage("Informe cargado. Cambia la evaluación para ver las demás.", "success");
+                showMessage(`Informe cargado. Última sincronización: ${new Date().toLocaleTimeString()}.`, "success");
             } catch (error) {
                 showMessage(error.message || "No se pudieron cargar los informes.", "error");
             }

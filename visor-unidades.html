@@ -83,6 +83,8 @@
         <select id="unidadSelect"><option value="">Cargando...</option></select>
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
+        <button class="pag-btn" id="btnRefresh" type="button" title="Recargar unidad actual">Recargar</button>
+        <span id="lastSync" style="font-size:0.82rem;color:#6b7280;white-space:nowrap;">Sin sincronizar</span>
     </div>
 
     <div class="content">
@@ -120,6 +122,8 @@
     const btnPrev       = document.getElementById("btnPrev");
     const btnNext       = document.getElementById("btnNext");
     const perPageSelect = document.getElementById("perPageSelect");
+    const btnRefresh    = document.getElementById("btnRefresh");
+    const lastSyncEl    = document.getElementById("lastSync");
 
     let currentState = null;
     let currentPage = 0;
@@ -263,6 +267,10 @@
 
             // Título desde A3 de la hoja
             unidadTituloEl.textContent = data.titulo || "";
+            if (lastSyncEl) {
+                const fileLabel = data.fileName ? ` · ${data.fileName}` : "";
+                lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileLabel}`;
+            }
 
             // Poblar selector de unidades si aun no tiene opciones
             if (unidadSelect.options.length <= 1 && data.unidades && data.unidades.length) {
@@ -291,6 +299,7 @@
         }
         unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
         alumnoSelect.addEventListener("change", () => { currentPage = 0; renderTable(); });
+        btnRefresh?.addEventListener("click", () => loadUnidad(unidadSelect.value || "U1"));
         loadUnidad("U1");
     });
 </script>
