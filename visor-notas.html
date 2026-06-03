@@ -104,6 +104,7 @@
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar datos de la evaluación actual">Recargar</button>
+        <button class="pag-btn" id="btnClearFilters" type="button" title="Limpiar filtros">Limpiar filtros</button>
         <span id="lastSync" style="font-size:0.8rem;color:#6b7280;white-space:nowrap;">Sin sincronizar</span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
@@ -162,7 +163,10 @@
     const perPageSelect   = document.getElementById("perPageSelect");
     const headerTitulo    = document.getElementById("headerTitulo");
     const btnRefresh      = document.getElementById("btnRefresh");
+    const btnClearFilters = document.getElementById("btnClearFilters");
     const lastSyncEl      = document.getElementById("lastSync");
+    const VIEW_PREFS_KEY  = "visorNotasPrefs";
+    let focusReloadTimer  = null;
 
     let currentState = null;
     let currentPage  = 0;
@@ -178,8 +182,39 @@
     ];
 
     function showMessage(text, type) {
-        messageEl.textContent = text;
+        const pretty = (type === "error" && window.appUx && window.appUx.hintError)
+            ? window.appUx.hintError(text)
+            : text;
+        messageEl.textContent = pretty;
         messageEl.className = "message " + type + " show";
+    }
+
+    function saveViewPrefs() {
+        try {
+            const prefs = {
+                evaluacion: evalSelect.value || "1",
+                search: searchInput.value || "",
+                alumno: alumnoSelect.value || "",
+                perPage
+            };
+            localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
+        } catch {}
+    }
+
+    function getSavedPrefs() {
+        try {
+            return JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || "null") || {};
+        } catch {
+            return {};
+        }
+    }
+
+    function clearFilters() {
+        searchInput.value = "";
+        alumnoSelect.value = "";
+        currentPage = 0;
+        saveViewPrefs();
+        renderTable();
     }
 
     function formatNote(display) {
@@ -320,6 +355,7 @@
 
     function changePage(delta) {
         currentPage += delta;
+        saveViewPrefs();
         renderTable();
     }
 
@@ -329,6 +365,7 @@
         const top = document.getElementById('perPageSelectTop');
         if (top) top.value = perPage;
         currentPage = 0;
+        saveViewPrefs();
         renderTable();
     }
 
@@ -346,9 +383,22 @@
             alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
                 nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
+            const prefs = getSavedPrefs();
+            if (prefs.evaluacion === evaluacion) {
+                if (prefs.search) searchInput.value = prefs.search;
+                if (prefs.alumno && nombres.includes(prefs.alumno)) {
+                    alumnoSelect.value = prefs.alumno;
+                    searchInput.value = "";
+                }
+            }
+
             renderStats();
             renderTable();
-            if (lastSyncEl) lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}`;
+            if (lastSyncEl) {
+                const fileName = data.fileName ? ` · ${data.fileName}` : "";
+                lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileName}`;
+            }
+            saveViewPrefs();
             showMessage("Notas cargadas.", "success");
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
@@ -371,10 +421,64 @@
             } catch {}
         }
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
-        searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
-        alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
+        searchInput.addEventListener("input", () => {
+            alumnoSelect.value = "";
+            currentPage = 0;
+            saveViewPrefs();
+            renderTable();
+        });
+        alumnoSelect.addEventListener("change", () => {
+            searchInput.value = "";
+            currentPage = 0;
+            saveViewPrefs();
+            renderTable();
+        });
         btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
-        loadEvaluacion("1");
+        btnClearFilters?.addEventListener("click", clearFilters);
+
+        document.addEventListener("keydown", (e) => {
+            if (e.ctrlKey && e.key.toLowerCase() === "f") {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+                return;
+            }
+            if (e.altKey && e.key === "ArrowRight") {
+                e.preventDefault();
+                changePage(1);
+                return;
+            }
+            if (e.altKey && e.key === "ArrowLeft") {
+                e.preventDefault();
+                changePage(-1);
+            }
+        });
+
+        window.addEventListener("focus", () => {
+            clearTimeout(focusReloadTimer);
+            focusReloadTimer = setTimeout(() => loadEvaluacion(evalSelect.value), 300);
+        });
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                clearTimeout(focusReloadTimer);
+                focusReloadTimer = setTimeout(() => loadEvaluacion(evalSelect.value), 300);
+            }
+        });
+
+        const prefs = getSavedPrefs();
+        const initialEval = prefs.evaluacion || "1";
+        if ([...evalSelect.options].some(o => o.value === initialEval)) {
+            evalSelect.value = initialEval;
+        }
+        const initialPerPage = Number(prefs.perPage || perPage);
+        if ([...perPageSelect.options].some(o => Number(o.value) === initialPerPage)) {
+            perPage = initialPerPage;
+            perPageSelect.value = String(initialPerPage);
+            const top = document.getElementById("perPageSelectTop");
+            if (top) top.value = String(initialPerPage);
+        }
+
+        loadEvaluacion(initialEval);
     });
 </script>
 </body>
