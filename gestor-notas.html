@@ -740,6 +740,16 @@
         .ce-nota-input.low    { border-color: #dc2626; color: #dc2626; font-weight: 700; }
         .ce-nota-input.invalid { border-color: #dc2626; background: #fff1f2; color: #991b1b; }
 
+        .nota-cr.dirty-note {
+            background: #fffbeb !important;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.22);
+        }
+
+        .nota-cr.saved-note {
+            background: #ecfdf5 !important;
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.22);
+        }
+
         .ce-detail-empty {
             padding: 10px;
             color: #6b7280;
@@ -882,6 +892,47 @@
         .pagination-bottom-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
         .pagination-bottom-row .button-row { margin-top: 0; }
 
+        .busy-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1100;
+            background: rgba(17, 24, 39, 0.35);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .busy-overlay.show {
+            display: flex;
+        }
+
+        .busy-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #374151;
+            box-shadow: 0 14px 34px rgba(31, 41, 55, 0.2);
+        }
+
+        .busy-spinner {
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            border: 2px solid #c7d2fe;
+            border-top-color: #4f46e5;
+            animation: busy-spin 0.9s linear infinite;
+        }
+
+        @keyframes busy-spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 800px) {
             body {
                 padding: 10px;
@@ -1022,7 +1073,6 @@
             </section>
 
             <section>
-                <div id="paginationTop" class="pagination-bar"></div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -1051,6 +1101,13 @@
         </main>
     </div>
 
+    <div id="busyOverlay" class="busy-overlay" aria-live="polite" aria-label="Cargando">
+        <div class="busy-box">
+            <span class="busy-spinner" aria-hidden="true"></span>
+            <span id="busyText">Cargando datos...</span>
+        </div>
+    </div>
+
     <script>
         let currentState = null;
         let currentNotes = [];
@@ -1063,6 +1120,8 @@
         let perPage = 15;
         const AUTO_SAVE_DELAY_MS = 15000;
         const _notasCache = new Map();
+        let busyCount = 0;
+        let busyDelayTimer = null;
 
         const messageBox = document.getElementById("message");
         const unidadSelect = document.getElementById("unidadSelect");
@@ -1086,6 +1145,8 @@
         const saveCriteriosButton = document.getElementById("saveCriteriosButton");
         const raSelect = document.getElementById("raSelect");
         const raDescBox = document.getElementById("raDescBox");
+        const busyOverlay = document.getElementById("busyOverlay");
+        const busyText = document.getElementById("busyText");
 
         document.addEventListener("DOMContentLoaded", () => {
             if (!window.electronExcel) {
@@ -1126,6 +1187,8 @@
                         }
                         crNota.nota = parseFloat(input.value.replace(",", ".")) || 0;
                         crNota.display = input.value;
+                        input.classList.add("dirty-note");
+                        input.classList.remove("saved-note");
                         renderSummary(currentState);
                         marcarCambio();
                     }
@@ -1166,6 +1229,7 @@
         async function loadNotas(options = {}) {
             try {
                 setDisabled(true);
+                beginBusy("Cargando notas de la unidad...");
 
                 const unidad = unidadSelect.value || "U1";
                 const cacheKey = `${unidad}`;
@@ -1214,6 +1278,7 @@
                 showMessage(error.message || "No se pudieron cargar las notas.", "error");
             } finally {
                 setDisabled(false);
+                endBusy();
             }
         }
 
@@ -1354,13 +1419,13 @@
                 stats.invalid > 0 ? `<span style="color:#b91c1c;font-weight:700">${stats.invalid} err.</span>` : '',
                 studentSearch ? `<span style="color:#6366f1;font-weight:700">filtrado</span>` : ''
             ].filter(Boolean).join(' · ');
-            const info = `${currentPage + 1}/${totalPages} &middot; ${total} alumnos${extras ? ' &middot; ' + extras : ''}`;
+            const info = `Pagina ${currentPage + 1} de ${totalPages} &middot; ${total} alumnos${extras ? ' &middot; ' + extras : ''}`;
             const opts = [10, 15, 20, 25, 50].map(n =>
                 `<option value="${n}"${n === perPage ? ' selected' : ''}>${n}</option>`
             ).join('');
             const html = `<button class="pag-btn"${prevDis} onclick="changePage(-1)">&#8249;</button><span class="pag-info">${info}</span><button class="pag-btn"${nextDis} onclick="changePage(1)">&#8250;</button><select class="per-page-sel" onchange="changePerPage(this.value)">${opts}</select>`;
-            document.getElementById('paginationTop').innerHTML = html;
-            document.getElementById('paginationBottom').innerHTML = html;
+            const paginationBottom = document.getElementById("paginationBottom");
+            if (paginationBottom) paginationBottom.innerHTML = html;
         }
 
         function changePage(delta) {
@@ -1508,6 +1573,7 @@
 
             try {
                 setDisabled(true);
+                beginBusy("Guardando notas en Excel...");
                 if (!options.silent) {
                     showMessage("Guardando notas en el Excel...", "info");
                 }
@@ -1539,6 +1605,7 @@
                 renderControls(data);
                 renderSummary(data);
                 renderTable();
+                markDirtyInputsAsSaved();
                 hayCambiosSinGuardar = false;
                 document.title = _BASE_TITLE;
                 if (autoSaveTimeout) {
@@ -1554,6 +1621,7 @@
                 return false;
             } finally {
                 setDisabled(false);
+                endBusy();
             }
         }
 
@@ -2020,10 +2088,53 @@
 
         window.addEventListener('beforeunload', (e) => {
             if (hayCambiosSinGuardar) {
+                const pending = getPendingDirtyCount();
+                const message = pending > 0
+                    ? `Hay ${pending} nota(s) pendiente(s) de guardar.`
+                    : "Hay cambios pendientes de guardar.";
                 e.preventDefault();
-                e.returnValue = '';
+                e.returnValue = message;
             }
         });
+
+        function beginBusy(text) {
+            busyCount += 1;
+            if (busyText && text) busyText.textContent = text;
+            if (busyCount > 1) return;
+            if (busyDelayTimer) clearTimeout(busyDelayTimer);
+            busyDelayTimer = setTimeout(() => {
+                if (busyCount > 0 && busyOverlay) busyOverlay.classList.add("show");
+            }, 200);
+        }
+
+        function endBusy() {
+            busyCount = Math.max(0, busyCount - 1);
+            if (busyCount > 0) return;
+            if (busyDelayTimer) {
+                clearTimeout(busyDelayTimer);
+                busyDelayTimer = null;
+            }
+            if (busyOverlay) busyOverlay.classList.remove("show");
+        }
+
+        function markDirtyInputsAsSaved() {
+            const dirtyInputs = document.querySelectorAll(".nota-cr.dirty-note");
+            dirtyInputs.forEach((input) => {
+                input.classList.remove("dirty-note");
+                input.classList.add("saved-note");
+            });
+            if (dirtyInputs.length) {
+                setTimeout(() => {
+                    document.querySelectorAll(".nota-cr.saved-note").forEach((input) => {
+                        input.classList.remove("saved-note");
+                    });
+                }, 1200);
+            }
+        }
+
+        function getPendingDirtyCount() {
+            return document.querySelectorAll(".nota-cr.dirty-note").length;
+        }
 
         function setDisabled(disabled) {
             [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, reloadButton, clearButton, saveCriteriosButton].forEach((element) => {
