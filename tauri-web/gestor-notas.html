@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notas de Actividades - Excel</title>
     <script src="app-bridge.js"></script>
+    <link rel="stylesheet" href="ux-common.css">
+    <script src="ux-common.js" defer></script>
     <style>
         * {
             box-sizing: border-box;
@@ -215,50 +217,99 @@
         }
 
         .summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
         }
 
-        .summary-item {
-            padding: 12px 15px;
+        .summary-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .summary-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
             background: #f5f3ff;
-            border-left: 4px solid #6366f1;
-            border-radius: 8px;
+            border: 1px solid #e0e7ff;
+            border-radius: 20px;
+            font-size: 0.83em;
+            white-space: nowrap;
         }
 
-        .summary-item span {
-            display: block;
-            margin-bottom: 4px;
+        .summary-pill .pill-label {
             color: #6b7280;
-            font-size: 0.85em;
+            font-weight: 500;
         }
 
-        .summary-item strong {
+        .summary-pill .pill-value {
             color: #3730a3;
-            font-size: 1.05em;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
+            font-weight: 800;
+        }
+
+        .summary-pill.warning { background: #fffbeb; border-color: #fde68a; }
+        .summary-pill.warning .pill-value { color: #b45309; }
+        .summary-pill.danger  { background: #fff1f2; border-color: #fecdd3; }
+        .summary-pill.danger  .pill-value { color: #b91c1c; }
+        .summary-pill.success { background: #f0fdf4; border-color: #bbf7d0; }
+        .summary-pill.success .pill-value { color: #166534; }
+
+        .summary-pill.wide {
+            max-width: 220px;
             overflow: hidden;
         }
 
-        .summary-item.warning {
-            border-left-color: #f59e0b;
+        .summary-pill.wide .pill-value {
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .summary-item.warning strong {
-            color: #b45309;
+        .summary-divider {
+            width: 1px;
+            height: 20px;
+            background: #e0e7ff;
+            margin: 0 2px;
         }
 
-        .summary-item.danger {
-            border-left-color: #dc2626;
+        .progress-bar-wrap {
+            margin-bottom: 16px;
         }
 
-        .summary-item.danger strong {
-            color: #b91c1c;
+        .progress-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78em;
+            color: #6b7280;
+            margin-bottom: 4px;
         }
+
+        .progress-bar-labels strong {
+            color: #3730a3;
+            font-weight: 700;
+        }
+
+        .progress-bar-track {
+            height: 8px;
+            background: #e0e7ff;
+            border-radius: 99px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar-fill.graded   { background: #059669; }
+        .progress-bar-fill.pending  { background: #f59e0b; }
+        .progress-bar-fill.invalid  { background: #dc2626; }
 
         .table-container {
             overflow-x: auto;
@@ -312,6 +363,26 @@
             max-width: 110px;
             min-height: 38px;
             text-align: center;
+            font-weight: 700;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .nota-input.nota-alta {
+            color: #065f46;
+            background: #d1fae5;
+            border-color: #059669;
+        }
+
+        .nota-input.nota-media {
+            color: #92400e;
+            background: #fef3c7;
+            border-color: #d97706;
+        }
+
+        .nota-input.nota-baja {
+            color: #991b1b;
+            background: #fee2e2;
+            border-color: #ef4444;
         }
 
         .nota-input.invalid {
@@ -834,7 +905,7 @@
         }
     </style>
 </head>
-<body>
+<body class="ux-app-shell ux-page-gestor-notas">
     <div class="container">
         <nav class="page-nav" aria-label="Navegacion">
             <div class="nav-group">
@@ -905,46 +976,72 @@
             </section>
 
             <section class="summary" aria-label="Resumen">
-                <div class="summary-item">
-                    <span>Archivo</span>
-                    <strong id="fileName">-</strong>
+                <div class="summary-row">
+                    <div class="summary-pill wide">
+                        <span class="pill-label">Archivo</span>
+                        <span class="pill-value" id="fileName">-</span>
+                    </div>
+                    <div class="summary-pill wide">
+                        <span class="pill-label">Actividad</span>
+                        <span class="pill-value" id="activityName">-</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-pill">
+                        <span class="pill-label">Alumnos</span>
+                        <span class="pill-value" id="studentCount">0</span>
+                    </div>
+                    <div class="summary-pill success">
+                        <span class="pill-label">Con nota</span>
+                        <span class="pill-value" id="gradedCount">0</span>
+                    </div>
+                    <div class="summary-pill warning">
+                        <span class="pill-label">Pendientes</span>
+                        <span class="pill-value" id="pendingCount">0</span>
+                    </div>
+                    <div class="summary-pill danger">
+                        <span class="pill-label">Errores</span>
+                        <span class="pill-value" id="invalidCount">0</span>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <span>Actividad</span>
-                    <strong id="activityName">-</strong>
+                <div class="summary-row">
+                    <span class="pill-label" style="font-size:0.8em;color:#9ca3af;padding-left:4px">Incluidas:</span>
+                    <div class="summary-pill">
+                        <span class="pill-label">Prácticas</span>
+                        <span class="pill-value" id="totalPracticas">0</span>
+                    </div>
+                    <div class="summary-pill">
+                        <span class="pill-label">Memorias</span>
+                        <span class="pill-value" id="totalMemorias">0</span>
+                    </div>
+                    <div class="summary-pill">
+                        <span class="pill-label">Otras</span>
+                        <span class="pill-value" id="totalOtros">0</span>
+                    </div>
+                    <div class="summary-pill">
+                        <span class="pill-label">Controles</span>
+                        <span class="pill-value" id="totalControles">0</span>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <span>Alumnos</span>
-                    <strong id="studentCount">0</strong>
+            </section>
+
+            <div class="progress-bar-wrap" id="progressBarWrap" style="display:none">
+                <div class="progress-bar-labels">
+                    <span>Progreso de notas</span>
+                    <span><strong id="progressText">0 / 0</strong> introducidas</span>
                 </div>
-                <div class="summary-item">
-                    <span>Con nota</span>
-                    <strong id="gradedCount">0</strong>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill graded" id="progressGraded" style="width:0%"></div>
+                    <div class="progress-bar-fill pending" id="progressPending" style="width:0%"></div>
+                    <div class="progress-bar-fill invalid" id="progressInvalid" style="width:0%"></div>
                 </div>
-                <div class="summary-item warning">
-                    <span>Pendientes</span>
-                    <strong id="pendingCount">0</strong>
-                </div>
-                <div class="summary-item danger">
-                    <span>Errores</span>
-                    <strong id="invalidCount">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Total prácticas</span>
-                    <strong id="totalPracticas">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Total memorias</span>
-                    <strong id="totalMemorias">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Total otras</span>
-                    <strong id="totalOtros">0</strong>
-                </div>
-                <div class="summary-item">
-                    <span>Total controles</span>
-                    <strong id="totalControles">0</strong>
-                </div>
+            </div>
+
+            <section class="quick-filters" id="noteQuickFilters" style="display:none" aria-label="Filtros rápidos de notas">
+                <button class="quick-filter active" type="button" data-note-filter="all">Todos <span class="quick-count" id="qfAll">0</span></button>
+                <button class="quick-filter" type="button" data-note-filter="pending">Pendientes <span class="quick-count" id="qfPending">0</span></button>
+                <button class="quick-filter" type="button" data-note-filter="invalid">Errores <span class="quick-count" id="qfInvalid">0</span></button>
+                <button class="quick-filter" type="button" data-note-filter="fail">Suspensos <span class="quick-count" id="qfFail">0</span></button>
+                <button class="quick-filter" type="button" data-note-filter="pass">Aprobados <span class="quick-count" id="qfPass">0</span></button>
             </section>
 
             <section>
@@ -1025,6 +1122,7 @@
             saveButton.addEventListener("click", saveNotas);
             clearButton.addEventListener("click", clearNotas);
             unidadSelect.addEventListener("change", () => loadNotasConGuardado());
+            setupQuickFilters();
 
             // Event delegation para inputs de notas CR (optimización: 1 listener en lugar de N)
             notasBody.addEventListener("input", (event) => {
@@ -1062,11 +1160,15 @@
                 let delta = null;
                 if (e.key === "ArrowDown" || e.key === "Enter") delta = cols;
                 else if (e.key === "ArrowUp") delta = -cols;
+                else if (e.key === "Tab" && !e.shiftKey) delta = 1;
+                else if (e.key === "Tab" && e.shiftKey) delta = -1;
                 else if (e.key === "ArrowRight" && inp.selectionStart === inp.value.length) delta = 1;
                 else if (e.key === "ArrowLeft" && inp.selectionStart === 0) delta = -1;
                 if (delta === null) return;
+                const next = inputs[i + delta];
+                if (e.key === "Tab" && !next) return; // deja Tab salir al último elemento
                 e.preventDefault();
-                inputs[i + delta]?.focus();
+                next?.focus();
             });
 
             loadNotas();
@@ -1189,6 +1291,65 @@
             gradedCount.textContent = stats.graded;
             pendingCount.textContent = stats.pending;
             invalidCount.textContent = stats.invalid;
+            updateProgressBar(stats);
+            updateQuickFilterCounts(stats);
+        }
+
+        function updateProgressBar(stats) {
+            const wrap = document.getElementById("progressBarWrap");
+            if (!wrap || !stats.total) { if (wrap) wrap.style.display = "none"; return; }
+            wrap.style.display = "";
+            const total = stats.total;
+            const gPct = (stats.graded / total * 100).toFixed(1);
+            const pPct = (stats.pending / total * 100).toFixed(1);
+            const iPct = (stats.invalid / total * 100).toFixed(1);
+            document.getElementById("progressGraded").style.width = gPct + "%";
+            document.getElementById("progressPending").style.width = pPct + "%";
+            document.getElementById("progressInvalid").style.width = iPct + "%";
+            document.getElementById("progressText").textContent = `${stats.graded} / ${total}`;
+        }
+
+        function updateQuickFilterCounts(stats) {
+            const section = document.getElementById("noteQuickFilters");
+            if (!section || !stats.total) { if (section) section.style.display = "none"; return; }
+            section.style.display = "flex";
+            document.getElementById("qfAll").textContent = stats.total;
+            document.getElementById("qfPending").textContent = stats.pending;
+            document.getElementById("qfInvalid").textContent = stats.invalid;
+            const rows = notasBody.querySelectorAll("tr[data-student-idx]");
+            let fail = 0, pass = 0;
+            rows.forEach((row) => {
+                const inputs = Array.from(row.querySelectorAll(".nota-cr:not([disabled])"));
+                const values = inputs.map(i => parseFloat(i.value.replace(",", ".")) || 0);
+                const hasValue = values.some(v => v > 0);
+                if (hasValue) {
+                    if (values.some(v => v > 0 && v < 5)) fail++;
+                    else pass++;
+                }
+            });
+            document.getElementById("qfFail").textContent = fail;
+            document.getElementById("qfPass").textContent = pass;
+        }
+
+        function setupQuickFilters() {
+            document.querySelectorAll("#noteQuickFilters .quick-filter").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    document.querySelectorAll("#noteQuickFilters .quick-filter").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    const filter = btn.dataset.noteFilter;
+                    const rows = notasBody.querySelectorAll("tr[data-student-idx]");
+                    rows.forEach((row) => {
+                        const inputs = Array.from(row.querySelectorAll(".nota-cr:not([disabled])"));
+                        const values = inputs.map(i => parseFloat(i.value.replace(",", ".")) || 0);
+                        let show = true;
+                        if (filter === "pending") show = values.every(v => v === 0);
+                        else if (filter === "invalid") show = row.classList.contains("invalid-note");
+                        else if (filter === "fail") show = values.some(v => v > 0 && v < 5);
+                        else if (filter === "pass") show = values.some(v => v >= 5) && !values.some(v => v > 0 && v < 5);
+                        row.style.display = show ? "" : "none";
+                    });
+                });
+            });
         }
 
         function formatIncludedTotal(type, data) {
@@ -1262,6 +1423,11 @@
         }
 
         function renderTable() {
+            // Reset quick filter to "all" on each full render
+            document.querySelectorAll("#noteQuickFilters .quick-filter").forEach(b => b.classList.remove("active"));
+            const allBtn = document.querySelector("#noteQuickFilters [data-note-filter='all']");
+            if (allBtn) allBtn.classList.add("active");
+
             if (!currentNotes.length) {
                 notasBody.innerHTML = '<tr><td class="empty" colspan="999">No hay alumnos en esta unidad.</td></tr>';
                 renderPagination();

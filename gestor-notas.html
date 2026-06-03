@@ -1160,11 +1160,15 @@
                 let delta = null;
                 if (e.key === "ArrowDown" || e.key === "Enter") delta = cols;
                 else if (e.key === "ArrowUp") delta = -cols;
+                else if (e.key === "Tab" && !e.shiftKey) delta = 1;
+                else if (e.key === "Tab" && e.shiftKey) delta = -1;
                 else if (e.key === "ArrowRight" && inp.selectionStart === inp.value.length) delta = 1;
                 else if (e.key === "ArrowLeft" && inp.selectionStart === 0) delta = -1;
                 if (delta === null) return;
+                const next = inputs[i + delta];
+                if (e.key === "Tab" && !next) return; // deja Tab salir al último elemento
                 e.preventDefault();
-                inputs[i + delta]?.focus();
+                next?.focus();
             });
 
             loadNotas();
