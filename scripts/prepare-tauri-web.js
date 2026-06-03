@@ -21,7 +21,9 @@ const files = [
   'diario.html',
   'gestor-instrumentos.html',
   'asteroides.html',
-  'app-bridge.js'
+  'app-bridge.js',
+  'ux-common.css',
+  'ux-common.js'
 ];
 
 fs.rmSync(outDir, { recursive: true, force: true });
