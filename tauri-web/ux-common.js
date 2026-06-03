@@ -49,7 +49,7 @@
 
     function showStatus(text, type = "info", duration = 3200) {
         if (!statusEl || !text) return;
-        const cleanText = String(text).replace(/\s+/g, " ").trim();
+        const cleanText = toActionableMessage(String(text).replace(/\s+/g, " ").trim());
         if (!cleanText) return;
 
         statusEl.textContent = cleanText;
@@ -274,10 +274,26 @@
             .replace(/'/g, "&#039;");
     }
 
+    function toActionableMessage(text) {
+        const msg = String(text || "").trim();
+        if (!msg) return "";
+        if (/No se encontr[oó] el Excel|No hay archivo local seleccionado|No se encontr[oó] un Excel activo/i.test(msg)) {
+            return `${msg} Abre Inicio y selecciona un archivo .xlsx válido.`;
+        }
+        if (/permiso|denegado|denied|EACCES/i.test(msg)) {
+            return `${msg} Cierra el Excel en otras ventanas y vuelve a intentar guardar.`;
+        }
+        if (/Error al guardar|Error al abrir|Error al cargar/i.test(msg)) {
+            return `${msg} Si persiste, pulsa "Cargar otro archivo" y vuelve a abrir el libro.`;
+        }
+        return msg;
+    }
+
     window.appUx = {
         showStatus,
         confirm: confirmDialog,
-        focusFirstInvalid
+        focusFirstInvalid,
+        hintError: toActionableMessage
     };
 
     if (document.readyState === "loading") {

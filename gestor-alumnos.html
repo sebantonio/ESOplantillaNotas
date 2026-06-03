@@ -505,6 +505,9 @@
                 <!-- TABLA DE ALUMNOS EXISTENTES -->
                 <div class="section">
                     <h2>2️⃣ Alumnos Actuales</h2>
+                    <div class="form-group" style="margin-top:0; margin-bottom:10px;">
+                        <input type="search" id="alumnoSearchInput" placeholder="Buscar alumno por nombre..." />
+                    </div>
                     <div class="table-container">
                         <table id="alumnosTable">
                             <thead>
@@ -563,6 +566,7 @@
         const isElectronMode = Boolean(window.electronExcel);
         let autoSaveTimeout = null;
         let hayCambiosSinGuardar = false;
+        let alumnosBusqueda = '';
         const AUTO_SAVE_DELAY_MS = 15000;
 
         // ===== VERIFICACIÓN DE LIBRERÍA XLSX =====
@@ -784,8 +788,12 @@
         function mostrarTablaAlumnos(alumnos) {
             const tbody = document.getElementById('alumnosTableBody');
             const emptyState = document.getElementById('emptyState');
+            const q = normalizarTexto(alumnosBusqueda);
+            const alumnosVisibles = !q
+                ? alumnos
+                : alumnos.filter((a) => normalizarTexto(a.nombre).includes(q));
 
-            if (alumnos.length === 0) {
+            if (alumnosVisibles.length === 0) {
                 document.getElementById('alumnosTable').style.display = 'none';
                 emptyState.style.display = 'block';
                 return;
@@ -794,7 +802,9 @@
             document.getElementById('alumnosTable').style.display = 'table';
             emptyState.style.display = 'none';
 
-            tbody.innerHTML = alumnos.map((alumno, idx) => `
+            tbody.innerHTML = alumnosVisibles.map((alumno) => {
+                const idx = alumnos.indexOf(alumno);
+                return `
                     <tr>
                         <td class="alumno-numero">${alumno.numero}</td>
                         <td>${alumno.nombre}</td>
@@ -802,7 +812,8 @@
                             <button class="delete" onclick="eliminarAlumno(${idx})">🗑️</button>
                         </td>
                     </tr>
-                `).join('');
+                `;
+            }).join('');
 
             // Guardar alumnos en global para usarlos después
             window.alumnosActuales = alumnos;
@@ -838,15 +849,17 @@
         }
 
         // ===== ELIMINAR ALUMNO =====
-        function eliminarAlumno(idx) {
+        async function eliminarAlumno(idx) {
             const nombre = window.alumnosActuales[idx].nombre;
-            if (confirm(`¿Eliminar a "${nombre}"?`)) {
-                window.alumnosActuales.splice(idx, 1);
-                mostrarTablaAlumnos(window.alumnosActuales);
-                actualizarStats(window.alumnosActuales);
-                mostrarMensaje(`✅ Alumno eliminado`, 'success');
-                marcarCambio();
-            }
+            const ok = window.appUx && window.appUx.confirm
+                ? await window.appUx.confirm(`¿Eliminar a "${nombre}"?`, { title: 'Eliminar alumno', confirmText: 'Eliminar' })
+                : confirm(`¿Eliminar a "${nombre}"?`);
+            if (!ok) return;
+            window.alumnosActuales.splice(idx, 1);
+            mostrarTablaAlumnos(window.alumnosActuales);
+            actualizarStats(window.alumnosActuales);
+            mostrarMensaje(`✅ Alumno eliminado`, 'success');
+            marcarCambio();
         }
 
         // ===== DESCARGAR EXCEL =====
@@ -999,11 +1012,18 @@
         // ===== FUNCIONES AUXILIARES =====
         function mostrarMensaje(texto, tipo) {
             const elem = document.getElementById('message');
-            elem.textContent = texto;
+            const pretty = (tipo === 'error' && window.appUx && window.appUx.hintError)
+                ? window.appUx.hintError(texto)
+                : texto;
+            elem.textContent = pretty;
             elem.className = `message show ${tipo}`;
             setTimeout(() => {
                 elem.classList.remove('show');
             }, 5000);
+        }
+
+        function normalizarTexto(texto) {
+            return String(texto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
         }
 
         function mostrarLoading(mostrar) {
@@ -1033,6 +1053,14 @@
         }
 
         if (isElectronMode) cargarAlumnosDesdeSeleccionado();
+
+        const alumnoSearchInput = document.getElementById('alumnoSearchInput');
+        if (alumnoSearchInput) {
+            alumnoSearchInput.addEventListener('input', () => {
+                alumnosBusqueda = alumnoSearchInput.value;
+                mostrarTablaAlumnos(window.alumnosActuales || []);
+            });
+        }
 
         // Verificar carga de XLSX cada 500ms hasta que esté listo (modo browser)
         const xlsxCheckInterval = setInterval(() => {

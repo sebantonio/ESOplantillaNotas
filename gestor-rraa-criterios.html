@@ -775,7 +775,7 @@
                         </div>
 
                         <!-- TABLA CRITERIOS -->
-                        <h3>Criterios Actuales</h3>
+                        <h3>Criterios Actuales <span class="count-badge" id="criteriosVisiblesBadge">0</span></h3>
                         <div class="form-group" style="align-items:center; margin-bottom:15px;">
                             <button class="secondary" type="button" onclick="alternarMenuRA()" style="width:auto;">☰ CE</button>
                             <select id="criterioRaFiltro" onchange="seleccionarRAFiltro(this.value)" style="flex:1; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
@@ -1272,6 +1272,7 @@
         function mostrarTablaCriterios() {
             const tbody = document.getElementById('criteriosTableBody');
             const emptyState = document.getElementById('emptyStateCriterios');
+            const badge = document.getElementById('criteriosVisiblesBadge');
             const criteriosVisibles = criteriosActuales.filter((crit) =>
                 Number(crit.raNumero) === Number(criterioRaActivo) &&
                 String(crit.texto || "").trim() !== "" &&
@@ -1279,6 +1280,7 @@
                     normalizarBusqueda(crit.codigo).includes(criterioBusqueda) ||
                     normalizarBusqueda(crit.texto).includes(criterioBusqueda))
             );
+            if (badge) badge.textContent = criteriosVisibles.length;
 
             if (criteriosVisibles.length === 0) {
                 document.getElementById('criteriosTable').style.display = 'none';
@@ -2200,7 +2202,10 @@ Unidades: ${importUnidades.length} registros
         // ===== FUNCIONES AUXILIARES =====
         function mostrarMensaje(texto, tipo) {
             const elem = document.getElementById('message');
-            elem.textContent = texto;
+            const pretty = (tipo === 'error' && window.appUx && window.appUx.hintError)
+                ? window.appUx.hintError(texto)
+                : texto;
+            elem.textContent = pretty;
             elem.className = `message show ${tipo}`;
             setTimeout(() => {
                 elem.classList.remove('show');
