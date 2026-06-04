@@ -73,6 +73,12 @@
         .horario-cell.has-content { background: var(--cell-bg, #eef2ff); color: var(--cell-fg, #3730a3); }
         .horario-cell input { width: 100%; border: none; background: transparent; font: inherit; font-size: 0.88rem; font-weight: 600; text-align: center; outline: none; color: inherit; }
         .horario-hint { font-size: 0.8rem; color: #9ca3af; margin-top: 10px; }
+        .horario-excel-badge { font-size: 0.65rem; color: #059669; font-weight: 700; margin-top: 2px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+        .horario-cell.has-excel { border-left: 3px solid #059669 !important; }
+        .horario-cell.has-excel:not(.editing):hover { background: #ecfdf5 !important; cursor: pointer; }
+        .horario-excel-btn { font-size: 0.68rem; padding: 2px 7px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; color: #6b7280; margin-top: 4px; display: inline-block; }
+        .horario-excel-btn:hover { border-color: #059669; color: #059669; }
+        .horario-excel-btn.linked { border-color: #059669; color: #059669; background: #ecfdf5; }
 
         /* ── ALUMNO AL AZAR ── */
         .azar-wrap { display: grid; grid-template-columns: 1fr 260px; gap: 24px; align-items: start; }
@@ -402,7 +408,7 @@ function beep() {
 }
 
 // ===== HORARIO =====
-const HORARIO_KEY = 'aula_horario_v1';
+const HORARIO_KEY = 'aula_horario_v2';
 const HORAS = ['1ª hora','2ª hora','3ª hora','4ª hora','5ª hora','6ª hora','7ª hora'];
 const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
 const COLORES = [
@@ -415,6 +421,14 @@ let horarioData = {};
 let materiaColorMap = {};
 let colorIdx = 0;
 
+// Normaliza celda: siempre devuelve {nombre, excelPath}
+function getCeldaData(key) {
+    const v = horarioData[key];
+    if (!v) return { nombre: '', excelPath: '' };
+    if (typeof v === 'string') return { nombre: v, excelPath: '' }; // migración v1
+    return { nombre: v.nombre || '', excelPath: v.excelPath || '' };
+}
+
 function getColorForMateria(nombre) {
     if (!nombre) return ['#ffffff','#1f2937'];
     if (!materiaColorMap[nombre]) {
@@ -425,46 +439,87 @@ function getColorForMateria(nombre) {
 }
 
 function horarioLoad() {
-    try { horarioData = JSON.parse(localStorage.getItem(HORARIO_KEY) || '{}'); } catch { horarioData = {}; }
-    // Reconstruir colorMap desde datos guardados
+    // Intentar cargar v2, luego v1 como migración
+    try {
+        const raw = localStorage.getItem(HORARIO_KEY) || localStorage.getItem('aula_horario_v1') || '{}';
+        horarioData = JSON.parse(raw);
+    } catch { horarioData = {}; }
     colorIdx = 0; materiaColorMap = {};
-    Object.values(horarioData).forEach(v => { if (v) getColorForMateria(v); });
+    Object.keys(horarioData).forEach(k => { const d = getCeldaData(k); if (d.nombre) getColorForMateria(d.nombre); });
     renderHorario();
 }
 
 function renderHorario() {
     const tbody = document.getElementById('horarioBody');
+    const esTauri = Boolean(window.electronExcel);
     tbody.innerHTML = HORAS.map((hora, hi) => {
         const celdas = DIAS.map((_, di) => {
             const key = `${hi}_${di}`;
-            const val = horarioData[key] || '';
-            const [bg, fg] = getColorForMateria(val);
-            const hasContent = val.trim() !== '';
+            const { nombre, excelPath } = getCeldaData(key);
+            const [bg, fg] = getColorForMateria(nombre);
+            const hasContent = nombre.trim() !== '';
+            const hasExcel = Boolean(excelPath);
+            const fileName = hasExcel ? excelPath.split(/[\\/]/).pop() : '';
+
             if (horarioEditando) {
-                return `<td><div class="horario-cell ${hasContent?'has-content':''}" style="--cell-bg:${bg};--cell-fg:${fg}">
-                    <input type="text" value="${escHtml(val)}" maxlength="40"
-                        onchange="horarioCeldaChange(${hi},${di},this.value)"
-                        oninput="horarioCeldaChange(${hi},${di},this.value)"
-                        placeholder="—">
+                const excelBtnClass = hasExcel ? 'horario-excel-btn linked' : 'horario-excel-btn';
+                const excelBtnLabel = hasExcel ? `📂 ${escHtml(fileName)}` : '📎 Asociar Excel';
+                const excelBtn = esTauri
+                    ? `<button class="${excelBtnClass}" type="button" onclick="horarioAsociarExcel(${hi},${di})">${excelBtnLabel}</button>`
+                    : '';
+                return `<td><div class="horario-cell editing ${hasContent?'has-content':''} ${hasExcel?'has-excel':''}" style="--cell-bg:${bg};--cell-fg:${fg};flex-direction:column;align-items:flex-start;padding:6px 8px;">
+                    <input type="text" value="${escHtml(nombre)}" maxlength="40"
+                        onchange="horarioCeldaChangeNombre(${hi},${di},this.value)"
+                        oninput="horarioCeldaChangeNombre(${hi},${di},this.value)"
+                        placeholder="—" style="width:100%;background:transparent;border:none;outline:none;font:inherit;font-size:0.88rem;font-weight:600;color:inherit;">
+                    ${excelBtn}
                 </div></td>`;
             }
-            return `<td><div class="horario-cell ${hasContent?'has-content':''}" style="--cell-bg:${bg};--cell-fg:${fg}">
-                ${hasContent ? escHtml(val) : '<span style="color:#d1d5db">—</span>'}
+
+            // Vista: si tiene Excel, click carga ese Excel
+            const clickAttr = (hasExcel && esTauri)
+                ? `onclick="horarioAbrirExcel('${key.replace(/'/g,"\\'")}','${escHtml(nombre)}')"` : '';
+            return `<td><div class="horario-cell ${hasContent?'has-content':''} ${hasExcel?'has-excel':''}" style="--cell-bg:${bg};--cell-fg:${fg};flex-direction:column;" ${clickAttr}>
+                ${hasContent ? `<span>${escHtml(nombre)}</span>` : '<span style="color:#d1d5db">—</span>'}
+                ${hasExcel ? `<span class="horario-excel-badge" title="${escHtml(excelPath)}">📂 ${escHtml(fileName)}</span>` : ''}
             </div></td>`;
         }).join('');
-        return `<tr><td style="padding:8px 12px;font-size:0.82rem;font-weight:700;color:#6b7280;background:#f8f9ff;border:1px solid #e5e7eb;">${hora}</td>${celdas}</tr>`;
+        return `<tr><td style="padding:8px 12px;font-size:0.82rem;font-weight:700;color:#6b7280;background:#f8f9ff;border:1px solid #e5e7eb;white-space:nowrap;">${hora}</td>${celdas}</tr>`;
     }).join('');
 }
 
-function horarioCeldaChange(hi, di, val) {
+function horarioCeldaChangeNombre(hi, di, val) {
     const key = `${hi}_${di}`;
-    horarioData[key] = val.trim();
-    const [bg, fg] = getColorForMateria(val.trim());
-    const cell = document.querySelector(`#horarioBody tr:nth-child(${hi+1}) td:nth-child(${di+2}) .horario-cell`);
-    if (cell) {
-        cell.style.setProperty('--cell-bg', bg);
-        cell.style.setProperty('--cell-fg', fg);
-        cell.classList.toggle('has-content', val.trim() !== '');
+    const prev = getCeldaData(key);
+    horarioData[key] = { nombre: val.trim(), excelPath: prev.excelPath };
+    getColorForMateria(val.trim());
+}
+
+async function horarioAsociarExcel(hi, di) {
+    if (!window.electronExcel) return;
+    try {
+        const result = await window.electronExcel.selectFile();
+        if (!result || !result.filePath) return;
+        const key = `${hi}_${di}`;
+        const prev = getCeldaData(key);
+        horarioData[key] = { nombre: prev.nombre, excelPath: result.filePath };
+        renderHorario();
+    } catch (e) {}
+}
+
+async function horarioAbrirExcel(key, nombre) {
+    if (!window.electronExcel) return;
+    const { excelPath } = getCeldaData(key);
+    if (!excelPath) return;
+    const ok = window.appUx && window.appUx.confirm
+        ? await window.appUx.confirm(`¿Cargar el Excel de "${nombre}"?`, { confirmText: 'Cargar' })
+        : confirm(`¿Cargar el Excel de "${nombre}"?`);
+    if (!ok) return;
+    try {
+        await window.electronExcel.setSelectedFile(excelPath);
+        window.location.href = 'index.html';
+    } catch (e) {
+        alert('No se pudo cargar el archivo: ' + e.message);
     }
 }
 
@@ -479,9 +534,8 @@ function horarioGuardar() {
     horarioEditando = false;
     document.getElementById('btnHorarioGuardar').style.display = 'none';
     document.getElementById('horarioStatus').textContent = 'Guardado';
-    // Recalcular colorMap
     colorIdx = 0; materiaColorMap = {};
-    Object.values(horarioData).forEach(v => { if (v) getColorForMateria(v); });
+    Object.keys(horarioData).forEach(k => { const d = getCeldaData(k); if (d.nombre) getColorForMateria(d.nombre); });
     localStorage.setItem(HORARIO_KEY, JSON.stringify(horarioData));
     renderHorario();
     setTimeout(() => document.getElementById('horarioStatus').textContent = 'Haz clic en Editar para modificar el horario', 2000);
@@ -491,6 +545,7 @@ function horarioLimpiar() {
     if (!confirm('¿Limpiar todo el horario?')) return;
     horarioData = {}; materiaColorMap = {}; colorIdx = 0;
     localStorage.removeItem(HORARIO_KEY);
+    localStorage.removeItem('aula_horario_v1');
     horarioEditando = false;
     document.getElementById('btnHorarioGuardar').style.display = 'none';
     document.getElementById('horarioStatus').textContent = 'Horario limpiado';
