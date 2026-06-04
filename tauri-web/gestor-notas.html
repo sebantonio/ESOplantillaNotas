@@ -16,7 +16,7 @@
 
         body {
             min-height: 100vh;
-            padding: 10px 12px 74px;
+            padding: 10px 12px 16px;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background: #f3f6fb;
             color: #1f2937;
@@ -379,6 +379,7 @@
             max-height: calc(100vh - 255px);
             border: 1px solid #e0e0e0;
             border-radius: 8px;
+            background: #fff;
         }
 
         table {
@@ -392,7 +393,7 @@
         th {
             position: sticky;
             top: 0;
-            z-index: 6;
+            z-index: 30;
             padding: 8px 6px;
             color: #3730a3;
             text-align: center;
@@ -400,11 +401,13 @@
             font-weight: 800;
             border-bottom: 2px solid #c7d2fe;
             white-space: nowrap;
+            background-clip: padding-box;
+            box-shadow: 0 1px 0 #c7d2fe;
         }
 
         thead tr:nth-child(2) th {
-            top: 34px;
-            z-index: 5;
+            top: var(--sticky-head-row-1, 34px);
+            z-index: 29;
         }
 
         td {
@@ -424,9 +427,8 @@
             font-size: 0.82rem;
         }
 
-        body.compact-mode .table-container {
-            max-height: calc(100vh - 220px);
-        }
+        body.compact-mode .table-container { max-height: calc(100vh - 220px); }
+        body.compact-mode thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 28px); }
 
         body.compact-mode th {
             padding: 5px 4px !important;
@@ -1048,7 +1050,7 @@
 
         .col-sticky-n    { position: sticky; left: 0;    z-index: 7; background: white; }
         .col-sticky-name { position: sticky; left: 40px; z-index: 7; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
-        thead .col-sticky-n, thead .col-sticky-name { z-index: 9; top: 0; background: #eef2ff; }
+        thead .col-sticky-n, thead .col-sticky-name { z-index: 35; top: 0; background: #eef2ff; }
         tr:hover .col-sticky-n, tr:hover .col-sticky-name { background: #f8f9ff; }
 
         .pagination-bar {
@@ -1313,15 +1315,7 @@
         </div>
     </div>
 
-    <div class="table-status-bar" aria-live="polite">
-        <div class="status-group">
-            <span class="status-chip">Alumnos <strong id="statusStudents">0</strong></span>
-            <span class="status-chip">Pendientes <strong id="statusPending">0</strong></span>
-            <span class="status-chip">Cambios <strong id="statusDirty">0</strong></span>
-            <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
-        </div>
-        <button class="status-save-button" type="button" id="floatingSaveButton">Guardar notas</button>
-    </div>
+    <button class="floating-save-button" type="button" id="floatingSaveButton">Guardar notas</button>
 
     <script>
         let currentState = null;
@@ -1387,6 +1381,7 @@
             saveButton.addEventListener("click", saveNotas);
             floatingSaveButton?.addEventListener("click", saveNotas);
             densityToggleButton?.addEventListener("click", toggleDensityMode);
+            window.addEventListener("resize", refreshStickyHeaderOffset);
             clearButton.addEventListener("click", clearNotas);
             unidadSelect.addEventListener("change", () => {
                 saveViewPrefs();
@@ -1722,12 +1717,21 @@
                 densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
                 densityToggleButton.title = compact ? "Cambiar a vista amplia" : "Cambiar a vista compacta";
             }
+            refreshStickyHeaderOffset();
         }
 
         function toggleDensityMode() {
             const compact = !document.body.classList.contains("compact-mode");
             localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
             applyDensityPreference();
+        }
+
+        function refreshStickyHeaderOffset() {
+            requestAnimationFrame(() => {
+                const row = notasHead?.querySelector("tr:first-child");
+                const height = row ? Math.ceil(row.getBoundingClientRect().height) : 34;
+                document.documentElement.style.setProperty("--sticky-head-row-1", `${height}px`);
+            });
         }
 
         function updateStatusBar() {
@@ -1888,6 +1892,7 @@
                 }
                 notasBody.innerHTML = '<tr><td class="empty" colspan="2">No hay CE/CR incluidos en esta unidad.</td></tr>';
                 notasTfoot.innerHTML = "";
+                refreshStickyHeaderOffset();
                 renderPagination();
                 updateStatusBar();
                 return;
@@ -1923,6 +1928,7 @@
 
             const thead = document.querySelector("table thead");
             if (thead) thead.innerHTML = head1 + head2;
+            refreshStickyHeaderOffset();
 
             // Mapa CR → color CE para las celdas del cuerpo
             const crColor = {};

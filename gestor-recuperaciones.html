@@ -9,9 +9,9 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 10px 12px 74px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 10px 12px 16px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
-        thead th.th-nombre { position: sticky; left: 0; z-index: 8; background: #eef2ff; }
+        thead th.th-nombre { position: sticky; left: 0; z-index: 35; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 7; background: #ffffff; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
         tbody tr:hover td.td-nombre { background: #eef2ff; }
         .page-nav { display: grid; grid-template-columns: auto minmax(260px,1fr) auto; align-items: center; gap: 12px; padding: 8px 14px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
@@ -45,17 +45,17 @@
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { position: relative; overflow: auto; max-height: calc(100vh - 255px); margin: 0 16px 16px; padding: 0; }
+        .table-container { position: relative; overflow: auto; max-height: calc(100vh - 255px); margin: 0 16px 16px; padding: 0; background: #fff; }
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
-        thead th { position: sticky; top: 0; z-index: 6; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
-        thead tr:nth-child(2) th { top: 34px; z-index: 5; }
+        thead th { position: sticky; top: 0; z-index: 30; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; background-clip: padding-box; box-shadow: 0 1px 0 #c7d2fe; }
+        thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 34px); z-index: 29; }
         thead th.th-nombre { text-align: left; width: 210px; padding-left: 12px; }
-        thead th.th-final { background: #1e1b4b !important; color: white !important; vertical-align: middle; }
+        thead th.th-final { width: 92px; min-width: 92px; max-width: 92px; background: #1e1b4b !important; color: white !important; vertical-align: middle; }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
         tbody td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; }
         tbody td.td-nombre { text-align: left; padding-left: 12px; font-weight: 600; }
-        tbody td.td-final { font-weight: 800; }
+        tbody td.td-final { width: 92px; min-width: 92px; max-width: 92px; font-weight: 800; }
         .grade { display: inline-block; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 0.88rem; min-width: 42px; }
         .grade-ok   { background: #dcfce7; color: #166534; }
         .grade-warn { background: #fef3c7; color: #92400e; }
@@ -79,7 +79,7 @@
         .ce-toggle:hover { border-color: #6366f1; color: #3730a3; background: #eef2ff; }
         body.compact-mode .table-container { max-height: calc(100vh - 225px); }
         body.compact-mode thead th { padding: 5px 4px !important; font-size: 0.72rem !important; }
-        body.compact-mode thead tr:nth-child(2) th { top: 28px; }
+        body.compact-mode thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 28px); }
         body.compact-mode tbody td { padding: 4px 5px !important; }
         body.compact-mode .grade { padding: 2px 6px; font-size: 0.78rem; }
         body.compact-mode .rec-input { width: 46px; min-height: 28px; font-size: 0.78rem; }
@@ -169,6 +169,8 @@
         <span id="lastSync" class="save-status">Sin sincronizar</span>
         <span id="pendientesBadge" style="padding:4px 10px;border-radius:6px;font-size:0.82rem;font-weight:700;display:inline-block;background:#f3f4f6;color:#9ca3af;transition:all 0.3s"></span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
+            <button class="pag-btn ce-toggle-all" id="ceToggleAllButton" type="button">Plegar CE</button>
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
             <span id="pageInfoTop" style="font-size:0.82rem;color:#374151;white-space:nowrap;"></span>
             <button class="pag-btn" id="btnNextTop" onclick="changePage(1)">&#8250;</button>
@@ -212,19 +214,7 @@
     </div>
 </div>
 
-<div class="table-status-bar" aria-live="polite">
-    <div class="status-group">
-        <span class="status-chip">Filtrados <strong id="statusFiltered">0</strong></span>
-        <span class="status-chip">Pendientes <strong id="statusPendingRec">0</strong></span>
-        <span class="status-chip">Cambios <strong id="statusDirtyRec">0</strong></span>
-        <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
-    </div>
-    <div class="status-actions">
-        <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
-        <button class="pag-btn ce-toggle-all" id="ceToggleAllButton" type="button">Abrir CE</button>
-        <button class="status-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
-    </div>
-</div>
+<button class="floating-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
 
 <script>
     const evalSelect      = document.getElementById("evalSelect");
@@ -248,7 +238,7 @@
     const statusDirtyRec = document.getElementById("statusDirtyRec");
     const statusSync = document.getElementById("statusSync");
     const DENSITY_PREFS_KEY = "recuperacionesDensity";
-    const COLLAPSED_CE_KEY = "recuperacionesCollapsedCe";
+    const COLLAPSED_CE_KEY = "recuperacionesCollapsedCeV2";
 
     let currentState = null;
     let currentPage  = 0;
@@ -346,12 +336,21 @@
         const compact = localStorage.getItem(DENSITY_PREFS_KEY) === "compact";
         document.body.classList.toggle("compact-mode", compact);
         if (densityToggleButton) densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
+        refreshStickyHeaderOffset();
     }
 
     function toggleDensityMode() {
         const compact = !document.body.classList.contains("compact-mode");
         localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
         applyDensityPreference();
+    }
+
+    function refreshStickyHeaderOffset() {
+        requestAnimationFrame(() => {
+            const row = notasHead?.querySelector("tr:first-child");
+            const height = row ? Math.ceil(row.getBoundingClientRect().height) : 34;
+            document.documentElement.style.setProperty("--sticky-head-row-1", `${height}px`);
+        });
     }
 
     function ceGroupKey(group) {
@@ -383,9 +382,9 @@
             const saved = JSON.parse(localStorage.getItem(COLLAPSED_CE_KEY) || "null");
             collapsedCeSet = Array.isArray(saved)
                 ? new Set(saved.map(String))
-                : new Set(groups.map(ceGroupKey));
+                : new Set();
         } catch {
-            collapsedCeSet = new Set(groups.map(ceGroupKey));
+            collapsedCeSet = new Set();
         }
     }
 
@@ -640,6 +639,7 @@
 
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
+            refreshStickyHeaderOffset();
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos para mostrar.</td></tr>`;
             updateStatusBar(allAlumnos.length, ceGroups);
             return;
@@ -647,6 +647,7 @@
 
         if (!ceGroups.length) {
             notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
+            refreshStickyHeaderOffset();
             notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
             updateStatusBar(allAlumnos.length, ceGroups);
             return;
@@ -679,6 +680,7 @@
         });
         head2 += `</tr>`;
         notasHead.innerHTML = head1 + head2;
+        refreshStickyHeaderOffset();
 
         let bodyHtml = "";
         alumnos.forEach(alumno => {
@@ -792,6 +794,7 @@
         btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
         densityToggleButton?.addEventListener("click", toggleDensityMode);
         ceToggleAllButton?.addEventListener("click", toggleAllCeGroups);
+        window.addEventListener("resize", refreshStickyHeaderOffset);
         notasHead.addEventListener("click", (event) => {
             const button = event.target.closest(".ce-toggle");
             if (button) toggleCeGroup(button.dataset.ceKey);

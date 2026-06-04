@@ -1067,11 +1067,121 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
     }))
 }
 
+fn collect_unit_note_updates(path: &str) -> HashMap<(String, String), (f64, String)> {
+    let mut updates = HashMap::new();
+    let units = match list_unit_sheets(path) {
+        Ok(units) => units,
+        Err(_) => return updates,
+    };
+
+    for unit in units {
+        let Some(code) = unit["codigo"].as_str() else { continue; };
+        let Ok(data) = load_notas_unidad(path, code) else { continue; };
+        let Some(alumnos) = data["alumnos"].as_array() else { continue; };
+        for alumno in alumnos {
+            let name = normalize_plain(alumno["nombre"].as_str().unwrap_or(""));
+            if name.is_empty() { continue; }
+            let Some(cr_notas) = alumno["crNotas"].as_array() else { continue; };
+            for cr in cr_notas {
+                let cr_code = normalize_plain(cr["codigo"].as_str().unwrap_or(""));
+                if cr_code.is_empty() { continue; }
+                let display_raw = cr["display"].as_str().unwrap_or("").trim();
+                let note = cr["nota"].as_f64()
+                    .or_else(|| display_raw.replace(',', ".").parse::<f64>().ok())
+                    .unwrap_or(0.0);
+                let display = if display_raw.is_empty() {
+                    format!("{:.2}", note).replace('.', ",")
+                } else {
+                    display_raw.to_string()
+                };
+                updates.insert((name.clone(), cr_code), (note, display));
+            }
+        }
+    }
+
+    updates
+}
+
+fn value_note(value: &Value) -> f64 {
+    value.as_f64()
+        .or_else(|| value.as_str().and_then(|s| s.replace(',', ".").parse::<f64>().ok()))
+        .unwrap_or(0.0)
+}
+
+fn overlay_unit_notes_on_evaluation(data: &mut Value, path: &str) {
+    let updates = collect_unit_note_updates(path);
+    if updates.is_empty() { return; }
+
+    let criteria_meta = data["criteria"].as_array().cloned().unwrap_or_default();
+    let ra_meta = data["raColumns"].as_array().cloned().unwrap_or_default();
+    let Some(alumnos) = data["alumnos"].as_array_mut() else { return; };
+
+    for alumno in alumnos {
+        let name = normalize_plain(alumno["nombre"].as_str().unwrap_or(""));
+        if name.is_empty() { continue; }
+
+        if let Some(criterios) = alumno["criterios"].as_array_mut() {
+            for cr in criterios {
+                let code = normalize_plain(cr["codigo"].as_str().unwrap_or(""));
+                if let Some((note, display)) = updates.get(&(name.clone(), code)) {
+                    cr["nota"] = json!(note);
+                    cr["display"] = json!(display);
+                }
+            }
+        }
+
+        let student_criteria = alumno["criterios"].as_array().cloned().unwrap_or_default();
+        if let Some(rraa) = alumno["rraa"].as_array_mut() {
+            for ra in rraa {
+                let ra_col = ra["colIdx"].as_u64().unwrap_or(0);
+                let mut weighted_sum = 0.0;
+                let mut weight_sum = 0.0;
+                for meta in criteria_meta.iter().filter(|c| c["raColIdx"].as_u64() == Some(ra_col)) {
+                    let col = meta["colIdx"].as_u64().unwrap_or(0);
+                    let peso = parse_decimal(&meta["peso"]);
+                    if peso <= 0.0 { continue; }
+                    let Some(cr_val) = student_criteria.iter().find(|c| c["colIdx"].as_u64() == Some(col)) else { continue; };
+                    let note = cr_val["nota"].as_f64().unwrap_or_else(|| value_note(&cr_val["display"]));
+                    let rec = value_note(&cr_val["recDisplay"]);
+                    let effective = if rec > 0.0 { rec.max(note) } else { note };
+                    weighted_sum += peso * effective;
+                    weight_sum += peso;
+                }
+                if weight_sum > 0.0 {
+                    let note = weighted_sum / weight_sum;
+                    ra["nota"] = json!(note);
+                    ra["display"] = json!(format!("{:.2}", note).replace('.', ","));
+                }
+            }
+        }
+
+        let student_rraa = alumno["rraa"].as_array().cloned().unwrap_or_default();
+        let mut weighted_sum = 0.0;
+        let mut weight_sum = 0.0;
+        for meta in &ra_meta {
+            let ra_col = meta["colIdx"].as_u64().unwrap_or(0);
+            let peso = parse_decimal(&meta["peso"]);
+            if peso <= 0.0 { continue; }
+            let Some(ra_val) = student_rraa.iter().find(|r| r["colIdx"].as_u64() == Some(ra_col)) else { continue; };
+            let note = ra_val["nota"].as_f64().unwrap_or_else(|| value_note(&ra_val["display"]));
+            weighted_sum += peso * note;
+            weight_sum += peso;
+        }
+        if weight_sum > 0.0 {
+            let note = weighted_sum / weight_sum;
+            alumno["final"] = json!(note);
+            alumno["finalDisplay"] = json!(format!("{:.2}", note).replace('.', ","));
+        }
+    }
+}
+
 #[tauri::command]
 fn excel_get_notas_evaluacion(payload: Value) -> Result<Value, String> {
     if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
     let path = match get_selected_path() { Some(p) => p, None => return Ok(Value::Null) };
-    load_notas_evaluacion(&path, payload["evaluacion"].as_str().unwrap_or("1"))
+    let mut data = load_notas_evaluacion(&path, payload["evaluacion"].as_str().unwrap_or("1"))?;
+    overlay_unit_notes_on_evaluation(&mut data, &path);
+    Ok(data)
 }
 
 #[tauri::command]
@@ -1134,6 +1244,7 @@ fn excel_get_notas_evaluacion_alumno(payload: Value) -> Result<Value, String> {
     let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
     let alumno = payload["alumno"].as_str().unwrap_or("").to_string();
     let mut data = load_notas_evaluacion(&path, &evaluacion)?;
+    overlay_unit_notes_on_evaluation(&mut data, &path);
     if let Some(arr) = data["alumnos"].as_array_mut() {
         let filtered: Vec<Value> = arr.iter().filter(|a| a["nombre"].as_str().unwrap_or("") == alumno).cloned().collect();
         data["alumnos"] = json!(filtered);
@@ -1397,6 +1508,55 @@ fn set_xml_cell(sheet_xml: &str, row_idx: usize, col_idx: usize, value: Option<&
         insert_xml_cell_in_row(&original_row, &new_cell, col_idx)
     };
     Ok(xml.replacen(&original_row, &updated_row, 1))
+}
+
+fn set_xml_formula_cache_number(sheet_xml: &str, row_idx: usize, col_idx: usize, value: Option<f64>) -> Result<String, String> {
+    let row_number = row_idx + 1;
+    let cell_ref = format!("{}{}", col_name(col_idx), row_number);
+    let row_pattern = format!(r#"<row\b[^>/]*\br="{row_number}"[^>/]*>[\s\S]*?</row>"#);
+    let row_re = Regex::new(&row_pattern).unwrap();
+    let original_row = match row_re.find(sheet_xml) {
+        Some(m) => m.as_str().to_string(),
+        None => {
+            return match value {
+                Some(n) => set_xml_cell(sheet_xml, row_idx, col_idx, Some(&json!(n)), "number"),
+                None => Ok(sheet_xml.to_string()),
+            };
+        }
+    };
+    let cell_pattern = format!(r#"<c\b[^>/]*\br="{}"[^>/]*(?:>[\s\S]*?</c>|\s*/?>)"#, regex::escape(&cell_ref));
+    let cell_re = Regex::new(&cell_pattern).unwrap();
+    let cell_xml = match cell_re.find(&original_row) {
+        Some(m) => m.as_str(),
+        None => {
+            return match value {
+                Some(n) => set_xml_cell(sheet_xml, row_idx, col_idx, Some(&json!(n)), "number"),
+                None => Ok(sheet_xml.to_string()),
+            };
+        }
+    };
+
+    if !cell_xml.contains("<f") {
+        return match value {
+            Some(n) => set_xml_cell(sheet_xml, row_idx, col_idx, Some(&json!(n)), "number"),
+            None => set_xml_cell(sheet_xml, row_idx, col_idx, None, "number"),
+        };
+    }
+
+    let v_re = Regex::new(r#"<v>[\s\S]*?</v>"#).unwrap();
+    let updated_cell = match value {
+        Some(n) => {
+            let v = format!("<v>{}</v>", n);
+            if v_re.is_match(cell_xml) {
+                v_re.replace(cell_xml, v.as_str()).to_string()
+            } else {
+                cell_xml.replace("</c>", &format!("{v}</c>"))
+            }
+        }
+        None => v_re.replace(cell_xml, "").to_string(),
+    };
+    let updated_row = original_row.replacen(cell_xml, &updated_cell, 1);
+    Ok(sheet_xml.replacen(&original_row, &updated_row, 1))
 }
 
 // ---------------------------------------------------------------------------
@@ -1730,15 +1890,112 @@ fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
 // excel_save_notas_unidad — ESO
 // ---------------------------------------------------------------------------
 
+fn find_evaluation_layout_indices(rows: &[Vec<Value>]) -> Option<(usize, usize, usize)> {
+    for row_idx in 0..rows.len() {
+        let has_nota_ce = rows[row_idx].iter().any(|v| is_nota_ce_cell(v));
+        let cr_count = rows[row_idx].iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count();
+        if has_nota_ce && cr_count >= 2 {
+            return Some((row_idx, row_idx, row_idx + 2));
+        }
+    }
+
+    for row_idx in 0..rows.len() {
+        if rows[row_idx].iter().filter(|v| is_nota_ce_cell(v)).count() == 0 { continue; }
+        for offset in 1..=3 {
+            if let Some(next) = rows.get(row_idx + offset) {
+                if next.iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
+                    return Some((row_idx, row_idx + offset, row_idx + offset + 1));
+                }
+            }
+        }
+    }
+
+    for row_idx in 1..rows.len() {
+        if rows[row_idx].iter().filter(|v| is_eval_criterion_code(&cell_val_str(v))).count() >= 2 {
+            return Some((row_idx.saturating_sub(1), row_idx, row_idx + 1));
+        }
+    }
+
+    None
+}
+
+fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value]) -> Result<(), String> {
+    let unit_rows = read_sheet_rows(path, unidad)
+        .map_err(|_| format!("El archivo no tiene la hoja \"{unidad}\"."))?;
+    let mut updates: HashMap<(String, String), Option<f64>> = HashMap::new();
+
+    for nota_item in notas {
+        let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) else { continue; };
+        let alumno = normalize_plain(&cell_str(&unit_rows, ri, 0));
+        if alumno.is_empty() { continue; }
+        let Some(cr_notas) = nota_item["crNotas"].as_object() else { continue; };
+        for (code, val_obj) in cr_notas {
+            let code_norm = normalize_plain(code);
+            let value = val_obj.get("nota").and_then(normalize_grade);
+            updates.insert((alumno.clone(), code_norm), value);
+        }
+    }
+
+    if updates.is_empty() { return Ok(()); }
+
+    let names = sheet_names(path)?;
+    let eval_sheets: Vec<String> = names.into_iter().filter(|name| {
+        let norm = normalize_plain(name);
+        (norm.contains("EVA") || norm == "FINAL") && !norm.contains("MAX")
+    }).collect();
+
+    for sheet_name in eval_sheets {
+        let rows = match read_sheet_rows(path, &sheet_name) {
+            Ok(rows) => rows,
+            Err(_) => continue,
+        };
+        let Some((_, code_row_idx, first_student_row_idx)) = find_evaluation_layout_indices(&rows) else { continue; };
+        let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
+        let code_cols: Vec<(usize, String)> = code_row.iter().enumerate().filter_map(|(ci, value)| {
+            let code = cell_val_str(value);
+            if is_eval_criterion_code(&code) {
+                Some((ci, normalize_plain(&code)))
+            } else {
+                None
+            }
+        }).collect();
+        if code_cols.is_empty() { continue; }
+
+        let mut cells: Vec<(usize, usize, Option<f64>)> = Vec::new();
+        for row_idx in first_student_row_idx..rows.len() {
+            let alumno = normalize_plain(&cell_str(&rows, row_idx, 0));
+            if alumno.is_empty() { continue; }
+            for (col_idx, code_norm) in &code_cols {
+                if let Some(value) = updates.get(&(alumno.clone(), code_norm.clone())) {
+                    cells.push((row_idx, *col_idx, *value));
+                }
+            }
+        }
+        if cells.is_empty() { continue; }
+
+        edit_workbook_sheets_xml(path, vec![(&sheet_name, Box::new(move |xml: &str| {
+            let mut s = xml.to_string();
+            for (row_idx, col_idx, value) in &cells {
+                s = set_xml_formula_cache_number(&s, *row_idx, *col_idx, *value)?;
+            }
+            Ok(s)
+        }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
     let notas = payload["notas"].as_array().ok_or("Falta notas")?.clone();
+    let notas_for_unit = notas.clone();
+    let notas_for_eval = notas.clone();
 
     edit_workbook_sheets_xml(&path, vec![(&unidad, Box::new(move |xml: &str| {
         let mut s = xml.to_string();
-        for nota_item in &notas {
+        for nota_item in &notas_for_unit {
             if let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) {
                 if let Some(cr_notas) = nota_item["crNotas"].as_object() {
                     for (_code, val_obj) in cr_notas {
@@ -1756,6 +2013,8 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
         }
         Ok(s)
     }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+
+    sync_unit_notes_to_evaluation_sheets(&path, &unidad, &notas_for_eval)?;
 
     load_notas_unidad(&path, &unidad)
 }
