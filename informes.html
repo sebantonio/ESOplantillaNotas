@@ -530,6 +530,23 @@
             </article>
         </section>
 
+        <section class="chart-section">
+            <article class="card panel">
+                <h2>Distribución de notas del grupo</h2>
+                <svg id="histogramChart" viewBox="0 0 720 200" role="img" aria-label="Histograma de notas" style="width:100%;display:block"></svg>
+            </article>
+        </section>
+
+        <section class="card panel" style="margin-bottom:22px">
+            <h2>Evolución por CE — comparativa de evaluaciones</h2>
+            <div style="overflow-x:auto">
+                <table class="summary-table" id="comparativaTable" style="width:100%">
+                    <thead id="comparativaHead"></thead>
+                    <tbody id="comparativaBody"></tbody>
+                </table>
+            </div>
+        </section>
+
         <section class="report-grid">
             <article class="card panel">
                 <h2>Resumen por evaluación</h2>
@@ -587,6 +604,9 @@
         const syncBadge = document.getElementById("syncBadge");
         const evolutionChart = document.getElementById("evolutionChart");
         const radarChart = document.getElementById("radarChart");
+        const histogramChart = document.getElementById("histogramChart");
+        const comparativaHead = document.getElementById("comparativaHead");
+        const comparativaBody = document.getElementById("comparativaBody");
         const summaryBody = document.getElementById("summaryBody");
         const focusTitle = document.getElementById("focusTitle");
         const focusDetail = document.getElementById("focusDetail");
@@ -796,6 +816,8 @@
             renderQueue.length = 0;
             scheduleRender(() => renderEvolutionChart(selected));
             scheduleRender(() => renderRadarChart());
+            scheduleRender(() => renderHistogramChart());
+            scheduleRender(() => renderComparativaChart());
             scheduleRender(() => renderSummaryTable(selected));
             scheduleRender(() => renderFocusDetail(selected));
             scheduleRender(() => renderEvaluationReports(selected));
@@ -839,6 +861,92 @@
 
             evalStatsCache.set(data, result);
             return result;
+        }
+
+        function renderHistogramChart() {
+            if (!histogramChart) return;
+            const evalData = state.evaluations.find(e => e.value === "final")
+                          || [...state.evaluations].reverse().find(e => !String(e.value).includes("solo"))
+                          || state.evaluations[state.evaluations.length - 1];
+            const grades = (evalData?.data?.alumnos || []).map(a => a.final).filter(n => typeof n === "number" && n > 0);
+            if (!grades.length) { histogramChart.innerHTML = chartEmptyText("Sin notas para el histograma."); return; }
+
+            const buckets = [
+                { label: "0-2",  min: 0,   max: 2,     fill: "#dc2626" },
+                { label: "2-4",  min: 2,   max: 4,     fill: "#f87171" },
+                { label: "4-5",  min: 4,   max: 5,     fill: "#fb923c" },
+                { label: "5-7",  min: 5,   max: 7,     fill: "#4ade80" },
+                { label: "7-9",  min: 7,   max: 9,     fill: "#22c55e" },
+                { label: "9-10", min: 9,   max: 10.01, fill: "#15803d" },
+            ];
+            const counts = buckets.map(b => grades.filter(g => g >= b.min && g < b.max).length);
+            const maxC = Math.max(...counts, 1);
+            const w = 720, h = 200, pL = 36, pB = 38, pT = 18, pR = 16;
+            const bw = (w - pL - pR) / buckets.length;
+            const ih = h - pT - pB;
+
+            const bars = buckets.map((b, i) => {
+                const cnt = counts[i];
+                const bh = (cnt / maxC) * ih;
+                const x = pL + i * bw + 5, y = pT + ih - bh, bwi = bw - 10;
+                return `<rect x="${x}" y="${y}" width="${bwi}" height="${bh}" fill="${b.fill}" rx="3"/>
+                        ${cnt > 0 ? `<text x="${x+bwi/2}" y="${y-5}" text-anchor="middle" fill="#1f2937" font-size="13" font-weight="800">${cnt}</text>` : ""}
+                        <text x="${x+bwi/2}" y="${h-8}" text-anchor="middle" fill="#61708a" font-size="12">${b.label}</text>`;
+            }).join("");
+
+            const yLines = [0, Math.ceil(maxC/2), maxC].map(v => {
+                const y = pT + ih - (v / maxC) * ih;
+                return `<line x1="${pL}" y1="${y}" x2="${w-pR}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="${v>0?'4,3':''}"/>
+                        <text x="${pL-4}" y="${y+4}" text-anchor="end" fill="#9ca3af" font-size="11">${v}</text>`;
+            }).join("");
+
+            const label = evalData?.label || "evaluación";
+            histogramChart.innerHTML = `${yLines}${bars}
+                <line x1="${pL}" y1="${pT}" x2="${pL}" y2="${h-pB}" stroke="#cbd5e1"/>
+                <line x1="${pL}" y1="${h-pB}" x2="${w-pR}" y2="${h-pB}" stroke="#cbd5e1"/>
+                <text x="${w/2}" y="${h-1}" text-anchor="middle" fill="#9ca3af" font-size="10">${grades.length} alumnos · ${escapeHtml(label)}</text>`;
+        }
+
+        function renderComparativaChart() {
+            if (!comparativaHead || !comparativaBody) return;
+            const evals = state.evaluations.filter(e => !String(e.value).includes("solo"));
+            if (!evals.length || !state.selectedStudent) {
+                comparativaBody.innerHTML = '<tr><td colspan="99" style="text-align:center;color:#9ca3af;padding:12px">Selecciona un alumno y carga evaluaciones.</td></tr>';
+                return;
+            }
+            const lastNonFinal = [...evals].reverse().find(e => e.value !== "final") || evals[evals.length - 1];
+            const ras = lastNonFinal?.data?.raColumns || evals.find(e => e.value === "final")?.data?.raColumns || [];
+            if (!ras.length) { comparativaBody.innerHTML = '<tr><td colspan="99" style="text-align:center;color:#9ca3af">Sin CE disponibles.</td></tr>'; return; }
+
+            // Cabecera dinámica
+            comparativaHead.innerHTML = `<tr>
+                <th style="text-align:left;padding:7px 10px">CE</th>
+                ${evals.map(e => `<th style="text-align:center;padding:7px 10px">${escapeHtml(e.label)}</th>`).join("")}
+                <th style="text-align:center;padding:7px 10px">Tendencia</th>
+            </tr>`;
+
+            comparativaBody.innerHTML = ras.map(ra => {
+                const label = (ra.label || "").replace(/RRAA\s*/i, "CE");
+                const vals = evals.map(ev => {
+                    const al = (ev.data.alumnos || []).find(a => a.nombre === state.selectedStudent);
+                    const rr = al ? (al.rraa || []).find(r => r.colIdx === ra.colIdx) : null;
+                    return (rr && rr.nota > 0) ? rr.nota : null;
+                });
+                const cells = vals.map(v => {
+                    if (v === null) return `<td style="text-align:center;color:#9ca3af">—</td>`;
+                    const cls = v >= 7 ? "grade-ok" : v >= 5 ? "grade-warn" : "grade-bad";
+                    return `<td style="text-align:center"><span class="grade ${cls}">${v.toFixed(2).replace(".",",")}</span></td>`;
+                });
+                const valid = vals.filter(v => v !== null);
+                let trend = `<span style="color:#9ca3af">—</span>`;
+                if (valid.length >= 2) {
+                    const diff = valid[valid.length-1] - valid[valid.length-2];
+                    if (diff > 0.19) trend = `<span style="color:#16a34a;font-weight:800">↑ +${diff.toFixed(1).replace(".",",")}</span>`;
+                    else if (diff < -0.19) trend = `<span style="color:#dc2626;font-weight:800">↓ ${diff.toFixed(1).replace(".",",")}</span>`;
+                    else trend = `<span style="color:#6b7280;font-weight:700">→</span>`;
+                }
+                return `<tr><td style="font-weight:700;padding:6px 10px">${escapeHtml(label)}</td>${cells.join("")}<td style="text-align:center;padding:6px 8px">${trend}</td></tr>`;
+            }).join("");
         }
 
         function renderRadarChart() {

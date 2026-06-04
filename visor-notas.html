@@ -230,8 +230,8 @@
         if (!display || display === "") return "grade-empty";
         const n = parseFloat(String(display).replace(",", "."));
         if (isNaN(n) || n === 0) return "grade-empty";
-        if (n >= 5) return "grade-ok";
-        if (n >= 3) return "grade-warn";
+        if (n >= 7) return "grade-ok";
+        if (n >= 5) return "grade-warn";
         return "grade-bad";
     }
 

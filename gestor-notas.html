@@ -1093,6 +1093,7 @@
                                 <td class="empty" colspan="4">Cargando datos...</td>
                             </tr>
                         </tbody>
+                        <tfoot id="notasTfoot"></tfoot>
                     </table>
                 </div>
                 <div class="pagination-bottom-row">
@@ -1137,6 +1138,7 @@
         const activityTitleInput = document.getElementById("activityTitleInput");
         const includedInput = document.getElementById("includedInput");
         const notasBody = document.getElementById("notasBody");
+        const notasTfoot = document.getElementById("notasTfoot");
         const fileName = document.getElementById("fileName");
         const activityName = document.getElementById("activityName");
         const studentCount = document.getElementById("studentCount");
@@ -1221,6 +1223,7 @@
                         input.classList.remove("saved-note");
                         renderSummary(currentState);
                         marcarCambio();
+                        renderStatsRow();
                     }
                 }
             });
@@ -1647,6 +1650,42 @@
             notasBody.appendChild(fragment);
             setQuickFilter(currentQuickFilter, false);
             renderPagination();
+            renderStatsRow();
+        }
+
+        function renderStatsRow() {
+            if (!notasTfoot || !currentState) return;
+            const criterios = currentState.criterios || [];
+            const activeC = criterios.filter(cr => (cr.ponderacion || 0) > 0);
+            if (!activeC.length) { notasTfoot.innerHTML = ""; return; }
+
+            // Calcular stats sobre TODOS los alumnos (no solo la página actual)
+            let html = '<tr style="background:#f1f5f9;border-top:2px solid #cbd5e1">';
+            html += '<td style="text-align:center;font-size:0.73em;color:#9ca3af;padding:5px 4px;font-style:italic" colspan="2">Estadísticas</td>';
+            criterios.forEach(cr => {
+                const tieneP = (cr.ponderacion || 0) > 0;
+                if (!tieneP) {
+                    html += `<td style="background:#f3f4f6;border-left:1px solid #e5e7eb"></td>`;
+                    return;
+                }
+                const vals = currentNotes.map(a => {
+                    const n = (a.crNotas || []).find(n => n.codigo === cr.codigo);
+                    const v = parseFloat(String(n?.display || n?.nota || "").replace(",", "."));
+                    return isNaN(v) || v === 0 ? null : v;
+                }).filter(v => v !== null);
+                const pending = currentNotes.length - vals.length;
+                const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+                const min = vals.length ? Math.min(...vals) : null;
+                const max = vals.length ? Math.max(...vals) : null;
+                const avgCol = avg !== null ? (avg >= 7 ? '#16a34a' : avg >= 5 ? '#b45309' : '#dc2626') : '#9ca3af';
+                html += `<td style="text-align:center;padding:4px 2px;font-size:0.74em;border-left:1px solid #e5e7eb">
+                    <div style="font-weight:800;color:${avgCol}">${avg !== null ? avg.toFixed(1).replace('.', ',') : '—'}</div>
+                    <div style="color:#9ca3af;font-size:0.88em">${min !== null ? min.toFixed(1).replace('.', ',') + '-' + max.toFixed(1).replace('.', ',') : '—'}</div>
+                    ${pending > 0 ? `<div style="color:#dc2626;font-weight:700;font-size:0.9em">${pending}✗</div>` : '<div style="color:#16a34a;font-size:0.9em">✓</div>'}
+                </td>`;
+            });
+            html += '</tr>';
+            notasTfoot.innerHTML = html;
         }
 
         async function saveNotas(options = {}) {
