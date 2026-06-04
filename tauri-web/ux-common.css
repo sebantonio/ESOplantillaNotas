@@ -713,6 +713,36 @@ body.ux-page-incluir-actividad [data-mode-panel][hidden] {
     font-weight: 800;
 }
 
+/* ── SCROLL TO TOP ── */
+.ux-scroll-top {
+    position: fixed; left: 16px; bottom: 64px; z-index: 888;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid #d1d5db; background: rgba(255,255,255,0.94);
+    color: #6366f1; font-size: 1rem; font-weight: 900; line-height: 1;
+    cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s; transform: translateY(8px);
+}
+.ux-scroll-top.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.ux-scroll-top:hover { background: #eef2ff; border-color: #6366f1; }
+
+/* ── DARK MODE TOGGLE ── */
+.ux-dark-toggle {
+    position: fixed; left: 16px; bottom: 16px; z-index: 888;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid #d1d5db; background: rgba(255,255,255,0.94);
+    font-size: 1.05rem; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+.ux-dark-toggle:hover { background: #f3f4f6; border-color: #6366f1; }
+
+/* ── DARK MODE ── */
+html.dark-mode { filter: invert(0.88) hue-rotate(180deg); }
+html.dark-mode img, html.dark-mode video { filter: invert(1) hue-rotate(180deg); }
+
 @media (max-width: 720px) {
     body.ux-app-shell {
         padding: 10px;

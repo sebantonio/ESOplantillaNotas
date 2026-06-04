@@ -1475,6 +1475,36 @@
                 next?.focus();
             });
 
+            // ── Stats tooltip en cabeceras de columna ──
+            (function() {
+                const tip = document.createElement("div");
+                tip.style.cssText = "position:fixed;z-index:9999;display:none;background:rgba(30,27,75,0.94);color:white;padding:6px 13px;border-radius:8px;font-size:0.78rem;font-weight:600;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.22);white-space:nowrap;gap:10px;";
+                document.body.appendChild(tip);
+
+                document.querySelector("table")?.addEventListener("mouseover", (e) => {
+                    const th = e.target.closest("thead th[data-col-key]");
+                    if (!th || !currentNotes?.length || !currentState) { tip.style.display = "none"; return; }
+                    const colIdx = Number(th.dataset.colKey);
+                    const cr = (currentState.criterios || []).find(c => Number(c.colIdx) === colIdx);
+                    if (!cr) { tip.style.display = "none"; return; }
+                    const vals = currentNotes.flatMap(a => {
+                        const n = (a.crNotas || []).find(n => n.codigo === cr.codigo);
+                        const v = parseFloat(String(n?.display || "").replace(",", "."));
+                        return (!isNaN(v) && v > 0) ? [v] : [];
+                    });
+                    if (!vals.length) { tip.style.display = "none"; return; }
+                    const media = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(2).replace(".", ",");
+                    const min = Math.min(...vals).toFixed(2).replace(".", ",");
+                    const max = Math.max(...vals).toFixed(2).replace(".", ",");
+                    tip.innerHTML = `<span style="opacity:.65">Media</span> <b>${media}</b> &nbsp;<span style="opacity:.65">Mín</span> <b>${min}</b> &nbsp;<span style="opacity:.65">Máx</span> <b>${max}</b> &nbsp;<span style="opacity:.65">${vals.length}/${currentNotes.length} alumnos</span>`;
+                    const r = th.getBoundingClientRect();
+                    tip.style.display = "flex";
+                    tip.style.left = `${Math.min(r.left, window.innerWidth - 340)}px`;
+                    tip.style.top = `${r.bottom + 6}px`;
+                });
+                document.querySelector("table")?.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+            })();
+
             const prefs = getViewPrefs();
             const initialPerPage = Number(prefs.perPage || perPage);
             perPage = [10, 15, 20, 25, 50].includes(initialPerPage) ? initialPerPage : perPage;

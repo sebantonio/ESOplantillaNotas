@@ -7,6 +7,7 @@
 
     function install() {
         document.body.classList.add("ux-enhanced", `ux-page-${pageName}`);
+        applyDarkModePreference();
         ensureSkipLink();
         ensureStatus();
         enhanceBackButtons();
@@ -16,6 +17,8 @@
         setupKeyboardShortcuts();
         setupGestorNotasHelpers();
         setupActividadModes();
+        setupScrollToTop();
+        setupDarkModeToggle();
     }
 
     function ensureSkipLink() {
@@ -175,13 +178,65 @@
         document.addEventListener("keydown", (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
                 const saveButton = document.getElementById("saveButton") ||
-                    document.querySelector("button[onclick*='guardarCambiosForzado'], button[onclick*='guardarExcel']");
+                    document.querySelector([
+                        "button[onclick*='guardarCambiosForzado']",
+                        "button[onclick*='guardarExcel']",
+                        "button[onclick*='guardarExcelLocal']",
+                        "button[onclick*='descargarExcel']",
+                        "button[onclick*='guardarCambios']",
+                        "#btnSave",
+                    ].join(", "));
                 if (saveButton && !saveButton.disabled) {
                     event.preventDefault();
                     saveButton.click();
                     showStatus("Guardando cambios...", "saving", 1800);
                 }
             }
+        });
+    }
+
+    const DARK_KEY = "appDarkMode";
+
+    function applyDarkModePreference() {
+        if (localStorage.getItem(DARK_KEY) === "1") {
+            document.documentElement.classList.add("dark-mode");
+        }
+    }
+
+    function setupScrollToTop() {
+        const btn = document.createElement("button");
+        btn.className = "ux-scroll-top";
+        btn.type = "button";
+        btn.title = "Volver arriba";
+        btn.setAttribute("aria-label", "Volver al inicio de la página");
+        btn.textContent = "↑";
+        document.body.appendChild(btn);
+
+        btn.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            document.querySelectorAll(".table-container").forEach(c => c.scrollTo({ top: 0, behavior: "smooth" }));
+        });
+
+        function check() {
+            btn.classList.toggle("visible", window.scrollY > 300);
+        }
+        window.addEventListener("scroll", check, { passive: true });
+        check();
+    }
+
+    function setupDarkModeToggle() {
+        const isDark = document.documentElement.classList.contains("dark-mode");
+        const btn = document.createElement("button");
+        btn.className = "ux-dark-toggle";
+        btn.type = "button";
+        btn.title = "Alternar modo oscuro";
+        btn.textContent = isDark ? "☀️" : "🌙";
+        document.body.appendChild(btn);
+
+        btn.addEventListener("click", () => {
+            const dark = document.documentElement.classList.toggle("dark-mode");
+            localStorage.setItem(DARK_KEY, dark ? "1" : "0");
+            btn.textContent = dark ? "☀️" : "🌙";
         });
     }
 

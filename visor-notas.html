@@ -127,6 +127,7 @@
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar datos de la evaluación actual">Recargar</button>
+        <button class="pag-btn" id="btnCopyTable" type="button" onclick="copiarTabla()" title="Copiar tabla completa al portapapeles (pega en Excel)">📋 Copiar</button>
         <button class="pag-btn" id="btnClearFilters" type="button" title="Limpiar filtros">Limpiar filtros</button>
         <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
         <button class="pag-btn ce-toggle-all" id="ceToggleAllButton" type="button">Abrir CE</button>
@@ -587,6 +588,49 @@
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
         }
+    }
+
+    function copiarTabla() {
+        if (!currentState) return;
+        const ceGroups = getCurrentCeGroups();
+        // Re-evaluate collapse state
+        ceGroups.forEach(g => { g.collapsed = collapsedCeSet ? collapsedCeSet.has(ceGroupKey(g)) : false; });
+        const alumnos = currentState.alumnos || [];
+
+        const headers = ["Alumno", "Nota Final"];
+        ceGroups.forEach(g => {
+            headers.push(`CE ${g.ra.numero || ""}`);
+            if (!g.collapsed) {
+                g.criterios.forEach(cr => {
+                    headers.push(cr.codigo);
+                    if (Number(cr.recColIdx) >= 0) headers.push(`${cr.codigo} Rec`);
+                });
+            }
+        });
+
+        const rows = [headers];
+        alumnos.forEach(alumno => {
+            const row = [alumno.nombre, formatNote(alumno.finalDisplay) || ""];
+            ceGroups.forEach(g => {
+                const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
+                row.push(formatNote(raVal ? raVal.display : "") || "");
+                if (!g.collapsed) {
+                    g.criterios.forEach(cr => {
+                        const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+                        row.push(formatNote(crVal ? crVal.display : "") || "");
+                        if (Number(cr.recColIdx) >= 0) row.push(formatNote(crVal ? crVal.recDisplay : "") || "");
+                    });
+                }
+            });
+            rows.push(row);
+        });
+
+        const tsv = rows.map(r => r.join("\t")).join("\n");
+        navigator.clipboard.writeText(tsv).then(() => {
+            window.appUx && window.appUx.showStatus(`${alumnos.length} alumnos copiados al portapapeles`, "success");
+            const btn = document.getElementById("btnCopyTable");
+            if (btn) { btn.textContent = "✓ Copiado"; setTimeout(() => btn.textContent = "📋 Copiar", 1800); }
+        }).catch(() => window.appUx && window.appUx.showStatus("No se pudo copiar", "error"));
     }
 
     document.addEventListener("DOMContentLoaded", async () => {

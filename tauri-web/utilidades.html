@@ -132,6 +132,54 @@
         /* Aviso sin alumnos */
         .alumnos-warning { padding: 10px 14px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; font-size: 0.88rem; color: #92400e; margin-bottom: 14px; }
         .alumnos-warning strong { font-weight: 700; }
+
+        /* ── SEMÁFORO ── */
+        .sem-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        .sem-date { padding: 7px 12px; border: 1.5px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.9rem; }
+        .sem-date:focus { outline: none; border-color: #6366f1; }
+        .sem-btn { padding: 7px 14px; border: 1.5px solid #d1d5db; border-radius: 7px; background: white; font: inherit; font-size: 0.88rem; font-weight: 700; color: #374151; cursor: pointer; }
+        .sem-btn:hover { border-color: #6366f1; color: #4338ca; }
+        .sem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+        .sem-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; }
+        .sem-row.state-green  { background: #f0fdf4; border-color: #86efac; }
+        .sem-row.state-yellow { background: #fefce8; border-color: #fde047; }
+        .sem-row.state-red    { background: #fff1f2; border-color: #fca5a5; }
+        .sem-name { flex: 1; font-size: 0.88rem; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sem-btns { display: flex; gap: 4px; flex-shrink: 0; }
+        .sem-state-btn { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid transparent; font-size: 0.9rem; cursor: pointer; background: #f3f4f6; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
+        .sem-state-btn:hover { transform: scale(1.1); }
+        .sem-state-btn.active-green  { background: #dcfce7; border-color: #22c55e; }
+        .sem-state-btn.active-yellow { background: #fef9c3; border-color: #eab308; }
+        .sem-state-btn.active-red    { background: #fee2e2; border-color: #ef4444; }
+        .sem-summary { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+        .sem-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; }
+        .sem-chip.green  { background: #dcfce7; color: #166534; }
+        .sem-chip.yellow { background: #fef9c3; color: #92400e; }
+        .sem-chip.red    { background: #fee2e2; color: #991b1b; }
+        .sem-chip.grey   { background: #f3f4f6; color: #6b7280; }
+
+        /* ── LISTA DE CONTROL ── */
+        .lista-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .lista-col-input { padding: 7px 12px; border: 1.5px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.9rem; min-width: 180px; }
+        .lista-col-input:focus { outline: none; border-color: #6366f1; }
+        .lista-add-btn { padding: 7px 14px; border-radius: 7px; border: none; background: #6366f1; color: white; font: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+        .lista-add-btn:hover { background: #4f46e5; }
+        .lista-sec-btn { padding: 7px 14px; border: 1.5px solid #d1d5db; border-radius: 7px; background: white; font: inherit; font-size: 0.88rem; font-weight: 700; color: #374151; cursor: pointer; }
+        .lista-sec-btn:hover { border-color: #6366f1; color: #4338ca; }
+        .lista-table-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; max-height: 60vh; overflow-y: auto; }
+        .lista-table { border-collapse: collapse; min-width: 100%; font-size: 0.88rem; }
+        .lista-table th { position: sticky; top: 0; background: #3730a3; color: white; padding: 9px 12px; font-weight: 700; white-space: nowrap; text-align: center; z-index: 2; }
+        .lista-table th.th-nombre { text-align: left; min-width: 160px; position: sticky; left: 0; z-index: 3; }
+        .lista-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+        .lista-table td.td-nombre { text-align: left; font-weight: 600; position: sticky; left: 0; background: white; z-index: 1; }
+        .lista-table tbody tr:nth-child(even) td { background: #fafafa; }
+        .lista-table tbody tr:nth-child(even) td.td-nombre { background: #fafafa; }
+        .lista-table tbody tr:hover td { background: #eef2ff; }
+        .lista-table tbody tr:hover td.td-nombre { background: #eef2ff; }
+        .lista-check { width: 18px; height: 18px; accent-color: #6366f1; cursor: pointer; }
+        .lista-col-header { display: flex; align-items: center; gap: 5px; justify-content: center; }
+        .lista-del-col { background: none; border: none; cursor: pointer; font-size: 0.8rem; color: #fca5a5; padding: 0 2px; line-height: 1; }
+        .lista-del-col:hover { color: #dc2626; }
     </style>
 </head>
 <body class="ux-app-shell ux-page-utilidades">
@@ -153,6 +201,8 @@
         <button class="tab-btn" type="button" onclick="cambiarTab('horario')">📅 Horario</button>
         <button class="tab-btn" type="button" onclick="cambiarTab('azar')">🎲 Alumno al azar</button>
         <button class="tab-btn" type="button" onclick="cambiarTab('grupos')">👥 Agrupaciones</button>
+        <button class="tab-btn" type="button" onclick="cambiarTab('semaforo')">🚦 Semáforo</button>
+        <button class="tab-btn" type="button" onclick="cambiarTab('lista')">📋 Lista de control</button>
     </div>
 
     <!-- ── TAB: TEMPORIZADOR ── -->
@@ -266,6 +316,39 @@
         </div>
         <div id="gruposResult"></div>
     </div>
+    <!-- ── TAB: SEMÁFORO ── -->
+    <div id="tab-semaforo" class="tab-content">
+        <div class="section-title">🚦 Semáforo de participación</div>
+        <div id="semaforoAlumnosWarning" class="alumnos-warning" style="display:none;">
+            <strong>Sin alumnos cargados.</strong> Abre primero el Excel desde Inicio.
+        </div>
+        <div class="sem-toolbar">
+            <label style="font-size:0.85rem;font-weight:700;color:#374151;">Sesión:</label>
+            <input type="date" id="semDate" class="sem-date">
+            <button class="sem-btn" type="button" onclick="semNuevaFecha()">+ Nueva sesión hoy</button>
+            <button class="sem-btn" type="button" onclick="semLimpiarFecha()">🗑 Limpiar sesión</button>
+            <span id="semStatus" style="font-size:0.8rem;color:#6b7280;"></span>
+        </div>
+        <div class="sem-grid" id="semGrid"></div>
+        <div class="sem-summary" id="semSummary"></div>
+    </div>
+
+    <!-- ── TAB: LISTA DE CONTROL ── -->
+    <div id="tab-lista" class="tab-content">
+        <div class="section-title">📋 Lista de control</div>
+        <div id="listaAlumnosWarning" class="alumnos-warning" style="display:none;">
+            <strong>Sin alumnos cargados.</strong> Abre primero el Excel desde Inicio.
+        </div>
+        <div class="lista-toolbar">
+            <input type="text" class="lista-col-input" id="listaNewColInput" placeholder="Nueva columna (ej: Tarea entregada)" maxlength="40">
+            <button class="lista-add-btn" type="button" onclick="listaAgregarColumna()">+ Añadir columna</button>
+            <button class="lista-sec-btn" type="button" onclick="listaCopiar()">📋 Copiar tabla</button>
+            <button class="lista-sec-btn" type="button" onclick="listaLimpiar()">🗑 Limpiar todo</button>
+        </div>
+        <div class="lista-table-wrap" id="listaTableWrap">
+            <div style="padding:40px;text-align:center;color:#9ca3af;font-style:italic;" id="listaEmpty">Añade columnas para comenzar.</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -278,13 +361,13 @@ let horarioEditando = false;
 const CIRCUM = 2 * Math.PI * 95;
 
 // ===== TABS =====
+const TAB_IDS = ['timer','horario','azar','grupos','semaforo','lista'];
 function cambiarTab(id) {
-    document.querySelectorAll('.tab-btn').forEach((b, i) => {
-        const ids = ['timer','horario','azar','grupos'];
-        b.classList.toggle('active', ids[i] === id);
-    });
+    document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', TAB_IDS[i] === id));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + id).classList.add('active');
+    if (id === 'semaforo') renderSemaforo();
+    if (id === 'lista') renderListaTabla();
 }
 
 // ===== CARGAR ALUMNOS =====
@@ -737,6 +820,186 @@ function copiarGrupos() {
     }).catch(() => {});
 }
 
+// ===== SEMÁFORO =====
+const SEM_KEY = 'aula_semaforo_v1';
+let semData = {}; // { fecha: { nombre: 'green'|'yellow'|'red'|'' } }
+
+function semLoad() {
+    try { semData = JSON.parse(localStorage.getItem(SEM_KEY) || '{}'); } catch { semData = {}; }
+}
+
+function semSave() {
+    localStorage.setItem(SEM_KEY, JSON.stringify(semData));
+}
+
+function semHoy() {
+    return new Date().toISOString().split('T')[0];
+}
+
+function semSetState(nombre, estado) {
+    const fecha = document.getElementById('semDate').value || semHoy();
+    if (!semData[fecha]) semData[fecha] = {};
+    semData[fecha][nombre] = estado === semData[fecha][nombre] ? '' : estado;
+    semSave();
+    renderSemaforo();
+}
+
+function semNuevaFecha() {
+    const hoy = semHoy();
+    document.getElementById('semDate').value = hoy;
+    if (!semData[hoy]) semData[hoy] = {};
+    renderSemaforo();
+}
+
+function semLimpiarFecha() {
+    const fecha = document.getElementById('semDate').value || semHoy();
+    delete semData[fecha];
+    semSave();
+    renderSemaforo();
+}
+
+function renderSemaforo() {
+    const grid = document.getElementById('semGrid');
+    const summary = document.getElementById('semSummary');
+    const warning = document.getElementById('semaforoAlumnosWarning');
+    const fecha = document.getElementById('semDate').value || semHoy();
+    const session = semData[fecha] || {};
+
+    if (!alumnosLista.length) {
+        warning.style.display = 'block';
+        grid.innerHTML = ''; summary.innerHTML = '';
+        return;
+    }
+    warning.style.display = 'none';
+
+    let green = 0, yellow = 0, red = 0, none = 0;
+    grid.innerHTML = alumnosLista.map(nombre => {
+        const st = session[nombre] || '';
+        if (st === 'green') green++;
+        else if (st === 'yellow') yellow++;
+        else if (st === 'red') red++;
+        else none++;
+        const rowClass = st ? `state-${st}` : '';
+        return `<div class="sem-row ${rowClass}">
+            <span class="sem-name" title="${escHtml(nombre)}">${escHtml(nombre)}</span>
+            <div class="sem-btns">
+                <button class="sem-state-btn ${st==='green'?'active-green':''}" type="button"
+                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','green')" title="Participa">✓</button>
+                <button class="sem-state-btn ${st==='yellow'?'active-yellow':''}" type="button"
+                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','yellow')" title="Normal/pasivo">~</button>
+                <button class="sem-state-btn ${st==='red'?'active-red':''}" type="button"
+                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','red')" title="No participa">✗</button>
+            </div>
+        </div>`;
+    }).join('');
+
+    summary.innerHTML = `
+        <span class="sem-chip green">✓ ${green} participan</span>
+        <span class="sem-chip yellow">~ ${yellow} pasivos</span>
+        <span class="sem-chip red">✗ ${red} no participan</span>
+        <span class="sem-chip grey">⬜ ${none} sin marcar</span>`;
+}
+
+// ===== LISTA DE CONTROL =====
+const LISTA_KEY = 'aula_lista_v1';
+let listaColumnas = []; // [{id, nombre}]
+let listaDatos = {};    // { colId: { alumnoNombre: true/false } }
+
+function listaLoad() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(LISTA_KEY) || '{}');
+        listaColumnas = raw.columnas || [];
+        listaDatos    = raw.datos    || {};
+    } catch { listaColumnas = []; listaDatos = {}; }
+}
+
+function listaSave() {
+    localStorage.setItem(LISTA_KEY, JSON.stringify({ columnas: listaColumnas, datos: listaDatos }));
+}
+
+function listaAgregarColumna() {
+    const inp = document.getElementById('listaNewColInput');
+    const nombre = inp.value.trim();
+    if (!nombre) { inp.focus(); return; }
+    const id = `col_${Date.now()}`;
+    listaColumnas.push({ id, nombre });
+    listaDatos[id] = {};
+    listaSave();
+    inp.value = '';
+    renderListaTabla();
+}
+
+function listaEliminarColumna(id) {
+    listaColumnas = listaColumnas.filter(c => c.id !== id);
+    delete listaDatos[id];
+    listaSave();
+    renderListaTabla();
+}
+
+function listaToggle(colId, nombre, checked) {
+    if (!listaDatos[colId]) listaDatos[colId] = {};
+    listaDatos[colId][nombre] = checked;
+    listaSave();
+}
+
+function listaLimpiar() {
+    if (!confirm('¿Limpiar toda la lista de control?')) return;
+    listaColumnas = []; listaDatos = {};
+    listaSave();
+    renderListaTabla();
+}
+
+function listaCopiar() {
+    if (!listaColumnas.length || !alumnosLista.length) return;
+    const headers = ['Alumno', ...listaColumnas.map(c => c.nombre)];
+    const rows = [headers, ...alumnosLista.map(nombre =>
+        [nombre, ...listaColumnas.map(c => (listaDatos[c.id]?.[nombre] ? '✓' : ''))]
+    )];
+    navigator.clipboard.writeText(rows.map(r => r.join('\t')).join('\n')).then(() => {
+        const btn = document.querySelector('.lista-sec-btn');
+        btn.textContent = '✓ Copiado';
+        setTimeout(() => btn.textContent = '📋 Copiar tabla', 1800);
+    }).catch(() => {});
+}
+
+function renderListaTabla() {
+    const wrap = document.getElementById('listaTableWrap');
+    const warning = document.getElementById('listaAlumnosWarning');
+
+    if (!alumnosLista.length) {
+        warning.style.display = 'block';
+        wrap.innerHTML = '';
+        return;
+    }
+    warning.style.display = 'none';
+
+    if (!listaColumnas.length) {
+        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af;font-style:italic;">Añade columnas para comenzar.</div>';
+        return;
+    }
+
+    const thead = `<thead><tr>
+        <th class="th-nombre">Alumno</th>
+        ${listaColumnas.map(c => `<th>
+            <div class="lista-col-header">
+                ${escHtml(c.nombre)}
+                <button class="lista-del-col" type="button" onclick="listaEliminarColumna('${c.id}')" title="Eliminar columna">✕</button>
+            </div>
+        </th>`).join('')}
+    </tr></thead>`;
+
+    const tbody = `<tbody>${alumnosLista.map(nombre => {
+        const cells = listaColumnas.map(c => {
+            const checked = listaDatos[c.id]?.[nombre] || false;
+            return `<td><input type="checkbox" class="lista-check" ${checked ? 'checked' : ''}
+                onchange="listaToggle('${c.id}','${escHtml(nombre).replace(/'/g,"\\'")}',this.checked)"></td>`;
+        }).join('');
+        return `<tr><td class="td-nombre">${escHtml(nombre)}</td>${cells}</tr>`;
+    }).join('')}</tbody>`;
+
+    wrap.innerHTML = `<table class="lista-table">${thead}${tbody}</table>`;
+}
+
 // ===== UTILS =====
 function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -746,6 +1009,10 @@ function escHtml(s) {
 document.addEventListener('DOMContentLoaded', () => {
     updateTimerDisplay();
     horarioLoad();
+    semLoad();
+    listaLoad();
+    // Fecha de semáforo = hoy
+    document.getElementById('semDate').value = semHoy();
     cargarAlumnos();
 });
 </script>
