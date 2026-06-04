@@ -778,6 +778,105 @@
         .alerta-dot.warn { background: #f59e0b; }
         .alertas-ok { color: var(--muted); font-size: 0.83rem; font-style: italic; }
         .alertas-loading { color: var(--muted); font-size: 0.83rem; }
+
+        /* ── Zonas ── */
+        .daily-panel h2 {
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .daily-panel > p { display: none; }
+
+        .zone {
+            margin-top: 14px;
+            background: rgba(248, 250, 252, 0.78);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px 14px 14px;
+        }
+
+        .zone-hdr {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .zone-info { flex: 1; min-width: 0; }
+
+        .zone-kicker {
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1px;
+        }
+
+        .zone-title {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1px;
+        }
+
+        .zone-desc {
+            display: block;
+            font-size: 0.79rem;
+            color: var(--muted);
+        }
+
+        .zone-badge {
+            flex-shrink: 0;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .zone-badge.escritura {
+            background: rgba(99, 102, 241, 0.09);
+            color: var(--primary-dark);
+            border: 1px solid rgba(99, 102, 241, 0.22);
+        }
+
+        .zone-badge.consulta {
+            background: rgba(15, 118, 110, 0.08);
+            color: #0f766e;
+            border: 1px solid rgba(15, 118, 110, 0.22);
+        }
+
+        .zone-badge.alerta {
+            background: rgba(245, 158, 11, 0.1);
+            color: #92400e;
+            border: 1px solid rgba(245, 158, 11, 0.28);
+        }
+
+        .zone-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+
+        .action-card--sm {
+            min-height: 88px;
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .action-card--sm .action-icon {
+            width: 36px;
+            height: 36px;
+            font-size: 1.25rem;
+        }
+
+        .action-card--sm strong { font-size: 0.93rem; margin-bottom: 3px; }
+        .action-card--sm span  { font-size: 0.81rem; }
     </style>
 </head>
 <body>
@@ -803,40 +902,87 @@
             <div class="daily-panel">
                 <div class="section-kicker">En producción</div>
                 <h2 id="daily-title">Trabajo diario de evaluación</h2>
-                <p>
-                    Accede rápido a las tareas habituales: registrar calificaciones y añadir actividades evaluables.
-                </p>
 
                 <div class="continue-banner" id="continueBanner">
                     <a class="continue-banner-link" href="#" id="continueLink">↩ Continuar</a>
                     <button class="continue-dismiss" type="button" id="continueDismiss" title="Cerrar" aria-label="Cerrar acceso rapido">✕</button>
                 </div>
 
-                <div class="primary-actions">
-                    <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">
-                        <div class="action-icon">📝</div>
-                        <div>
-                            <strong>Introducir notas</strong>
-                            <span>Notas por actividad/unidad o recuperaciones por evaluación.</span>
+                <!-- ZONA 1: Escritura -->
+                <div class="zone">
+                    <div class="zone-hdr">
+                        <div class="zone-info">
+                            <div class="zone-kicker">Escritura</div>
+                            <strong class="zone-title">Introducir datos</strong>
+                            <span class="zone-desc">Acciones que escriben o preparan información en el Excel.</span>
                         </div>
+                        <span class="zone-badge escritura">ESCRITURA</span>
                     </div>
-
-                    <div class="action-card" style="cursor:pointer" onclick="document.getElementById('modalVerNotas').style.display='flex'">
-                        <div class="action-icon">👁️</div>
-                        <div>
-                            <strong>Ver notas CE y Criterios</strong>
-                            <span>Notas por evaluación, competencias específicas y criterios por alumno.</span>
+                    <div class="zone-cards">
+                        <div class="action-card action-card--sm" style="cursor:pointer" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">
+                            <div class="action-icon" style="background:rgba(37,99,235,0.1)">📝</div>
+                            <div>
+                                <strong>Introducir notas</strong>
+                                <span>Notas por actividad y unidad didáctica.</span>
+                            </div>
                         </div>
+                        <a class="action-card action-card--sm" href="gestor-recuperaciones.html">
+                            <div class="action-icon" style="background:rgba(34,197,94,0.1)">🔄</div>
+                            <div>
+                                <strong>Recuperaciones</strong>
+                                <span>Notas de recuperación por evaluación y criterio.</span>
+                            </div>
+                        </a>
                     </div>
+                </div>
 
-                    <a class="action-card" href="informes.html">
-                        <div class="action-icon">📊</div>
-                        <div>
-                            <strong>Informes</strong>
-                            <span>Genera informes y gráficos de evolución por alumno.</span>
+                <!-- ZONA 2: Consulta -->
+                <div class="zone">
+                    <div class="zone-hdr">
+                        <div class="zone-info">
+                            <div class="zone-kicker">Consulta</div>
+                            <strong class="zone-title">Consultar notas</strong>
+                            <span class="zone-desc">Pantallas de solo lectura para revisar evaluación y progreso.</span>
                         </div>
-                    </a>
+                        <span class="zone-badge consulta">CONSULTA</span>
+                    </div>
+                    <div class="zone-cards">
+                        <div class="action-card action-card--sm" style="cursor:pointer" onclick="document.getElementById('modalVerNotas').style.display='flex'">
+                            <div class="action-icon" style="background:rgba(180,83,9,0.1)">👁️</div>
+                            <div>
+                                <strong>Ver notas CE</strong>
+                                <span>Por evaluación, unidad o criterios.</span>
+                            </div>
+                        </div>
+                        <a class="action-card action-card--sm" href="informes.html">
+                            <div class="action-icon" style="background:rgba(124,58,237,0.1)">📊</div>
+                            <div>
+                                <strong>Informes</strong>
+                                <span>Gráficos de evolución y vistas imprimibles.</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
 
+                <!-- ZONA 3: Alertas -->
+                <div class="zone" id="alertasPanel" style="display:none" aria-label="Alertas de evaluación">
+                    <div class="zone-hdr">
+                        <div class="zone-info">
+                            <div class="zone-kicker">Alertas</div>
+                            <strong class="zone-title">Alumnos en riesgo</strong>
+                        </div>
+                        <select class="alertas-eva-select" id="alertasEvaSelect" onchange="loadAlertas()">
+                            <option value="1">1ª EVA</option>
+                            <option value="2">2ª EVA</option>
+                            <option value="3">3ª EVA</option>
+                            <option value="final">Final</option>
+                        </select>
+                        <a href="visor-notas.html" style="font-size:0.78rem;color:var(--primary);font-weight:700;text-decoration:none;">Ver todos →</a>
+                        <span class="zone-badge alerta">ALERTAS</span>
+                    </div>
+                    <div class="alertas-list" id="alertasList">
+                        <span class="alertas-loading">Cargando...</span>
+                    </div>
                 </div>
             </div>
 
@@ -876,33 +1022,7 @@
                     </a>
                 </div>
 
-                <div class="side-action">
-                    <div class="section-kicker">Informes</div>
-                    <a class="side-action-card" href="informes.html">
-                        <div class="side-action-icon">📊</div>
-                        <div>
-                            <strong>Informes</strong>
-                            <span>Genera informes, gráficos de evolución y vistas imprimibles.</span>
-                        </div>
-                    </a>
-                </div>
             </aside>
-        </section>
-
-        <section class="alertas-panel" id="alertasPanel" style="display:none" aria-label="Alertas de evaluación">
-            <div class="alertas-header">
-                <div class="section-kicker">Alertas</div>
-                <select class="alertas-eva-select" id="alertasEvaSelect" onchange="loadAlertas()">
-                    <option value="1">1ª EVA</option>
-                    <option value="2">2ª EVA</option>
-                    <option value="3">3ª EVA</option>
-                    <option value="final">Final</option>
-                </select>
-                <a href="visor-notas.html" style="font-size:0.78rem; color:var(--primary); font-weight:700; text-decoration:none; margin-left:8px;">Ver todos →</a>
-            </div>
-            <div class="alertas-list" id="alertasList">
-                <span class="alertas-loading">Cargando...</span>
-            </div>
         </section>
 
         <section class="setup-panel" aria-labelledby="setup-title">
