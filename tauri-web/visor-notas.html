@@ -249,6 +249,29 @@
         return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
     }
 
+    function numberFrom(value) {
+        if (value === null || value === undefined || value === "") return 0;
+        if (typeof value === "number") return value;
+        const n = parseFloat(String(value).trim().replace("%", "").replace(",", "."));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function getIncludedCriteria(criteria) {
+        return (criteria || []).filter((cr) => numberFrom(cr.peso) > 0);
+    }
+
+    function criterionCeNumber(codigo) {
+        const match = String(codigo || "").match(/^CR(\d+)/i);
+        return match ? Number(match[1]) : 0;
+    }
+
+    function raDisplayNumber(ra, criteria) {
+        const own = Number(ra && ra.numero);
+        if (own > 0) return own;
+        const firstCriterion = (criteria || []).find((cr) => Number(cr.raColIdx) === Number(ra && ra.colIdx));
+        return criterionCeNumber(firstCriterion && firstCriterion.codigo) || Number.MAX_SAFE_INTEGER;
+    }
+
     function renderStats() {
         const alumnos = (currentState && currentState.alumnos) || [];
         const nums = alumnos.map(a => a.final).filter(n => typeof n === "number" && n > 0);
@@ -265,8 +288,15 @@
         const data = currentState;
         if (!data) return;
 
-        const raColumns = data.raColumns || [];
-        const criteria  = data.criteria  || [];
+        const criteria  = getIncludedCriteria(data.criteria || []);
+        const raColumns = (data.raColumns || [])
+            .filter((ra) =>
+                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
+            )
+            .sort((a, b) =>
+                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
+                Number(a.colIdx) - Number(b.colIdx)
+            );
         const filtroAlumno = alumnoSelect.value;
         const query = filtroAlumno ? "" : normalize(searchInput.value);
         const allAlumnos = (data.alumnos || []).filter(a =>
@@ -297,7 +327,13 @@
             // colspan = 1 (Nota CE) + sum(cr.recColIdx >= 0 ? 2 : 1)
             const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
             return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
-        });
+        }).filter((g) => g.criterios.length);
+
+        if (!ceGroups.length) {
+            notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
+            notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
+            return;
+        }
 
         // Cabecera fila 1: Alumno (rowspan=2) | Final (rowspan=2) | CE bloques
         let head1 = `<tr>`;

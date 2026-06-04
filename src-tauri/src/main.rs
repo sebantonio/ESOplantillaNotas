@@ -81,7 +81,7 @@ fn normalize_plain(s: &str) -> String {
 fn parse_decimal(v: &Value) -> f64 {
     match v {
         Value::Number(n) => n.as_f64().unwrap_or(0.0),
-        Value::String(s) => s.replace(',', ".").parse::<f64>().unwrap_or(0.0),
+        Value::String(s) => s.trim().replace('%', "").replace(',', ".").parse::<f64>().unwrap_or(0.0),
         _ => 0.0,
     }
 }
@@ -809,6 +809,36 @@ fn is_nota_ce_cell(v: &Value) -> bool {
     txt == "NOTA CE" || txt.starts_with("NOTA CE") || txt == "NOTA_CE"
 }
 
+fn evaluation_ce_number_from_value(v: &Value) -> Option<i64> {
+    let txt = normalize_plain(&cell_val_str(v));
+    Regex::new(r"^CE[^0-9]*(\d+)")
+        .unwrap()
+        .captures(&txt)
+        .and_then(|caps| caps.get(1))
+        .and_then(|m| m.as_str().parse::<i64>().ok())
+}
+
+fn find_evaluation_ce_anchors(rows: &[Vec<Value>], code_row_idx: usize) -> Vec<(usize, i64)> {
+    let start_row = code_row_idx.saturating_sub(4);
+
+    for row_idx in (start_row..=code_row_idx).rev() {
+        let anchors: Vec<(usize, i64)> = rows.get(row_idx)
+            .map(|row| {
+                row.iter()
+                    .enumerate()
+                    .filter_map(|(ci, value)| evaluation_ce_number_from_value(value).map(|num| (ci, num)))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        if anchors.len() >= 2 {
+            return anchors;
+        }
+    }
+
+    Vec::new()
+}
+
 fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> {
     let names = sheet_names(path)?;
     let sheet_name = find_evaluation_sheet_name(&names, evaluacion)
@@ -863,17 +893,25 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
 
     let summary_row = &rows[summary_row_idx];
     let mut ra_columns: Vec<Value> = Vec::new();
-    for (ci, cell) in summary_row.iter().enumerate() {
-        if !is_nota_ce_cell(cell) { continue; }
-        let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
-        let ra_num = code_row[ci+1..].iter().find_map(|v| {
-            let s = cell_val_str(v);
-            let norm = normalize_plain(&s);
-            if norm == "NOTA CE" || norm == "NOTA FINAL" { return None; }
-            s.trim().chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse::<i64>().ok()
-        }).unwrap_or(ra_columns.len() as i64 + 1);
-        let peso = cell_str(&rows, 13, ci);
-        ra_columns.push(json!({ "colIdx": ci, "address": col_name(ci), "label": format!("RRAA {ra_num}"), "numero": ra_num, "peso": peso }));
+    let ce_anchors = find_evaluation_ce_anchors(&rows, code_row_idx);
+    if !ce_anchors.is_empty() {
+        for (ci, ra_num) in ce_anchors {
+            let peso = cell_str(&rows, 13, ci);
+            ra_columns.push(json!({ "colIdx": ci, "address": col_name(ci), "label": format!("RRAA {ra_num}"), "numero": ra_num, "peso": peso }));
+        }
+    } else {
+        for (ci, cell) in summary_row.iter().enumerate() {
+            if !is_nota_ce_cell(cell) { continue; }
+            let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
+            let ra_num = code_row[ci+1..].iter().find_map(|v| {
+                let s = cell_val_str(v);
+                let norm = normalize_plain(&s);
+                if norm == "NOTA CE" || norm == "NOTA FINAL" { return None; }
+                s.trim().chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse::<i64>().ok()
+            }).unwrap_or(ra_columns.len() as i64 + 1);
+            let peso = cell_str(&rows, 13, ci);
+            ra_columns.push(json!({ "colIdx": ci, "address": col_name(ci), "label": format!("RRAA {ra_num}"), "numero": ra_num, "peso": peso }));
+        }
     }
 
     let final_col = summary_row.iter().position(|v| normalize_plain(&cell_val_str(v)) == "NOTA FINAL")
@@ -984,26 +1022,17 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": final_f64, "finalDisplay": final_display, "rraa": rraa_vals, "criterios": crit_vals }));
     }
 
-    // Filtrar RRAA y criterios sin ningún dato de alumno (columnas vacías = inactivos)
-    let active_crit_cols: std::collections::HashSet<usize> = criteria.iter().filter(|c| {
-        let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
-        alumnos.iter().any(|a| {
-            a["criterios"].as_array().map(|arr| arr.iter().any(|v| {
-                v["colIdx"].as_u64().map(|x| x as usize) == Some(ci)
-                    && v["nota"].is_number()
-                    && v["nota"].as_f64().unwrap_or(0.0) != 0.0
-            })).unwrap_or(false)
-        })
-    }).map(|c| c["colIdx"].as_u64().unwrap_or(0) as usize).collect();
+    // Filtrar RRAA y criterios no incluidos en la evaluación (peso 0 o vacío).
+    let active_crit_cols: std::collections::HashSet<usize> = criteria.iter()
+        .filter(|c| parse_decimal(&c["peso"]) > 0.0)
+        .map(|c| c["colIdx"].as_u64().unwrap_or(0) as usize)
+        .collect();
 
     let active_ra_cols: std::collections::HashSet<usize> = ra_columns.iter().filter(|ra| {
-        let ci = ra["colIdx"].as_u64().unwrap_or(0) as usize;
-        alumnos.iter().any(|a| {
-            a["rraa"].as_array().map(|arr| arr.iter().any(|v| {
-                v["colIdx"].as_u64().map(|x| x as usize) == Some(ci)
-                    && v["nota"].is_number()
-                    && v["nota"].as_f64().unwrap_or(0.0) != 0.0
-            })).unwrap_or(false)
+        let ra_ci = ra["colIdx"].as_u64().unwrap_or(0) as usize;
+        parse_decimal(&ra["peso"]) > 0.0 || criteria.iter().any(|c| {
+            c["raColIdx"].as_u64().map(|x| x as usize) == Some(ra_ci)
+                && active_crit_cols.contains(&(c["colIdx"].as_u64().unwrap_or(0) as usize))
         })
     }).map(|ra| ra["colIdx"].as_u64().unwrap_or(0) as usize).collect();
 

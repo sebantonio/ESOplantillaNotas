@@ -9,35 +9,43 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 20px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 10px 12px 16px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
         thead th.th-nombre { position: sticky; left: 0; z-index: 3; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 2; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
         tbody tr:hover td.td-nombre { background: #eef2ff; }
-        .page-nav { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
+        .page-nav { display: grid; grid-template-columns: auto minmax(260px,1fr) auto; align-items: center; gap: 12px; padding: 8px 14px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
         .nav-group { display: flex; flex-wrap: wrap; gap: 10px; }
-        .nav-button, .nav-link { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 14px; border-radius: 8px; font-size: 0.92em; font-weight: 700; text-decoration: none; cursor: pointer; }
+        .page-nav > .nav-group:last-child { justify-content: flex-end; }
+        .nav-title { min-width: 0; }
+        .nav-title h1 { color: #065f46; font-size: 1.04rem; font-weight: 800; line-height: 1.1; }
+        #headerTitulo { font-size: 0.78rem; color: #047857; font-weight: 650; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-button, .nav-link { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 12px; border-radius: 7px; font-size: 0.88em; font-weight: 700; text-decoration: none; cursor: pointer; }
         .nav-button { color: #6366f1; background: white; border: 2px solid #6366f1; }
         .nav-link { color: white; background: #6366f1; border: 2px solid #6366f1; }
-        .header { padding: 28px 30px; color: white; background: #065f46; }
+        .header { display: none; padding: 28px 30px; color: white; background: #065f46; }
         .header h1 { margin-bottom: 4px; font-size: 1.5rem; }
-        #headerTitulo { font-size: 0.92rem; color: #d1fae5; font-weight: 400; margin-top: 2px; }
-        .toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; background: #fafbff; }
-        .toolbar label { font-size: 0.9rem; font-weight: 700; color: #374151; white-space: nowrap; }
-        select, input[type=search] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.92rem; background: #fff; }
-        select { min-width: 210px; cursor: pointer; }
-        input[type=search] { min-width: 200px; }
+        .toolbar { display: grid; grid-template-columns: auto minmax(170px,270px) minmax(190px,300px) auto minmax(170px,250px) auto minmax(170px,260px) auto; align-items: center; gap: 7px 10px; padding: 9px 16px; border-bottom: 1px solid #e5e7eb; background: #fafbff; }
+        .toolbar label { font-size: 0.82rem; font-weight: 700; color: #374151; white-space: nowrap; }
+        select, input[type=search] { width: 100%; min-height: 34px; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.9rem; background: #fff; }
+        select { min-width: 0; cursor: pointer; }
+        input[type=search] { min-width: 0; }
         select:focus, input[type=search]:focus { outline: 2px solid #6366f1; outline-offset: 1px; }
-        .stats { display: flex; gap: 12px; padding: 12px 20px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
-        .stat { padding: 8px 16px; background: white; border: 1px solid #e5e7eb; border-left: 4px solid #6366f1; border-radius: 8px; }
-        .stat span { display: block; font-size: 0.76rem; color: #6b7280; font-weight: 600; margin-bottom: 1px; }
-        .stat strong { font-size: 1.1rem; color: #4f46e5; }
-        .message { padding: 10px 16px; border-radius: 7px; font-size: 0.9rem; margin: 12px 20px; display: none; }
+        #btnSave { grid-column: 1; grid-row: 2; }
+        #saveStatus { grid-column: 2; grid-row: 2; }
+        #lastSync { grid-column: 3 / span 2; grid-row: 2; }
+        #pendientesBadge { grid-column: 5 / span 2; grid-row: 2; }
+        .toolbar > span:last-child { grid-column: 7 / span 2; grid-row: 2; justify-self: end; margin-left: 0 !important; }
+        .stats { display: flex; gap: 8px; padding: 8px 16px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
+        .stat { display: inline-flex; align-items: baseline; gap: 6px; max-width: 290px; padding: 5px 10px; background: white; border: 1px solid #e5e7eb; border-left: 4px solid #6366f1; border-radius: 8px; }
+        .stat span { display: inline; font-size: 0.72rem; color: #6b7280; font-weight: 600; margin-bottom: 0; }
+        .stat strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.98rem; color: #4f46e5; }
+        .message { padding: 8px 12px; border-radius: 7px; font-size: 0.86rem; margin: 8px 16px; display: none; }
         .message.show { display: block; }
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { overflow-x: auto; padding: 0 20px 20px; }
+        .table-container { overflow-x: auto; padding: 0 16px 16px; }
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.88rem; }
         thead th { background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
         thead th.th-nombre { text-align: left; width: 210px; padding-left: 12px; }
@@ -65,6 +73,9 @@
         .btn-save { padding: 7px 18px; border: 2px solid #16a34a; border-radius: 7px; background: #16a34a; color: white; font-weight: 700; font-size: 0.92em; cursor: pointer; white-space: nowrap; }
         .btn-save:hover { background: #15803d; border-color: #15803d; }
         .btn-save:disabled { opacity: 0.55; cursor: default; }
+        .floating-save-button { position: fixed; right: 24px; bottom: 24px; z-index: 900; min-height: 46px; padding: 11px 18px; border-radius: 8px; background: #16a34a; border: 2px solid #15803d; color: white; font-weight: 800; box-shadow: 0 14px 34px rgba(22, 163, 74, 0.28); cursor: pointer; }
+        .floating-save-button:hover { background: #15803d; }
+        .floating-save-button:disabled { opacity: 0.55; cursor: default; }
         .save-status { font-size: 0.78em; color: #6b7280; }
         .pag-btn { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; }
         .pag-btn:disabled { opacity: 0.4; cursor: default; }
@@ -76,6 +87,22 @@
         .pagination button:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
         .pagination .page-info { font-size: 0.88rem; color: #374151; }
         .per-page { min-width: auto !important; padding: 6px 10px; font-size: 0.88rem; }
+        @media (max-width: 1040px) {
+            .page-nav { grid-template-columns: 1fr; align-items: stretch; }
+            .toolbar { grid-template-columns: 1fr; }
+            #btnSave,
+            #saveStatus,
+            #lastSync,
+            #pendientesBadge,
+            .toolbar > span:last-child {
+                grid-column: auto;
+                grid-row: auto;
+                justify-self: stretch;
+            }
+            .toolbar > span:last-child {
+                justify-content: flex-start;
+            }
+        }
     </style>
 </head>
 <body class="ux-app-shell ux-page-gestor-recuperaciones">
@@ -84,6 +111,10 @@
         <div class="nav-group">
             <button class="nav-button" type="button" onclick="window.history.back()">Atras</button>
             <a class="nav-link" href="index.html">Inicio</a>
+        </div>
+        <div class="nav-title">
+            <h1>Introducir Recuperaciones</h1>
+            <div id="headerTitulo"></div>
         </div>
         <div class="nav-group">
             <a class="nav-link" href="gestor-notas.html">Introducir notas</a>
@@ -94,7 +125,6 @@
 
     <header class="header">
         <h1>Introducir Recuperaciones</h1>
-        <div id="headerTitulo"></div>
     </header>
 
     <div class="toolbar">
@@ -161,6 +191,8 @@
     </div>
 </div>
 
+<button class="floating-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
+
 <script>
     const evalSelect      = document.getElementById("evalSelect");
     const searchInput     = document.getElementById("searchInput");
@@ -175,6 +207,7 @@
     const headerTitulo    = document.getElementById("headerTitulo");
     const btnRefresh      = document.getElementById("btnRefresh");
     const lastSyncEl      = document.getElementById("lastSync");
+    const btnSaveFloating = document.getElementById("btnSaveFloating");
 
     let currentState = null;
     let currentPage  = 0;
@@ -244,9 +277,32 @@
         return isNaN(n) ? null : n;
     }
 
+    function numberFrom(value) {
+        if (value === null || value === undefined || value === "") return 0;
+        if (typeof value === "number") return value;
+        const n = parseFloat(String(value).trim().replace("%", "").replace(",", "."));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function getIncludedCriteria(criteria) {
+        return (criteria || []).filter((cr) => numberFrom(cr.peso) > 0);
+    }
+
+    function criterionCeNumber(codigo) {
+        const match = String(codigo || "").match(/^CR(\d+)/i);
+        return match ? Number(match[1]) : 0;
+    }
+
+    function raDisplayNumber(ra, criteria) {
+        const own = Number(ra && ra.numero);
+        if (own > 0) return own;
+        const firstCriterion = (criteria || []).find((cr) => Number(cr.raColIdx) === Number(ra && ra.colIdx));
+        return criterionCeNumber(firstCriterion && firstCriterion.codigo) || Number.MAX_SAFE_INTEGER;
+    }
+
     function recomputeAlumno(alumno) {
         const raColumns = currentState.raColumns || [];
-        const criteria  = currentState.criteria  || [];
+        const criteria  = getIncludedCriteria(currentState.criteria || []);
         for (const ra of (alumno.rraa || [])) {
             const raCrits = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
             if (!raCrits.length) continue;
@@ -332,6 +388,7 @@
         const btn = document.getElementById('btnSave');
         const status = document.getElementById('saveStatus');
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+        if (btnSaveFloating) { btnSaveFloating.disabled = true; btnSaveFloating.textContent = 'Guardando...'; }
         try {
             await window.electronExcel.saveEvalRecsBatch({
                 evaluacion: evalSelect.value,
@@ -360,6 +417,7 @@
         } finally {
             savingAll = false;
             if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+            if (btnSaveFloating) { btnSaveFloating.disabled = false; btnSaveFloating.textContent = 'Guardar'; }
         }
     }
 
@@ -384,8 +442,15 @@
         const data = currentState;
         if (!data) return;
 
-        const raColumns = data.raColumns || [];
-        const criteria  = data.criteria  || [];
+        const criteria  = getIncludedCriteria(data.criteria || []);
+        const raColumns = (data.raColumns || [])
+            .filter((ra) =>
+                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
+            )
+            .sort((a, b) =>
+                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
+                Number(a.colIdx) - Number(b.colIdx)
+            );
         const filtroAlumno = alumnoSelect.value;
         const query = filtroAlumno ? "" : normalize(searchInput.value);
         const allAlumnos = (data.alumnos || []).filter(a =>
@@ -414,7 +479,13 @@
             const crs = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
             const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
             return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
-        });
+        }).filter((g) => g.criterios.length);
+
+        if (!ceGroups.length) {
+            notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
+            notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
+            return;
+        }
 
         let head1 = `<tr>`;
         head1 += `<th class="th-nombre" rowspan="2">Alumno</th>`;

@@ -718,7 +718,7 @@
 
         async function loadEvaluation(value) {
             const evalConfig = EVALUATIONS.find((e) => e.value === value);
-            const data = await window.electronExcel.getNotasEvaluacion({ evaluacion: value });
+            const data = filterIncludedEvaluationData(await window.electronExcel.getNotasEvaluacion({ evaluacion: value }));
             if (activeFileBadge && data?.fileName) {
                 activeFileBadge.textContent = `📂 Archivo: ${data.fileName}`;
             }
@@ -726,6 +726,33 @@
             state.evaluations = EVALUATIONS
                 .filter((e) => _evaluationsCache.has(e.value))
                 .map((e) => _evaluationsCache.get(e.value));
+        }
+
+        function numberFrom(value) {
+            if (value === null || value === undefined || value === "") return 0;
+            if (typeof value === "number") return value;
+            const n = parseFloat(String(value).trim().replace("%", "").replace(",", "."));
+            return isNaN(n) ? 0 : n;
+        }
+
+        function filterIncludedEvaluationData(data) {
+            if (!data) return data;
+            const criteria = (data.criteria || []).filter((criterion) => numberFrom(criterion.peso) > 0);
+            const activeCriterionCols = new Set(criteria.map((criterion) => Number(criterion.colIdx)));
+            const raColumns = (data.raColumns || []).filter((ra) =>
+                criteria.some((criterion) => Number(criterion.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
+            );
+            const activeRaCols = new Set(raColumns.map((ra) => Number(ra.colIdx)));
+            return {
+                ...data,
+                raColumns,
+                criteria,
+                alumnos: (data.alumnos || []).map((alumno) => ({
+                    ...alumno,
+                    rraa: (alumno.rraa || []).filter((ra) => activeRaCols.has(Number(ra.colIdx))),
+                    criterios: (alumno.criterios || []).filter((criterion) => activeCriterionCols.has(Number(criterion.colIdx)))
+                }))
+            };
         }
 
         async function loadReports() {

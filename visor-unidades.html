@@ -147,11 +147,26 @@
         return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
+    function numberFrom(value) {
+        if (value === null || value === undefined || value === "") return 0;
+        if (typeof value === "number") return value;
+        const n = parseFloat(String(value).trim().replace("%", "").replace(",", "."));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function criterionOrder(codigo) {
+        const match = String(codigo || "").match(/^CR(\d+)\.(\d+)/i);
+        if (!match) return Number.MAX_SAFE_INTEGER;
+        return Number(match[1]) * 1000 + Number(match[2]);
+    }
+
     function renderTable() {
         const data = currentState;
         if (!data) return;
 
-        const criterios = data.criterios || [];
+        const criterios = (data.criterios || [])
+            .filter((cr) => numberFrom(cr.ponderacion) > 0)
+            .sort((a, b) => criterionOrder(a.codigo) - criterionOrder(b.codigo));
         const filtroAlumno = alumnoSelect.value;
         const allAlumnos = (data.alumnos || []).filter(a => !filtroAlumno || a.nombre === filtroAlumno);
         const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
@@ -166,6 +181,12 @@
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos en esta unidad.</td></tr>`;
+            return;
+        }
+
+        if (!criterios.length) {
+            notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th></tr>`;
+            notasBody.innerHTML = `<tr><td class="empty-msg">No hay CE/CR incluidos en esta unidad.</td></tr>`;
             return;
         }
 
@@ -208,7 +229,7 @@
         // Fila 2: columnas CR individuales
         let headRow2 = `<tr>`;
         criterios.forEach((cr, i) => {
-            const pond = cr.ponderacion || 0;
+            const pond = numberFrom(cr.ponderacion);
             const tieneP = pond > 0;
             const ce = ceOf(cr.codigo);
             const c = ceColorMap[ce];
@@ -227,7 +248,7 @@
         alumnos.forEach(alumno => {
             bodyHtml += `<tr><td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
             criterios.forEach((cr, i) => {
-                const tieneP = (cr.ponderacion || 0) > 0;
+                const tieneP = numberFrom(cr.ponderacion) > 0;
                 const ce = ceOf(cr.codigo);
                 const c = ceColorMap[ce];
                 const crNota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);

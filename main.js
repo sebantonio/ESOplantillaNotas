@@ -862,6 +862,7 @@ function loadNotasEvaluacionFromSelectedFile(evaluacion = '1') {
   const finalColumn = findEvaluationFinalColumn(sheet, rows, layout);
   const criteria = findEvaluationCriteriaColumns(sheet, rows, layout, raColumns, finalColumn);
   const alumnos = extractEvaluationStudents(sheet, rows, layout, raColumns, finalColumn, criteria);
+  const included = filterIncludedEvaluationData(raColumns, criteria, alumnos);
 
   return {
     filePath: selectedExcelPath,
@@ -870,17 +871,30 @@ function loadNotasEvaluacionFromSelectedFile(evaluacion = '1') {
     title,
     evaluacion: String(evaluacion),
     layout,
-    raColumns,
-    criteria,
-    alumnos
+    raColumns: included.raColumns,
+    criteria: included.criteria,
+    alumnos: included.alumnos
   };
 }
 
 function findEvaluationLayout(rows) {
   for (let rowIdx = 0; rowIdx < rows.length; rowIdx += 1) {
     const row = rows[rowIdx] || [];
-    const normalizedCells = row.map((value) => normalizePlainText(value));
-    const notaCeCount = normalizedCells.filter((value) => value === 'NOTA CE').length;
+    const notaCeCount = row.filter((value) => isEvaluationNotaCe(value)).length;
+    const sameRowCriteriaCount = row.filter((value) => isEvaluationCriterionCode(value)).length;
+
+    if (notaCeCount > 0 && sameRowCriteriaCount >= 2) {
+      return {
+        summaryRowIdx: rowIdx,
+        codeRowIdx: rowIdx,
+        firstStudentRowIdx: rowIdx + 2
+      };
+    }
+  }
+
+  for (let rowIdx = 0; rowIdx < rows.length; rowIdx += 1) {
+    const row = rows[rowIdx] || [];
+    const notaCeCount = row.filter((value) => isEvaluationNotaCe(value)).length;
     const nextRow = rows[rowIdx + 1] || [];
     const nextRowCriteriaCount = nextRow.filter((value) => isEvaluationCriterionCode(value)).length;
 
@@ -894,6 +908,11 @@ function findEvaluationLayout(rows) {
   }
 
   throw new Error('No se encontro la cabecera de notas de evaluacion.');
+}
+
+function isEvaluationNotaCe(value) {
+  const normalized = normalizePlainText(value);
+  return normalized === 'NOTA CE' || normalized.startsWith('NOTA CE') || normalized === 'NOTA_CE';
 }
 
 function findEvaluationSheetName(workbook, evaluacion) {
@@ -927,11 +946,25 @@ function findEvaluationSheetName(workbook, evaluacion) {
 }
 
 function findEvaluationRaColumns(sheet, rows, layout) {
-  const summaryRow = rows[layout.summaryRowIdx] || [];
   const columns = [];
+  const ceAnchors = findEvaluationCeAnchorColumns(rows, layout);
 
+  if (ceAnchors.length) {
+    ceAnchors.forEach(({ colIdx, numero }) => {
+      columns.push({
+        colIdx,
+        address: columnName(colIdx),
+        label: `RRAA ${numero}`,
+        numero,
+        peso: getCellDisplay(sheet, 13, colIdx) || ''
+      });
+    });
+    return columns;
+  }
+
+  const summaryRow = rows[layout.summaryRowIdx] || [];
   summaryRow.forEach((value, colIdx) => {
-    if (normalizePlainText(value) === 'NOTA CE') {
+    if (isEvaluationNotaCe(value)) {
       const raNumber = findEvaluationRaNumberForBlock(rows, layout, colIdx);
       const label = raNumber ? `RRAA ${raNumber}` : `RRAA ${columns.length + 1}`;
       columns.push({
@@ -947,6 +980,28 @@ function findEvaluationRaColumns(sheet, rows, layout) {
   return columns;
 }
 
+function evaluationCeNumberFromCell(value) {
+  const match = normalizePlainText(value).match(/^CE[^0-9]*(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function findEvaluationCeAnchorColumns(rows, layout) {
+  const startRow = Math.max(0, layout.codeRowIdx - 4);
+
+  for (let rowIdx = layout.codeRowIdx; rowIdx >= startRow; rowIdx -= 1) {
+    const row = rows[rowIdx] || [];
+    const anchors = row
+      .map((value, colIdx) => ({ colIdx, numero: evaluationCeNumberFromCell(value) }))
+      .filter((item) => item.numero);
+
+    if (anchors.length >= 2) {
+      return anchors;
+    }
+  }
+
+  return [];
+}
+
 function findEvaluationRaNumberForBlock(rows, layout, notaCeColIdx) {
   const codeRow = rows[layout.codeRowIdx] || [];
 
@@ -954,7 +1009,7 @@ function findEvaluationRaNumberForBlock(rows, layout, notaCeColIdx) {
     const value = codeRow[colIdx];
     const normalizedValue = normalizePlainText(value);
 
-    if (normalizedValue === 'NOTA CE' || normalizedValue === 'NOTA FINAL') {
+    if (isEvaluationNotaCe(value) || normalizedValue === 'NOTA FINAL') {
       break;
     }
 
@@ -1065,6 +1120,33 @@ function extractEvaluationStudents(sheet, rows, layout, raColumns, finalColumn, 
   }
 
   return alumnos;
+}
+
+function filterIncludedEvaluationData(raColumns, criteria, alumnos) {
+  const activeCriterionCols = new Set(
+    criteria
+      .filter((criterion) => parseDecimal(criterion.peso) > 0)
+      .map((criterion) => criterion.colIdx)
+  );
+
+  const activeRaCols = new Set(
+    raColumns
+      .filter((ra) => (
+        parseDecimal(ra.peso) > 0 ||
+        criteria.some((criterion) => criterion.raColIdx === ra.colIdx && activeCriterionCols.has(criterion.colIdx))
+      ))
+      .map((ra) => ra.colIdx)
+  );
+
+  return {
+    raColumns: raColumns.filter((ra) => activeRaCols.has(ra.colIdx)),
+    criteria: criteria.filter((criterion) => activeCriterionCols.has(criterion.colIdx)),
+    alumnos: alumnos.map((alumno) => ({
+      ...alumno,
+      rraa: (alumno.rraa || []).filter((ra) => activeRaCols.has(ra.colIdx)),
+      criterios: (alumno.criterios || []).filter((criterion) => activeCriterionCols.has(criterion.colIdx))
+    }))
+  };
 }
 
 function isEvaluationCriterionCode(value) {
@@ -1556,7 +1638,7 @@ function parseDecimal(value) {
     return 0;
   }
 
-  const number = Number(String(value).replace(',', '.'));
+  const number = Number(String(value).trim().replace('%', '').replace(',', '.'));
   return Number.isNaN(number) ? 0 : number;
 }
 

@@ -16,14 +16,14 @@
 
         body {
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px 12px 16px;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background: #f3f6fb;
             color: #1f2937;
         }
 
         .container {
-            max-width: 1220px;
+            max-width: 1560px;
             margin: 0 auto;
             overflow: clip;
             background: white;
@@ -32,18 +32,44 @@
         }
 
         .page-nav {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: auto minmax(240px, 1fr) auto;
+            align-items: center;
             gap: 12px;
-            padding: 14px 16px;
+            padding: 8px 12px;
             background: #f8f9ff;
             border-bottom: 1px solid #e5e7eb;
+        }
+
+        .nav-title {
+            min-width: 0;
+        }
+
+        .nav-title h1 {
+            color: #312e81;
+            font-size: 1.02rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .nav-title p {
+            margin-top: 1px;
+            color: #6b7280;
+            font-size: 0.78rem;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .nav-group {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+        }
+
+        .page-nav > .nav-group:last-child {
+            justify-content: flex-end;
         }
 
         .nav-button,
@@ -66,6 +92,7 @@
         .nav-button:hover, .nav-link:hover { border-color: #6366f1; background: #f5f3ff; }
 
         .header {
+            display: none;
             padding: 18px 20px 12px;
             background: white;
             border-bottom: 2px solid #e0e7ff;
@@ -85,14 +112,15 @@
         }
 
         .content {
-            padding: 30px;
+            padding: 10px 18px 16px;
         }
 
         .message {
             display: none;
-            margin-bottom: 18px;
-            padding: 14px 18px;
+            margin-bottom: 8px;
+            padding: 8px 12px;
             border-radius: 6px;
+            font-size: 0.88rem;
         }
 
         .message.show {
@@ -119,38 +147,45 @@
 
         .controls {
             display: grid;
-            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 220px) minmax(220px, 1fr) auto auto auto;
-            gap: 14px;
+            grid-template-columns: minmax(220px, 1.2fr) minmax(190px, 280px) auto auto;
+            gap: 8px 10px;
             align-items: end;
-            margin-bottom: 22px;
-            padding: 18px;
+            margin-bottom: 8px;
+            padding: 10px 12px;
             background: #f8f9ff;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
         }
 
+        .field {
+            min-width: 0;
+        }
+
         .field label,
         .field-label {
             display: block;
-            margin-bottom: 7px;
+            margin-bottom: 4px;
             color: #4b5563;
-            font-size: 0.9em;
+            font-size: 0.82em;
             font-weight: 700;
         }
 
         select,
-        input[type="text"] {
+        input[type="text"],
+        input[type="search"] {
             width: 100%;
-            min-height: 42px;
-            padding: 9px 10px;
+            min-height: 34px;
+            padding: 6px 9px;
             border: 1px solid #d7d7d7;
             border-radius: 6px;
             font: inherit;
+            font-size: 0.92rem;
             background: white;
         }
 
         select:focus,
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="search"]:focus {
             outline: none;
             border-color: #6366f1;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.13);
@@ -190,8 +225,8 @@
         }
 
         button {
-            min-height: 38px;
-            padding: 7px 14px;
+            min-height: 34px;
+            padding: 6px 12px;
             color: white;
             font: inherit;
             font-size: 0.88rem;
@@ -216,11 +251,28 @@
             opacity: 0.6;
         }
 
+        .floating-save-button {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 900;
+            min-height: 46px;
+            padding: 11px 18px;
+            border-radius: 8px;
+            background: #16a34a;
+            border-color: #15803d;
+            box-shadow: 0 14px 34px rgba(22, 163, 74, 0.28);
+        }
+
+        .floating-save-button:hover {
+            background: #15803d;
+        }
+
         .summary {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 6px;
+            margin-bottom: 8px;
         }
 
         .summary-row {
@@ -234,11 +286,11 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 12px;
+            padding: 4px 9px;
             background: #f5f3ff;
             border: 1px solid #e0e7ff;
             border-radius: 20px;
-            font-size: 0.83em;
+            font-size: 0.8em;
             white-space: nowrap;
         }
 
@@ -271,21 +323,21 @@
 
         .summary-divider {
             width: 1px;
-            height: 20px;
+            height: 18px;
             background: #e0e7ff;
             margin: 0 2px;
         }
 
         .progress-bar-wrap {
-            margin-bottom: 16px;
+            margin-bottom: 8px;
         }
 
         .progress-bar-labels {
             display: flex;
             justify-content: space-between;
-            font-size: 0.78em;
+            font-size: 0.76em;
             color: #6b7280;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
 
         .progress-bar-labels strong {
@@ -294,7 +346,7 @@
         }
 
         .progress-bar-track {
-            height: 8px;
+            height: 6px;
             background: #e0e7ff;
             border-radius: 99px;
             overflow: hidden;
@@ -310,6 +362,17 @@
         .progress-bar-fill.graded   { background: #059669; }
         .progress-bar-fill.pending  { background: #f59e0b; }
         .progress-bar-fill.invalid  { background: #dc2626; }
+
+        .quick-filters {
+            margin: 0 0 8px !important;
+            gap: 8px !important;
+        }
+
+        .quick-filter {
+            min-height: 34px !important;
+            padding: 6px 12px !important;
+            font-size: 0.84rem !important;
+        }
 
         .table-container {
             overflow-x: auto;
@@ -790,7 +853,7 @@
 
         /* Ajustar grid para solo unidad */
         .controls {
-            grid-template-columns: minmax(180px, 1fr) auto auto !important;
+            grid-template-columns: minmax(220px, 1.2fr) minmax(190px, 280px) auto auto !important;
         }
 
         /* Modal visualización */
@@ -939,7 +1002,16 @@
             }
 
             .content {
-                padding: 20px;
+                padding: 12px;
+            }
+
+            .page-nav {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .nav-title p {
+                white-space: normal;
             }
 
             .controls {
@@ -954,6 +1026,10 @@
             <div class="nav-group">
                 <button class="nav-button" type="button" onclick="window.history.back()">Atras</button>
                 <a class="nav-link" href="index.html">Inicio</a>
+            </div>
+            <div class="nav-title">
+                <h1>Notas por Unidad</h1>
+                <p>Introduce las notas de los criterios de evaluaci&oacute;n por unidad y alumno.</p>
             </div>
             <div class="nav-group">
                 <button class="nav-button" type="button" onclick="document.getElementById('modalVisualizacion').classList.add('open')">Ver notas &#9660;</button>
@@ -1114,6 +1190,8 @@
         </div>
     </div>
 
+    <button class="floating-save-button" type="button" id="floatingSaveButton">Guardar notas</button>
+
     <script>
         let currentState = null;
         let currentNotes = [];
@@ -1147,6 +1225,7 @@
         const invalidCount = document.getElementById("invalidCount");
         const studentSearchInput = document.getElementById("studentSearchInput");
         const saveButton = document.getElementById("saveButton");
+        const floatingSaveButton = document.getElementById("floatingSaveButton");
         const reloadButton = document.getElementById("reloadButton");
         const clearFiltersButton = document.getElementById("clearFiltersButton");
         const clearButton = document.getElementById("clearButton");
@@ -1168,6 +1247,7 @@
 
             reloadButton.addEventListener("click", () => loadNotasConGuardado());
             saveButton.addEventListener("click", saveNotas);
+            floatingSaveButton?.addEventListener("click", saveNotas);
             clearButton.addEventListener("click", clearNotas);
             unidadSelect.addEventListener("change", () => {
                 saveViewPrefs();
@@ -1539,6 +1619,48 @@
             return m ? m[1] : '?';
         }
 
+        function numberFrom(value) {
+            if (value === null || value === undefined || value === "") return 0;
+            if (typeof value === "number") return value;
+            const n = parseFloat(String(value).trim().replace("%", "").replace(",", "."));
+            return isNaN(n) ? 0 : n;
+        }
+
+        function criterionWeight(cr) {
+            return numberFrom(cr && cr.ponderacion);
+        }
+
+        function getIncludedCriteria(criterios) {
+            return (criterios || []).filter((cr) => criterionWeight(cr) > 0);
+        }
+
+        function currentUnitPesosForCriterion(criterion) {
+            if (!currentCriteriosState || !criterion) return null;
+            const unidadActual = currentState && currentState.unidad;
+            const unidades = (currentState && currentState.unidades) || [];
+            const unidadIdx = unidades.findIndex((u) => u.codigo === unidadActual);
+            const unidadPesos = unidadIdx >= 0 ? currentCriteriosState.ponderacionesUnidad[unidadIdx] : null;
+            return unidadPesos && unidadPesos.ponderaciones
+                ? unidadPesos.ponderaciones[String(criterion.colIdx)]
+                : null;
+        }
+
+        function unitWeightBreakdown(criterion) {
+            const pesos = currentUnitPesosForCriterion(criterion);
+            const total = numberFrom(pesos && pesos.ponderacion);
+            const instituto = numberFrom(pesos && pesos.ponderacionInstituto);
+            const empresa = numberFrom(pesos && pesos.ponderacionEmpresa);
+            return {
+                total: total || instituto + empresa,
+                instituto,
+                empresa
+            };
+        }
+
+        function isCriterionIncludedForCurrentUnit(criterion) {
+            return unitWeightBreakdown(criterion).total > 0;
+        }
+
         function buildCeGroups(criterios) {
             const groups = [];
             const map = {};
@@ -1562,7 +1684,17 @@
                 return;
             }
 
-            const criterios = currentState.criterios || [];
+            const criterios = getIncludedCriteria(currentState.criterios || []);
+            if (!criterios.length) {
+                const thead = document.querySelector("table thead");
+                if (thead) {
+                    thead.innerHTML = '<tr><th class="col-sticky-n" style="width:40px;text-align:center">N</th><th class="col-sticky-name" style="width:200px;text-align:left">Alumno</th></tr>';
+                }
+                notasBody.innerHTML = '<tr><td class="empty" colspan="2">No hay CE/CR incluidos en esta unidad.</td></tr>';
+                notasTfoot.innerHTML = "";
+                renderPagination();
+                return;
+            }
             const ceGroups = buildCeGroups(criterios);
 
             // Cabecera: 2 filas — fila1: N(rs2) + Alumno(rs2) + CE groups; fila2: CRs
@@ -1579,7 +1711,7 @@
             ceGroups.forEach((g, gi) => {
                 const c = CE_COLORS[gi % CE_COLORS.length];
                 g.criterios.forEach((cr, ci) => {
-                    const pond = cr.ponderacion || 0;
+                    const pond = numberFrom(cr.ponderacion);
                     const tieneP = pond > 0;
                     const pctTxt = tieneP
                         ? `<div style="font-size:0.85em;color:${c.fg};font-weight:600;margin-top:2px">${Math.round(pond)}%</div>`
@@ -1617,7 +1749,7 @@
                 html += `<td class="col-sticky-name" style="font-size:0.85em;padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${escapeHtml(alumno.nombre)}</td>`;
 
                 criterios.forEach((cr) => {
-                    const tieneP = (cr.ponderacion || 0) > 0;
+                    const tieneP = numberFrom(cr.ponderacion) > 0;
                     const nota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);
                     const notaVal = nota ? nota.display || "" : "";
                     const cc = crColor[cr.codigo] || {};
@@ -1655,19 +1787,13 @@
 
         function renderStatsRow() {
             if (!notasTfoot || !currentState) return;
-            const criterios = currentState.criterios || [];
-            const activeC = criterios.filter(cr => (cr.ponderacion || 0) > 0);
-            if (!activeC.length) { notasTfoot.innerHTML = ""; return; }
+            const criterios = getIncludedCriteria(currentState.criterios || []);
+            if (!criterios.length) { notasTfoot.innerHTML = ""; return; }
 
             // Calcular stats sobre TODOS los alumnos (no solo la página actual)
             let html = '<tr style="background:#f1f5f9;border-top:2px solid #cbd5e1">';
             html += '<td style="text-align:center;font-size:0.73em;color:#9ca3af;padding:5px 4px;font-style:italic" colspan="2">Estadísticas</td>';
             criterios.forEach(cr => {
-                const tieneP = (cr.ponderacion || 0) > 0;
-                if (!tieneP) {
-                    html += `<td style="background:#f3f4f6;border-left:1px solid #e5e7eb"></td>`;
-                    return;
-                }
                 const vals = currentNotes.map(a => {
                     const n = (a.crNotas || []).find(n => n.codigo === cr.codigo);
                     const v = parseFloat(String(n?.display || n?.nota || "").replace(",", "."));
@@ -1771,9 +1897,17 @@
 
             criteriosSection.style.display = "";
 
-            // Poblar selector de RA
+            // Poblar selector de RA: solo RA con criterios incluidos en la unidad.
             raSelect.innerHTML = '<option value="">-- Selecciona un RA --</option>';
-            rraa.forEach((ra) => {
+            const rraaConCriteriosIncluidos = rraa.filter((ra) =>
+                todasCriterios.some((c) =>
+                    Number(c.raNumero) === Number(ra.numero) &&
+                    (c.codigo || "").trim() &&
+                    (c.texto || "").trim() &&
+                    isCriterionIncludedForCurrentUnit(c)
+                )
+            );
+            rraaConCriteriosIncluidos.forEach((ra) => {
                 const opt = document.createElement("option");
                 opt.value = String(ra.numero);
                 opt.textContent = `RA ${ra.numero}${ra.descripcion ? " - " + ra.descripcion : ""}`;
@@ -1817,17 +1951,13 @@
                 raDescBox.style.display = "none";
             }
 
-            const criteriosRa = currentCriteriosState.criterios.filter((c) => Number(c.raNumero) === raNum);
+            const criteriosRa = currentCriteriosState.criterios.filter((c) =>
+                Number(c.raNumero) === raNum && isCriterionIncludedForCurrentUnit(c)
+            );
             if (!criteriosRa.length) {
-                criteriosContent.innerHTML = '<div class="criterios-empty">Este RA no tiene criterios de evaluacion definidos.</div>';
+                criteriosContent.innerHTML = '<div class="criterios-empty">Este RA no tiene criterios incluidos en esta unidad.</div>';
                 return;
             }
-
-            // Encontrar ponderaciones de la unidad actual (por posicion en la lista de unidades)
-            const unidadActual = currentState && currentState.unidad;
-            const unidades = (currentState && currentState.unidades) || [];
-            const unidadIdx = unidades.findIndex((u) => u.codigo === unidadActual);
-            const unidadPesos = unidadIdx >= 0 ? currentCriteriosState.ponderacionesUnidad[unidadIdx] : null;
 
             const fragment = document.createDocumentFragment();
 
@@ -1839,11 +1969,7 @@
             const firstStudentCeNotas = (currentState && currentState.notas && currentState.notas[0] && currentState.notas[0].ceNotas) || {};
 
             criteriosRa.forEach((c) => {
-                const ci = String(c.colIdx);
-                const pesos = unidadPesos && unidadPesos.ponderaciones && unidadPesos.ponderaciones[ci];
-                const pesoTotal = pesos ? (pesos.ponderacion || 0) : 0;
-                const pesoInst = pesos ? (pesos.ponderacionInstituto || 0) : 0;
-                const pesoEmp = pesos ? (pesos.ponderacionEmpresa || 0) : 0;
+                const { total: pesoTotal, instituto: pesoInst, empresa: pesoEmp } = unitWeightBreakdown(c);
                 const pesoLabel = pesoTotal > 0
                     ? `${Math.round(pesoTotal * 100)}%\n(I:${Math.round(pesoInst * 100)}% E:${Math.round(pesoEmp * 100)}%)`
                     : "—";
@@ -1916,11 +2042,14 @@
             // Solo RAs que tengan al menos un criterio con código no vacío
             const rraaConCriterios = rraa.filter((ra) =>
                 currentCriteriosState.criterios.some(
-                    (c) => Number(c.raNumero) === Number(ra.numero) && (c.codigo || "").trim() && (c.texto || "").trim()
+                    (c) => Number(c.raNumero) === Number(ra.numero) &&
+                        (c.codigo || "").trim() &&
+                        (c.texto || "").trim() &&
+                        isCriterionIncludedForCurrentUnit(c)
                 )
             );
             if (!rraaConCriterios.length) {
-                container.innerHTML = '<div class="ce-detail-empty">No hay criterios definidos para esta unidad.</div>';
+                container.innerHTML = '<div class="ce-detail-empty">No hay criterios incluidos para esta unidad.</div>';
                 return;
             }
 
@@ -1948,17 +2077,16 @@
 
             // Lista CE del RA seleccionado (excluye criterios sin código o sin texto)
             const criteriosRa = currentCriteriosState.criterios.filter(
-                (c) => Number(c.raNumero) === raNum && (c.codigo || "").trim() && (c.texto || "").trim()
+                (c) => Number(c.raNumero) === raNum &&
+                    (c.codigo || "").trim() &&
+                    (c.texto || "").trim() &&
+                    isCriterionIncludedForCurrentUnit(c)
             );
-            const unidadActual = currentState && currentState.unidad;
-            const unidades = (currentState && currentState.unidades) || [];
-            const unidadIdx = unidades.findIndex((u) => u.codigo === unidadActual);
-            const unidadPesos = unidadIdx >= 0 ? currentCriteriosState.ponderacionesUnidad[unidadIdx] : null;
             const ceNotas = item.ceNotas || {};
 
             let ceListHtml = "";
             if (!criteriosRa.length) {
-                ceListHtml = '<div class="ce-detail-empty">Este RA no tiene criterios definidos.</div>';
+                ceListHtml = '<div class="ce-detail-empty">Este RA no tiene criterios incluidos.</div>';
             } else {
                 ceListHtml = '<div class="ce-detail-list">';
                 ceListHtml += '<div class="ce-detail-col-header">CE</div>';
@@ -1967,11 +2095,7 @@
                 ceListHtml += '<div class="ce-detail-col-header" style="text-align:right">Peso</div>';
 
                 criteriosRa.forEach((c) => {
-                    const ci = String(c.colIdx);
-                    const pesos = unidadPesos && unidadPesos.ponderaciones && unidadPesos.ponderaciones[ci];
-                    const pesoTotal = pesos ? (pesos.ponderacion || 0) : 0;
-                    const pesoInst  = pesos ? (pesos.ponderacionInstituto || 0) : 0;
-                    const pesoEmp   = pesos ? (pesos.ponderacionEmpresa || 0) : 0;
+                    const { total: pesoTotal, instituto: pesoInst, empresa: pesoEmp } = unitWeightBreakdown(c);
                     const pesoLabel = pesoTotal > 0
                         ? `${Math.round(pesoTotal * 100)}%\n(I:${Math.round(pesoInst * 100)}% E:${Math.round(pesoEmp * 100)}%)`
                         : "—";
@@ -2264,7 +2388,7 @@
         }
 
         function setDisabled(disabled) {
-            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, reloadButton, clearFiltersButton, clearButton, saveCriteriosButton].forEach((element) => {
+            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, floatingSaveButton, reloadButton, clearFiltersButton, clearButton, saveCriteriosButton].forEach((element) => {
                 element.disabled = disabled;
             });
         }
