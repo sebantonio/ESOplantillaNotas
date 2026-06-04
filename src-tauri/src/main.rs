@@ -931,7 +931,7 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
             })
         }).collect();
         let final_display = final_cb_xml.get(&row_idx).cloned()
-            .filter(|s| !s.is_empty())
+            .filter(|s| !s.is_empty() && s.replace(',', ".").parse::<f64>().is_ok())
             .unwrap_or_else(|| cell_str(&rows, row_idx, final_col));
         let final_f64 = final_display.parse::<f64>().unwrap_or_else(|_| cell_f64(&rows, row_idx, final_col).unwrap_or(0.0));
         alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": final_f64, "finalDisplay": final_display, "rraa": rraa_vals, "criterios": crit_vals }));
