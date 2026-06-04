@@ -212,7 +212,7 @@
 
         .report-grid {
             display: grid;
-            grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 18px;
             margin-bottom: 18px;
         }
@@ -504,6 +504,10 @@
 
             .report-grid,
             .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .report-chart-pair {
                 grid-template-columns: 1fr;
             }
 

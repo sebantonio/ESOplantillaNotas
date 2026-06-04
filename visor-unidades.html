@@ -35,7 +35,7 @@
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
         thead th { position: sticky; top: 0; z-index: 30; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; background-clip: padding-box; box-shadow: 0 1px 0 #c7d2fe; }
         thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 34px); z-index: 29; }
-        thead th.th-nombre { text-align: left; width: 200px; padding-left: 12px; }
+        thead th.th-nombre { text-align: left; width: 210px; min-width: 210px; max-width: 210px; padding-left: 12px; }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
         tbody td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; }
@@ -77,7 +77,7 @@
 <div class="container">
     <nav class="page-nav">
         <div class="nav-group">
-            <button class="nav-button" type="button" onclick="window.history.back()">Atras</button>
+            <button class="nav-button" type="button" onclick="window.history.back()">Atrás</button>
             <a class="nav-link" href="index.html">Inicio</a>
         </div>
         <div class="nav-group">
@@ -116,7 +116,7 @@
         <button id="btnPrev" onclick="changePage(-1)" disabled>&#8249; Anterior</button>
         <span class="page-info" id="pageInfo"></span>
         <button id="btnNext" onclick="changePage(1)">Siguiente &#8250;</button>
-        <label for="perPageSelect" style="margin-left:auto;font-size:0.88rem;font-weight:600;color:#374151;">Por pagina:</label>
+        <label for="perPageSelect" style="margin-left:auto;font-size:0.88rem;font-weight:600;color:#374151;">Por página:</label>
         <select id="perPageSelect" class="per-page" onchange="changePerPage()">
             <option value="10">10</option>
             <option value="15" selected>15</option>

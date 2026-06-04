@@ -175,8 +175,21 @@
             border-bottom: 1px solid #e0e0e0;
         }
 
+        table tbody tr:nth-child(even) { background: #f8f9ff; }
+
         table tr:hover {
-            background: #f8f9ff;
+            background: #eef2ff;
+        }
+
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20%,60%  { transform: translateX(-4px); }
+            40%,80%  { transform: translateX(4px); }
+        }
+        .input-error {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 3px rgba(220,38,38,0.15) !important;
+            animation: shake 0.3s ease;
         }
 
         table tr:last-child td {
@@ -835,10 +848,14 @@
 
         // ===== AGREGAR ALUMNO =====
         function agregarAlumno() {
-            const nombre = document.getElementById('alumnoNombre').value.trim();
+            const inputEl = document.getElementById('alumnoNombre');
+            const nombre = inputEl.value.trim();
 
             if (!nombre) {
                 mostrarMensaje('❌ Por favor ingresa el nombre del alumno', 'error');
+                inputEl.classList.add('input-error');
+                inputEl.focus();
+                setTimeout(() => inputEl.classList.remove('input-error'), 600);
                 return;
             }
 

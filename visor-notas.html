@@ -95,7 +95,7 @@
 <div class="container">
     <nav class="page-nav">
         <div class="nav-group">
-            <button class="nav-button" type="button" onclick="window.history.back()">Atras</button>
+            <button class="nav-button" type="button" onclick="window.history.back()">Atrás</button>
             <a class="nav-link" href="index.html">Inicio</a>
         </div>
         <div class="nav-group">
@@ -448,7 +448,7 @@
         const _bt = document.getElementById('btnPrevTop'), _bn = document.getElementById('btnNextTop'), _pi = document.getElementById('pageInfoTop');
         if (_bt) _bt.disabled = currentPage === 0;
         if (_bn) _bn.disabled = currentPage >= totalPages - 1;
-        if (_pi) _pi.textContent = `Pagina ${currentPage + 1} de ${totalPages} · ${allAlumnos.length} alumnos`;
+        if (_pi) _pi.textContent = `Página ${currentPage + 1} de ${totalPages} · ${allAlumnos.length} alumnos`;
 
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
