@@ -494,26 +494,40 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     }).collect();
 
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
-    for i in 0..15usize {
-        let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, 0)).unwrap_or_default();
-        let nombre = if nombre_raw == "0" { String::new() } else { nombre_raw };
+    for i in 0..16usize {
+        let row_idx = i + 4;
+        let codigo_datos = cell_str(&datos_rows, row_idx, 8);
+        let nombre_datos = cell_str(&datos_rows, row_idx, 9);
+        let evaluacion_datos = cell_str(&datos_rows, row_idx, 10);
+        let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, row_idx, 0)).unwrap_or_default();
+        let nombre = if !nombre_raw.is_empty() && nombre_raw != "0" {
+            nombre_raw
+        } else if !nombre_datos.is_empty() && nombre_datos != "0" {
+            nombre_datos.clone()
+        } else if !codigo_datos.is_empty() && codigo_datos != "0" {
+            codigo_datos.clone()
+        } else {
+            String::new()
+        };
         let mut ponderaciones = serde_json::Map::new();
         for c in &criterios {
             let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
             let cr_code = c["codigo"].as_str().unwrap_or("");
             let actual_col = cr_col_map.get(cr_code).copied().unwrap_or(ci);
-            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, i + 4, actual_col)).unwrap_or(0.0);
+            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, row_idx, actual_col)).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
         let mut instr_por_ce = serde_json::Map::new();
         for (&ce_num, &instr_col) in &ce_instr_col {
-            let instr = pesos_rows.as_ref().map(|r| cell_str(r, i + 4, instr_col)).unwrap_or_default();
+            let instr = pesos_rows.as_ref().map(|r| cell_str(r, row_idx, instr_col)).unwrap_or_default();
             instr_por_ce.insert(ce_num.to_string(), json!({ "codigo": instr, "colIdx": instr_col }));
         }
         ponderaciones_unidad.push(json!({
             "numero": i + 1,
-            "rowIdx": i + 4,
+            "rowIdx": row_idx,
+            "codigo": codigo_datos,
             "nombre": nombre,
+            "evaluacion": evaluacion_datos,
             "ponderaciones": ponderaciones,
             "instrPorCe": instr_por_ce
         }));
@@ -1633,23 +1647,42 @@ fn save_alumnos_to_file(path: &str, alumnos: &[Value]) -> Result<(), String> {
 fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
     // Tabla fija I5:K20 (0-indexed: filas 4-19, cols 8=I, 9=J, 10=K)
     let unidades_owned = unidades.to_vec();
-    edit_workbook_sheets_xml(path, vec![("DATOS", Box::new(move |xml: &str| {
-        let mut s = xml.to_string();
-        for idx in 0..16 {
-            let u = unidades_owned.get(idx);
-            let ri = 4 + idx;
-            let codigo = u.and_then(|v| v["codigo"].as_str()).unwrap_or("");
-            let codigo_val = json!(codigo);
-            s = set_xml_cell(&s, ri, 8, if codigo.is_empty() { None } else { Some(&codigo_val) }, "text")?;
-            let nombre = u.and_then(|v| v["nombre"].as_str()).unwrap_or("");
-            let nombre_val = json!(nombre);
-            s = set_xml_cell(&s, ri, 9, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
-            let eval = u.and_then(|v| v["evaluacion"].as_str()).unwrap_or("");
-            let eval_val = json!(eval);
-            s = set_xml_cell(&s, ri, 10, if eval.is_empty() { None } else { Some(&eval_val) }, "text")?;
-        }
-        Ok(s)
-    }))])
+    edit_workbook_sheets_xml(path, vec![
+        ("DATOS", Box::new({
+            let unidades_datos = unidades_owned.clone();
+            move |xml: &str| {
+                let mut s = xml.to_string();
+                for idx in 0..16 {
+                    let u = unidades_datos.get(idx);
+                    let ri = 4 + idx;
+                    let codigo = u.and_then(|v| v["codigo"].as_str()).unwrap_or("");
+                    let codigo_val = json!(codigo);
+                    s = set_xml_cell(&s, ri, 8, if codigo.is_empty() { None } else { Some(&codigo_val) }, "text")?;
+                    let nombre = u.and_then(|v| v["nombre"].as_str()).unwrap_or("");
+                    let nombre_val = json!(nombre);
+                    s = set_xml_cell(&s, ri, 9, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
+                    let eval = u.and_then(|v| v["evaluacion"].as_str()).unwrap_or("");
+                    let eval_val = json!(eval);
+                    s = set_xml_cell(&s, ri, 10, if eval.is_empty() { None } else { Some(&eval_val) }, "text")?;
+                }
+                Ok(s)
+            }
+        })),
+        ("PESOS", Box::new({
+            let unidades_pesos = unidades_owned.clone();
+            move |xml: &str| {
+                let mut s = xml.to_string();
+                for idx in 0..16 {
+                    let u = unidades_pesos.get(idx);
+                    let ri = 4 + idx;
+                    let nombre = u.and_then(|v| v["nombre"].as_str()).unwrap_or("");
+                    let nombre_val = json!(nombre);
+                    s = set_xml_cell(&s, ri, 0, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
+                }
+                Ok(s)
+            }
+        })),
+    ])
 }
 
 // ---------------------------------------------------------------------------
@@ -1684,6 +1717,9 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
                 // Filas de unidades: ponderaciones por CR e instrumento por CE
                 for unidad in &pond2 {
                     if let Some(ri) = unidad["rowIdx"].as_u64().map(|n| n as usize) {
+                        let nombre = unidad["nombre"].as_str().unwrap_or("");
+                        let nombre_val = json!(nombre);
+                        s = set_xml_cell(&s, ri, 0, if nombre.is_empty() { None } else { Some(&nombre_val) }, "text")?;
                         if let Some(ponds) = unidad["ponderaciones"].as_object() {
                             for (col_key, vals) in ponds {
                                 let ci: usize = col_key.parse().unwrap_or(0);

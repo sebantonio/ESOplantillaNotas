@@ -1416,10 +1416,15 @@
         function cargarPonderacionesUnidad() {
             const sheet = workbook.Sheets['PESOS'];
             const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            const datosJson = workbook.Sheets['DATOS']
+                ? XLSX.utils.sheet_to_json(workbook.Sheets['DATOS'], { header: 1 })
+                : [];
 
             ponderacionesUnidad = [];
-            for (let rowIdx = 4; rowIdx < 19; rowIdx++) {
+            for (let rowIdx = 4; rowIdx < 20; rowIdx++) {
                 const row = json[rowIdx] || [];
+                const datosRow = datosJson[rowIdx] || [];
+                const nombre = nombreUnidadPonderacion(row[0], datosRow[8], datosRow[9]);
                 const ponderaciones = {};
                 criteriosActuales.forEach((criterio) => {
                     ponderaciones[criterio.colIdx] = {
@@ -1432,7 +1437,9 @@
                 ponderacionesUnidad.push({
                     numero: rowIdx - 3,
                     rowIdx,
-                    nombre: row[0] && String(row[0]) !== '0' ? String(row[0]) : '',
+                    codigo: datosRow[8] ? String(datosRow[8]) : '',
+                    nombre,
+                    evaluacion: datosRow[10] ? String(datosRow[10]) : '',
                     ponderaciones
                 });
             }
@@ -1442,6 +1449,15 @@
             actualizarOpcionesPonderacion();
             mostrarTablaPonderacionesUnidad();
             actualizarSelectorInstrumento();
+        }
+
+        function nombreUnidadPonderacion(nombrePesos, codigoDatos, nombreDatos) {
+            const pesos = String(nombrePesos || '').trim();
+            if (pesos && pesos !== '0') return pesos;
+            const nombre = String(nombreDatos || '').trim();
+            if (nombre && nombre !== '0') return nombre;
+            const codigo = String(codigoDatos || '').trim();
+            return codigo && codigo !== '0' ? codigo : '';
         }
 
         // ===== MOSTRAR TABLA RRAA =====
