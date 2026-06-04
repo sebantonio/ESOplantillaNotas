@@ -2351,32 +2351,18 @@
                     }).join('')}
                 </tr>`;
 
-            // Filas de unidades
-            const instrOpts = '<option value="">—</option>' + instrumentosDisponibles.map(i =>
-                `<option value="${i.codigo}">${i.codigo}</option>`
-            ).join('');
+            // Filas de unidades (solo lectura)
             const tdStyle = 'border-bottom:1px solid #e5e7eb;padding:6px 8px;text-align:center;';
             tbody.innerHTML = unidades.map(u => {
                 const instrActual = (u.instrPorCe && u.instrPorCe[String(ceResumenActivo)]) || '';
                 const instrCodigo = typeof instrActual === 'object' ? instrActual.codigo : instrActual;
-                const optsConSelected = instrOpts.replace(
-                    `value="${instrCodigo}"`, `value="${instrCodigo}" selected`
-                );
                 return `<tr>
                     <td style="${tdStyle} text-align:left;font-weight:500;">${escaparHtml(u.nombre)}</td>
-                    <td style="${tdStyle}">
-                        <select onchange="cambiarInstrumentoResumen(${u.rowIdx},${ce.instrColIdx||0},this.value)"
-                            style="padding:3px 6px;border:1px solid #c7d2fe;border-radius:5px;font-size:0.88em;background:#f8f9ff;">
-                            ${optsConSelected}
-                        </select>
-                    </td>
+                    <td style="${tdStyle} color:#4338ca;font-weight:600;">${escaparHtml(instrCodigo || '—')}</td>
                     ${crs.map(cr => {
                         const val = (u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0;
-                        return `<td style="${tdStyle}">
-                            <input type="number" value="${val}" min="0" step="1"
-                                style="width:60px;text-align:center;border:1px solid #c7d2fe;border-radius:5px;padding:3px;"
-                                onchange="actualizarPonderacionUnidad(${u.rowIdx},${cr.colIdx},'ponderacion',this.value)" />
-                        </td>`;
+                        const color = val > 0 ? 'color:#1e1b4b;font-weight:700;' : 'color:#9ca3af;';
+                        return `<td style="${tdStyle} ${color}">${val > 0 ? val : '—'}</td>`;
                     }).join('')}
                 </tr>`;
             }).join('');
