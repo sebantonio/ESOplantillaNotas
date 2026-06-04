@@ -517,6 +517,19 @@
             </article>
         </section>
 
+        <section class="chart-section">
+            <article class="card panel">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                    <h2 style="margin:0">Diagrama de araña por CE</h2>
+                    <div style="display:flex;gap:14px;font-size:0.82rem;color:#61708a">
+                        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:rgba(99,102,241,0.55);border-radius:3px;display:inline-block"></span>Media grupo</span>
+                        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:rgba(220,38,38,0.5);border-radius:3px;display:inline-block"></span>Alumno</span>
+                    </div>
+                </div>
+                <svg id="radarChart" viewBox="0 0 360 360" role="img" aria-label="Diagrama de araña CE" style="width:100%;max-width:400px;display:block;margin:0 auto"></svg>
+            </article>
+        </section>
+
         <section class="report-grid">
             <article class="card panel">
                 <h2>Resumen por evaluación</h2>
@@ -573,6 +586,7 @@
         const activeFileBadge = document.getElementById("activeFileBadge");
         const syncBadge = document.getElementById("syncBadge");
         const evolutionChart = document.getElementById("evolutionChart");
+        const radarChart = document.getElementById("radarChart");
         const summaryBody = document.getElementById("summaryBody");
         const focusTitle = document.getElementById("focusTitle");
         const focusDetail = document.getElementById("focusDetail");
@@ -781,6 +795,7 @@
 
             renderQueue.length = 0;
             scheduleRender(() => renderEvolutionChart(selected));
+            scheduleRender(() => renderRadarChart());
             scheduleRender(() => renderSummaryTable(selected));
             scheduleRender(() => renderFocusDetail(selected));
             scheduleRender(() => renderEvaluationReports(selected));
@@ -824,6 +839,65 @@
 
             evalStatsCache.set(data, result);
             return result;
+        }
+
+        function renderRadarChart() {
+            if (!radarChart) return;
+            const evalData = state.evaluations.find(e => e.value === "final")
+                          || [...state.evaluations].reverse().find(e => !String(e.value).includes("solo"))
+                          || state.evaluations[state.evaluations.length - 1];
+            const ras = evalData?.data?.raColumns;
+            if (!ras || ras.length < 2) {
+                radarChart.innerHTML = chartEmptyText("Sin CE para diagrama. Carga la evaluación Final.");
+                return;
+            }
+            const allAlumnos = evalData.data.alumnos || [];
+            const alumno = allAlumnos.find(a => a.nombre === state.selectedStudent);
+
+            const classAvg = ras.map(ra => {
+                const notes = allAlumnos.map(a => (a.rraa || []).find(r => r.colIdx === ra.colIdx)?.nota)
+                    .filter(n => typeof n === "number" && n > 0);
+                return notes.length ? notes.reduce((s, n) => s + n, 0) / notes.length : 0;
+            });
+            const stuNotes = alumno
+                ? ras.map(ra => (alumno.rraa || []).find(r => r.colIdx === ra.colIdx)?.nota || 0)
+                : null;
+
+            const n = ras.length, sz = 360, cx = sz / 2, cy = sz / 2, maxR = cx - 52, maxVal = 10;
+
+            function polar(idx, val) {
+                const a = (idx / n) * 2 * Math.PI - Math.PI / 2;
+                const r = (Math.max(0, Math.min(10, val)) / maxVal) * maxR;
+                return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+            }
+            function ptsStr(vals) {
+                return vals.map((v, i) => { const p = polar(i, v); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; }).join(" ");
+            }
+
+            // Cuadrícula
+            const grid = [2.5, 5, 7.5, 10].map(level => {
+                const gpts = Array.from({length: n}, (_, i) => { const p = polar(i, level); return `${p.x.toFixed(1)},${p.y.toFixed(1)}`; }).join(" ");
+                const ly = cy - (level / maxVal) * maxR;
+                return `<polygon points="${gpts}" fill="${level===5?'rgba(99,102,241,0.04)':'none'}" stroke="#e5e7eb" stroke-width="${level===10?1.5:0.8}"/>
+                         <text x="${cx+3}" y="${ly-3}" fill="#9ca3af" font-size="9">${level}</text>`;
+            }).join("");
+
+            // Ejes + etiquetas
+            const axes = ras.map((ra, i) => {
+                const outer = polar(i, maxVal);
+                const lp = polar(i, maxVal + 1.6);
+                const label = (ra.label || '').replace(/RRAA\s*/i, 'CE');
+                return `<line x1="${cx}" y1="${cy}" x2="${outer.x.toFixed(1)}" y2="${outer.y.toFixed(1)}" stroke="#cbd5e1" stroke-width="1"/>
+                         <text x="${lp.x.toFixed(1)}" y="${lp.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" fill="#374151" font-size="11" font-weight="700">${escapeHtml(label)}</text>`;
+            }).join("");
+
+            // Polígonos
+            const avgPoly = `<polygon points="${ptsStr(classAvg)}" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round"/>`;
+            const avgDots = classAvg.map((v, i) => { const p = polar(i, v); return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#6366f1"/><title>${(v||0).toFixed(2).replace('.',',')}</title>`; }).join("");
+            const stuPoly = stuNotes ? `<polygon points="${ptsStr(stuNotes)}" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="2" stroke-linejoin="round"/>` : "";
+            const stuDots = stuNotes ? stuNotes.map((v, i) => { const p = polar(i, v); return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#dc2626"/>` ; }).join("") : "";
+
+            radarChart.innerHTML = `${grid}${axes}${avgPoly}${stuPoly}${avgDots}${stuDots}`;
         }
 
         function renderEvolutionChart(series) {
