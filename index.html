@@ -640,17 +640,22 @@
         .file-meta {
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            padding: 14px;
-            border: 2px solid rgba(67, 56, 202, 0.55);
-            border-radius: 10px;
-            background: linear-gradient(160deg, rgba(99, 102, 241, 0.13) 0%, rgba(238, 244, 255, 0.7) 100%);
-            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.1);
+            gap: 4px;
+            padding: 8px 10px;
+            border: 1.5px solid rgba(67, 56, 202, 0.4);
+            border-radius: 8px;
+            background: linear-gradient(160deg, rgba(99, 102, 241, 0.08) 0%, rgba(238, 244, 255, 0.6) 100%);
+            box-shadow: 0 1px 6px rgba(99, 102, 241, 0.08);
+        }
+
+        .file-meta .section-kicker {
+            font-size: 0.72rem;
+            margin-bottom: 2px;
         }
 
         .file-name {
-            font-size: 1rem;
-            font-weight: 800;
+            font-size: 0.85rem;
+            font-weight: 700;
             color: var(--primary-dark);
             white-space: nowrap;
             overflow: hidden;
@@ -659,26 +664,26 @@
         }
 
         .file-mtime {
-            font-size: 0.79rem;
+            font-size: 0.73rem;
             color: var(--muted);
             font-weight: 600;
         }
 
         .file-stats {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             flex-wrap: wrap;
         }
 
         .stat-pill {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 3px 10px;
-            background: rgba(99, 102, 241, 0.14);
-            border: 1px solid rgba(99, 102, 241, 0.28);
+            gap: 3px;
+            padding: 2px 7px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.22);
             border-radius: 999px;
-            font-size: 0.76rem;
+            font-size: 0.71rem;
             font-weight: 700;
             color: var(--primary-dark);
         }
@@ -824,11 +829,11 @@
                         </div>
                     </div>
 
-                    <a class="action-card" href="visor-unidades.html">
-                        <div class="action-icon">🏫</div>
+                    <a class="action-card" href="informes.html">
+                        <div class="action-icon">📊</div>
                         <div>
-                            <strong>Notas por Unidad</strong>
-                            <span>Notas de cada alumno organizadas por unidad didáctica.</span>
+                            <strong>Informes</strong>
+                            <span>Genera informes y gráficos de evolución por alumno.</span>
                         </div>
                     </a>
 
@@ -849,12 +854,6 @@
                 <div class="file-actions">
                     <button class="small-button" type="button" id="changeFileBtn">Cambiar archivo</button>
                     <button class="small-button" type="button" id="refreshFileBtn" title="Recargar estado del archivo activo">Recargar estado</button>
-                    <a
-                        class="online-link"
-                        href="https://crfpcastilla-my.sharepoint.com/:x:/g/personal/sslm07_educastillalamancha_es/IQCcqkwxp64ZQ7zaAT65YnDDAUq1WmRzaTsFUgF8vd8QcSw?e=MDXWht"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >OneDrive ↗</a>
                 </div>
                 <span class="file-mtime" id="fileVerifyState" style="display:none"></span>
 
