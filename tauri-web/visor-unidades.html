@@ -9,9 +9,9 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 20px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 20px 20px 74px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
-        thead th.th-nombre { position: sticky; left: 0; z-index: 3; background: #eef2ff; }
+        thead th.th-nombre { position: sticky; left: 0; z-index: 8; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 2; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
         tbody tr:hover td.td-nombre { background: #eef2ff; }
         .page-nav { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
@@ -31,9 +31,10 @@
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { overflow-x: auto; }
-        table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-        thead th { background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        .table-container { position: relative; overflow: auto; max-height: calc(100vh - 285px); }
+        table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
+        thead th { position: sticky; top: 0; z-index: 6; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        thead tr:nth-child(2) th { top: 34px; z-index: 5; }
         thead th.th-nombre { text-align: left; width: 200px; padding-left: 12px; }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
@@ -57,6 +58,19 @@
         .pagination .page-info { font-size: 0.88rem; color: #374151; }
         .pagination select.per-page { min-width: auto; padding: 6px 10px; font-size: 0.88rem; }
         #unidadTitulo { font-size: 0.92rem; color: #d1d5db; font-weight: 400; margin-top: 2px; }
+        .density-toggle { min-height: 30px; padding: 5px 10px; font-size: 0.82rem; }
+        body.compact-mode .table-container { max-height: calc(100vh - 245px); }
+        body.compact-mode thead th { padding: 5px 4px !important; font-size: 0.72rem !important; }
+        body.compact-mode thead tr:nth-child(2) th { top: 28px; }
+        body.compact-mode tbody td { padding: 4px 5px !important; }
+        body.compact-mode .grade { padding: 2px 6px; font-size: 0.78rem; }
+        tr.row-active > td { background-color: #ecfeff !important; }
+        td.col-active, th.col-active { box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08); }
+        .active-cell { outline: 2px solid #0ea5e9; outline-offset: -2px; }
+        .table-status-bar { position: fixed; left: 16px; right: 16px; bottom: 12px; z-index: 920; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid #dbe4f0; border-radius: 8px; background: rgba(255,255,255,0.96); box-shadow: 0 14px 34px rgba(31,41,55,0.16); backdrop-filter: blur(8px); }
+        .status-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+        .status-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid #e0e7ff; border-radius: 999px; background: #f8fafc; color: #475569; font-size: 0.8rem; font-weight: 650; white-space: nowrap; }
+        .status-chip strong { color: #3730a3; font-weight: 850; }
     </style>
 </head>
 <body class="ux-app-shell ux-page-visor-unidades">
@@ -84,6 +98,7 @@
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar unidad actual">Recargar</button>
+        <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
         <span id="lastSync" style="font-size:0.82rem;color:#6b7280;white-space:nowrap;">Sin sincronizar</span>
     </div>
 
@@ -111,6 +126,14 @@
     </div>
 </div>
 
+<div class="table-status-bar" aria-live="polite">
+    <div class="status-group">
+        <span class="status-chip">Filtrados <strong id="statusFiltered">0</strong></span>
+        <span class="status-chip">Unidad <strong id="statusUnidad">-</strong></span>
+        <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
+    </div>
+</div>
+
 <script>
     const unidadSelect  = document.getElementById("unidadSelect");
     const alumnoSelect  = document.getElementById("alumnoSelect");
@@ -124,6 +147,11 @@
     const perPageSelect = document.getElementById("perPageSelect");
     const btnRefresh    = document.getElementById("btnRefresh");
     const lastSyncEl    = document.getElementById("lastSync");
+    const densityToggleButton = document.getElementById("densityToggleButton");
+    const statusFiltered = document.getElementById("statusFiltered");
+    const statusUnidad = document.getElementById("statusUnidad");
+    const statusSync = document.getElementById("statusSync");
+    const DENSITY_PREFS_KEY = "visorUnidadesDensity";
 
     let currentState = null;
     let currentPage = 0;
@@ -160,6 +188,43 @@
         return Number(match[1]) * 1000 + Number(match[2]);
     }
 
+    function applyDensityPreference() {
+        const compact = localStorage.getItem(DENSITY_PREFS_KEY) === "compact";
+        document.body.classList.toggle("compact-mode", compact);
+        if (densityToggleButton) densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
+    }
+
+    function toggleDensityMode() {
+        const compact = !document.body.classList.contains("compact-mode");
+        localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
+        applyDensityPreference();
+    }
+
+    function updateStatusBar(filteredCount) {
+        if (statusFiltered) statusFiltered.textContent = String(filteredCount ?? 0);
+        if (statusUnidad) statusUnidad.textContent = unidadSelect.value || "-";
+        if (statusSync) statusSync.textContent = lastSyncEl?.textContent || "Sin sincronizar";
+    }
+
+    function clearActiveCellHighlight() {
+        document.querySelectorAll(".row-active, .col-active, .active-cell").forEach((el) => {
+            el.classList.remove("row-active", "col-active", "active-cell");
+        });
+    }
+
+    function highlightActiveCell(cell) {
+        clearActiveCellHighlight();
+        const row = cell.closest("tr");
+        const colKey = cell.dataset.colKey;
+        if (row) row.classList.add("row-active");
+        cell.classList.add("active-cell");
+        if (colKey) {
+            document.querySelectorAll("[data-col-key]").forEach((el) => {
+                if (el.dataset.colKey === String(colKey)) el.classList.add("col-active");
+            });
+        }
+    }
+
     function renderTable() {
         const data = currentState;
         if (!data) return;
@@ -181,12 +246,14 @@
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos en esta unidad.</td></tr>`;
+            updateStatusBar(allAlumnos.length);
             return;
         }
 
         if (!criterios.length) {
             notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th></tr>`;
             notasBody.innerHTML = `<tr><td class="empty-msg">No hay CE/CR incluidos en esta unidad.</td></tr>`;
+            updateStatusBar(allAlumnos.length);
             return;
         }
 
@@ -238,7 +305,7 @@
                 : `<div style="font-size:0.82em;color:#9ca3af;margin-top:2px">—</div>`;
             const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
             const bgStyle = tieneP ? "" : "background:#f3f4f6;color:#9ca3af;";
-            headRow2 += `<th style="width:80px;font-size:0.72em;padding:6px 4px;${sepStyle}${bgStyle}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+            headRow2 += `<th data-col-key="${escapeHtml(cr.codigo)}" style="width:80px;font-size:0.72em;padding:6px 4px;${sepStyle}${bgStyle}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
         });
         headRow2 += `</tr>`;
         notasHead.innerHTML = headRow1 + headRow2;
@@ -257,14 +324,15 @@
                 const val = (display && display !== "") ? escapeHtml(display) : "—";
                 const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
                 if (tieneP) {
-                    bodyHtml += `<td style="${sepStyle}"><span class="grade ${cls}">${val}</span></td>`;
+                    bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}" style="${sepStyle}"><span class="grade ${cls}">${val}</span></td>`;
                 } else {
-                    bodyHtml += `<td style="background:#f9fafb;${sepStyle}"><span class="grade grade-empty">—</span></td>`;
+                    bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}" style="background:#f9fafb;${sepStyle}"><span class="grade grade-empty">—</span></td>`;
                 }
             });
             bodyHtml += `</tr>`;
         });
         notasBody.innerHTML = bodyHtml;
+        updateStatusBar(allAlumnos.length);
     }
 
     function changePage(delta) {
@@ -307,6 +375,7 @@
                 nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
             renderTable();
+            updateStatusBar((data.alumnos || []).length);
             showMessage("Unidad cargada.", "success");
         } catch (e) {
             showMessage(e.message || "Error al cargar notas.", "error");
@@ -314,6 +383,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
+        applyDensityPreference();
         if (!window.electronExcel) {
             showMessage("Abre esta pantalla desde la aplicacion local.", "error");
             return;
@@ -321,6 +391,11 @@
         unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
         alumnoSelect.addEventListener("change", () => { currentPage = 0; renderTable(); });
         btnRefresh?.addEventListener("click", () => loadUnidad(unidadSelect.value || "U1"));
+        densityToggleButton?.addEventListener("click", toggleDensityMode);
+        notasBody.addEventListener("click", (event) => {
+            const cell = event.target.closest("td");
+            if (cell) highlightActiveCell(cell);
+        });
         loadUnidad("U1");
     });
 </script>

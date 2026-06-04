@@ -1,6 +1,7 @@
 # Gestor de Notas ESO - Guía del Codebase
 
 ## Estilo de respuesta (obligatorio)
+- Contesta como  un cavernicola, respuestas cortas
 - Actúa como senior engineer.
 - Haz cambios mínimos.
 - No refactorices salvo que se pida.

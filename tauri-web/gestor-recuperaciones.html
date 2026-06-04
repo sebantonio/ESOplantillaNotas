@@ -9,7 +9,7 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 10px 12px 16px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 10px 12px 74px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
         thead th.th-nombre { position: sticky; left: 0; z-index: 8; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 7; background: #ffffff; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
@@ -45,9 +45,10 @@
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { position: relative; overflow-x: auto; margin: 0 16px 16px; padding: 0; }
+        .table-container { position: relative; overflow: auto; max-height: calc(100vh - 255px); margin: 0 16px 16px; padding: 0; }
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
-        thead th { background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        thead th { position: sticky; top: 0; z-index: 6; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        thead tr:nth-child(2) th { top: 34px; z-index: 5; }
         thead th.th-nombre { text-align: left; width: 210px; padding-left: 12px; }
         thead th.th-final { background: #1e1b4b !important; color: white !important; vertical-align: middle; }
         tbody tr:nth-child(even) { background: #fafafa; }
@@ -73,6 +74,26 @@
         .btn-save { padding: 7px 18px; border: 2px solid #16a34a; border-radius: 7px; background: #16a34a; color: white; font-weight: 700; font-size: 0.92em; cursor: pointer; white-space: nowrap; }
         .btn-save:hover { background: #15803d; border-color: #15803d; }
         .btn-save:disabled { opacity: 0.55; cursor: default; }
+        .density-toggle, .ce-toggle-all { min-height: 30px; padding: 5px 10px; font-size: 0.82rem; }
+        .ce-toggle { min-height: 24px; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; font-size: 0.74rem; font-weight: 850; cursor: pointer; }
+        .ce-toggle:hover { border-color: #6366f1; color: #3730a3; background: #eef2ff; }
+        body.compact-mode .table-container { max-height: calc(100vh - 225px); }
+        body.compact-mode thead th { padding: 5px 4px !important; font-size: 0.72rem !important; }
+        body.compact-mode thead tr:nth-child(2) th { top: 28px; }
+        body.compact-mode tbody td { padding: 4px 5px !important; }
+        body.compact-mode .grade { padding: 2px 6px; font-size: 0.78rem; }
+        body.compact-mode .rec-input { width: 46px; min-height: 28px; font-size: 0.78rem; }
+        tr.row-active > td { background-color: #ecfeff !important; }
+        td.col-active, th.col-active { box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08); }
+        .active-cell { outline: 2px solid #0ea5e9; outline-offset: -2px; }
+        .table-status-bar { position: fixed; left: 16px; right: 16px; bottom: 12px; z-index: 920; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid #dbe4f0; border-radius: 8px; background: rgba(255,255,255,0.96); box-shadow: 0 14px 34px rgba(31,41,55,0.16); backdrop-filter: blur(8px); }
+        .status-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+        .status-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid #e0e7ff; border-radius: 999px; background: #f8fafc; color: #475569; font-size: 0.8rem; font-weight: 650; white-space: nowrap; }
+        .status-chip strong { color: #065f46; font-weight: 850; }
+        .status-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .status-save-button { min-height: 38px; padding: 8px 16px; border-radius: 8px; background: #16a34a; border: 2px solid #15803d; color: white; font-weight: 800; box-shadow: 0 10px 26px rgba(22, 163, 74, 0.22); cursor: pointer; }
+        .status-save-button:hover { background: #15803d; }
+        .status-save-button:disabled { opacity: 0.55; cursor: default; }
         .floating-save-button { position: fixed; right: 24px; bottom: 24px; z-index: 900; min-height: 46px; padding: 11px 18px; border-radius: 8px; background: #16a34a; border: 2px solid #15803d; color: white; font-weight: 800; box-shadow: 0 14px 34px rgba(22, 163, 74, 0.28); cursor: pointer; }
         .floating-save-button:hover { background: #15803d; }
         .floating-save-button:disabled { opacity: 0.55; cursor: default; }
@@ -191,7 +212,19 @@
     </div>
 </div>
 
-<button class="floating-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
+<div class="table-status-bar" aria-live="polite">
+    <div class="status-group">
+        <span class="status-chip">Filtrados <strong id="statusFiltered">0</strong></span>
+        <span class="status-chip">Pendientes <strong id="statusPendingRec">0</strong></span>
+        <span class="status-chip">Cambios <strong id="statusDirtyRec">0</strong></span>
+        <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
+    </div>
+    <div class="status-actions">
+        <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
+        <button class="pag-btn ce-toggle-all" id="ceToggleAllButton" type="button">Abrir CE</button>
+        <button class="status-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
+    </div>
+</div>
 
 <script>
     const evalSelect      = document.getElementById("evalSelect");
@@ -208,10 +241,19 @@
     const btnRefresh      = document.getElementById("btnRefresh");
     const lastSyncEl      = document.getElementById("lastSync");
     const btnSaveFloating = document.getElementById("btnSaveFloating");
+    const densityToggleButton = document.getElementById("densityToggleButton");
+    const ceToggleAllButton = document.getElementById("ceToggleAllButton");
+    const statusFiltered = document.getElementById("statusFiltered");
+    const statusPendingRec = document.getElementById("statusPendingRec");
+    const statusDirtyRec = document.getElementById("statusDirtyRec");
+    const statusSync = document.getElementById("statusSync");
+    const DENSITY_PREFS_KEY = "recuperacionesDensity";
+    const COLLAPSED_CE_KEY = "recuperacionesCollapsedCe";
 
     let currentState = null;
     let currentPage  = 0;
     let perPage      = 15;
+    let collapsedCeSet = null;
 
     const CE_COLORS = [
         { bg: "#eef2ff", fg: "#3730a3", border: "#818cf8", notaBg: "#e0e7ff" },
@@ -300,6 +342,135 @@
         return criterionCeNumber(firstCriterion && firstCriterion.codigo) || Number.MAX_SAFE_INTEGER;
     }
 
+    function applyDensityPreference() {
+        const compact = localStorage.getItem(DENSITY_PREFS_KEY) === "compact";
+        document.body.classList.toggle("compact-mode", compact);
+        if (densityToggleButton) densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
+    }
+
+    function toggleDensityMode() {
+        const compact = !document.body.classList.contains("compact-mode");
+        localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
+        applyDensityPreference();
+    }
+
+    function ceGroupKey(group) {
+        return String(group.ra.numero || group.ra.colIdx);
+    }
+
+    function getCurrentCeGroups() {
+        const data = currentState;
+        if (!data) return [];
+        const criteria = getIncludedCriteria(data.criteria || []);
+        const raColumns = (data.raColumns || [])
+            .filter((ra) =>
+                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
+            )
+            .sort((a, b) =>
+                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
+                Number(a.colIdx) - Number(b.colIdx)
+            );
+        return raColumns.map((ra, i) => ({
+            ra,
+            color: CE_COLORS[i % CE_COLORS.length],
+            criterios: criteria.filter((c) => Number(c.raColIdx) === Number(ra.colIdx))
+        })).filter((group) => group.criterios.length);
+    }
+
+    function ensureCollapsedCePrefs(groups) {
+        if (collapsedCeSet) return;
+        try {
+            const saved = JSON.parse(localStorage.getItem(COLLAPSED_CE_KEY) || "null");
+            collapsedCeSet = Array.isArray(saved)
+                ? new Set(saved.map(String))
+                : new Set(groups.map(ceGroupKey));
+        } catch {
+            collapsedCeSet = new Set(groups.map(ceGroupKey));
+        }
+    }
+
+    function saveCollapsedCePrefs() {
+        try {
+            localStorage.setItem(COLLAPSED_CE_KEY, JSON.stringify(Array.from(collapsedCeSet || [])));
+        } catch {}
+    }
+
+    async function toggleCeGroup(key) {
+        await saveAllRec();
+        if (!collapsedCeSet) collapsedCeSet = new Set();
+        if (collapsedCeSet.has(key)) collapsedCeSet.delete(key);
+        else collapsedCeSet.add(key);
+        saveCollapsedCePrefs();
+        renderTable();
+    }
+
+    async function toggleAllCeGroups() {
+        await saveAllRec();
+        const groups = getCurrentCeGroups();
+        ensureCollapsedCePrefs(groups);
+        const allCollapsed = groups.length > 0 && groups.every((group) => collapsedCeSet.has(ceGroupKey(group)));
+        collapsedCeSet = allCollapsed ? new Set() : new Set(groups.map(ceGroupKey));
+        saveCollapsedCePrefs();
+        renderTable();
+    }
+
+    function getFilteredAlumnos() {
+        const data = currentState;
+        if (!data) return [];
+        const filtroAlumno = alumnoSelect.value;
+        const query = filtroAlumno ? "" : normalize(searchInput.value);
+        return (data.alumnos || []).filter(a =>
+            filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
+        );
+    }
+
+    function countPendingRecoveries() {
+        if (!currentState) return 0;
+        const criteria = getIncludedCriteria(currentState.criteria || [])
+            .filter((cr) => Number(cr.recColIdx) >= 0);
+        let total = 0;
+        (currentState.alumnos || []).forEach((alumno) => {
+            criteria.forEach((cr) => {
+                const crVal = (alumno.criterios || []).find((v) => Number(v.colIdx) === Number(cr.colIdx));
+                const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
+                const recRaw = crVal && crVal.recDisplay ? String(crVal.recDisplay).trim() : "";
+                if (crNota > 0 && crNota < 5 && recRaw === "") total++;
+            });
+        });
+        return total;
+    }
+
+    function updateStatusBar(filteredCount, ceGroups) {
+        const groups = ceGroups || getCurrentCeGroups();
+        if (groups.length && !collapsedCeSet) ensureCollapsedCePrefs(groups);
+        const openCount = groups.filter((group) => !collapsedCeSet?.has(ceGroupKey(group))).length;
+        if (statusFiltered) statusFiltered.textContent = String(filteredCount ?? getFilteredAlumnos().length);
+        if (statusPendingRec) statusPendingRec.textContent = String(countPendingRecoveries());
+        if (statusDirtyRec) statusDirtyRec.textContent = String(document.querySelectorAll(".rec-input.dirty-rec").length);
+        if (statusSync) statusSync.textContent = lastSyncEl?.textContent || "Sin sincronizar";
+        if (ceToggleAllButton) ceToggleAllButton.textContent = openCount ? "Plegar CE" : "Abrir CE";
+    }
+
+    function clearActiveCellHighlight() {
+        document.querySelectorAll(".row-active, .col-active, .active-cell").forEach((el) => {
+            el.classList.remove("row-active", "col-active", "active-cell");
+        });
+    }
+
+    function highlightActiveCell(target) {
+        clearActiveCellHighlight();
+        const cell = target.closest("td");
+        const row = target.closest("tr");
+        const colKey = target.dataset.colKey || target.dataset.col || cell?.dataset.colKey;
+        if (row) row.classList.add("row-active");
+        if (cell) cell.classList.add("active-cell");
+        if (colKey) {
+            document.querySelectorAll("[data-col-key]").forEach((el) => {
+                if (el.dataset.colKey === String(colKey)) el.classList.add("col-active");
+            });
+        }
+    }
+
     function recomputeAlumno(alumno) {
         const raColumns = currentState.raColumns || [];
         const criteria  = getIncludedCriteria(currentState.criteria || []);
@@ -368,6 +539,7 @@
                 renderStats();
             }
             refreshPendingState();
+            updateStatusBar();
         }).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
     }
 
@@ -411,6 +583,7 @@
             }
             renderStats();
             refreshPendingState();
+            updateStatusBar();
             if (status) status.textContent = 'Guardado ' + new Date().toLocaleTimeString();
         } catch(e) {
             showMessage('Error al guardar: ' + (e.message || e), 'error');
@@ -442,20 +615,16 @@
         const data = currentState;
         if (!data) return;
 
-        const criteria  = getIncludedCriteria(data.criteria || []);
-        const raColumns = (data.raColumns || [])
-            .filter((ra) =>
-                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
-            )
-            .sort((a, b) =>
-                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
-                Number(a.colIdx) - Number(b.colIdx)
-            );
-        const filtroAlumno = alumnoSelect.value;
-        const query = filtroAlumno ? "" : normalize(searchInput.value);
-        const allAlumnos = (data.alumnos || []).filter(a =>
-            filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
-        );
+        const allAlumnos = getFilteredAlumnos();
+        const ceGroups = getCurrentCeGroups();
+        ensureCollapsedCePrefs(ceGroups);
+        ceGroups.forEach((group) => {
+            group.key = ceGroupKey(group);
+            group.collapsed = collapsedCeSet.has(group.key);
+            group.colspan = group.collapsed
+                ? 1
+                : 1 + group.criterios.reduce((sum, cr) => sum + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
+        });
 
         const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
         if (currentPage >= totalPages) currentPage = totalPages - 1;
@@ -472,18 +641,14 @@
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos para mostrar.</td></tr>`;
+            updateStatusBar(allAlumnos.length, ceGroups);
             return;
         }
-
-        const ceGroups = raColumns.map((ra, i) => {
-            const crs = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
-            const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
-            return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
-        }).filter((g) => g.criterios.length);
 
         if (!ceGroups.length) {
             notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
             notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
+            updateStatusBar(allAlumnos.length, ceGroups);
             return;
         }
 
@@ -493,21 +658,24 @@
         ceGroups.forEach((g, i) => {
             const c = g.color;
             const label = `CE ${g.ra.numero || (i + 1)}`;
-            head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">${label}</th>`;
+            const icon = g.collapsed ? "+" : "-";
+            head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}"><button class="ce-toggle" type="button" data-ce-key="${escapeHtml(g.key)}">${label} ${icon}</button></th>`;
         });
         head1 += `</tr>`;
 
         let head2 = `<tr>`;
         ceGroups.forEach(g => {
             const c = g.color;
-            head2 += `<th class="th-ce-nota" style="width:72px;background:${c.notaBg};color:${c.fg};border-left:3px solid ${c.border};border-right:2px solid ${c.border};">Nota CE</th>`;
-            g.criterios.forEach((cr, crIdx) => {
-                const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
-                head2 += `<th style="width:62px;font-size:0.72em;padding:5px 3px;background:${crBg};color:${c.fg};">${escapeHtml(cr.codigo)}</th>`;
-                if (Number(cr.recColIdx) >= 0) {
-                    head2 += `<th class="th-rec" style="width:56px;font-size:0.68em;padding:5px 3px;background:${crBg};">Rec</th>`;
-                }
-            });
+            head2 += `<th class="th-ce-nota" data-col-key="${escapeHtml(g.key)}-ce" style="width:72px;background:${c.notaBg};color:${c.fg};border-left:3px solid ${c.border};border-right:2px solid ${c.border};">Nota CE</th>`;
+            if (!g.collapsed) {
+                g.criterios.forEach((cr, crIdx) => {
+                    const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
+                    head2 += `<th data-col-key="${cr.colIdx}" style="width:62px;font-size:0.72em;padding:5px 3px;background:${crBg};color:${c.fg};">${escapeHtml(cr.codigo)}</th>`;
+                    if (Number(cr.recColIdx) >= 0) {
+                        head2 += `<th class="th-rec" data-col-key="${cr.colIdx}-rec" style="width:56px;font-size:0.68em;padding:5px 3px;background:${crBg};">Rec</th>`;
+                    }
+                });
+            }
         });
         head2 += `</tr>`;
         notasHead.innerHTML = head1 + head2;
@@ -524,28 +692,30 @@
                 const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
                 const ceDisp = formatNote(raVal ? raVal.display : "");
                 const ceCls  = gradeClass(raVal ? raVal.display : "");
-                bodyHtml += `<td data-ce="${alumno.rowIdx}-${g.ra.colIdx}" style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
-                g.criterios.forEach((cr, crIdx) => {
-                    const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
-                    const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
-                    const disp  = formatNote(crVal ? crVal.display : "");
-                    const cls   = gradeClass(crVal ? crVal.display : "");
-                    bodyHtml += `<td style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
-                    if (Number(cr.recColIdx) >= 0) {
-                        const recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
-                        const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
-                        const pendiente = crNota > 0 && crNota < 5 && recRaw === "";
-                        const pendClass = pendiente ? " rec-pending" : "";
-                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠" : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)"></td>`;
-                    }
-                });
+                bodyHtml += `<td data-ce="${alumno.rowIdx}-${g.ra.colIdx}" data-col-key="${escapeHtml(g.key)}-ce" style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
+                if (!g.collapsed) {
+                    g.criterios.forEach((cr, crIdx) => {
+                        const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
+                        const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+                        const disp  = formatNote(crVal ? crVal.display : "");
+                        const cls   = gradeClass(crVal ? crVal.display : "");
+                        bodyHtml += `<td data-col-key="${cr.colIdx}" style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
+                        if (Number(cr.recColIdx) >= 0) {
+                            const recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
+                            const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
+                            const pendiente = crNota > 0 && crNota < 5 && recRaw === "";
+                            const pendClass = pendiente ? " rec-pending" : "";
+                            bodyHtml += `<td class="td-rec" data-col-key="${cr.colIdx}-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠" : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" data-col-key="${cr.colIdx}-rec" onblur="saveRecFromInput(this)"></td>`;
+                        }
+                    });
+                }
             });
             bodyHtml += `</tr>`;
         });
         notasBody.innerHTML = bodyHtml;
 
         // Contador de pendientes
-        const totalPendientes = notasBody.querySelectorAll(".rec-pending").length;
+        const totalPendientes = countPendingRecoveries();
         const badge = document.getElementById("pendientesBadge");
         if (badge) {
             badge.textContent = totalPendientes > 0
@@ -554,6 +724,7 @@
             badge.style.color = totalPendientes > 0 ? "#92400e" : "#16a34a";
             badge.style.background = totalPendientes > 0 ? "#fef3c7" : "#dcfce7";
         }
+        updateStatusBar(allAlumnos.length, ceGroups);
     }
 
     function changePage(delta) {
@@ -591,6 +762,7 @@
                 const fileLabel = data.fileName ? ` · ${data.fileName}` : '';
                 lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileLabel}`;
             }
+            updateStatusBar((data.alumnos || []).length, getCurrentCeGroups());
             const status = document.getElementById('saveStatus');
             if (status) status.textContent = 'Sin cambios pendientes';
             showMessage("Notas cargadas.", "success");
@@ -600,6 +772,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
+        applyDensityPreference();
         if (!window.electronExcel) {
             showMessage("Abre esta pantalla desde la aplicación local.", "error");
             return;
@@ -617,6 +790,20 @@
         searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
         alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
         btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
+        densityToggleButton?.addEventListener("click", toggleDensityMode);
+        ceToggleAllButton?.addEventListener("click", toggleAllCeGroups);
+        notasHead.addEventListener("click", (event) => {
+            const button = event.target.closest(".ce-toggle");
+            if (button) toggleCeGroup(button.dataset.ceKey);
+        });
+        notasBody.addEventListener("focusin", (event) => {
+            if (event.target.classList.contains("rec-input")) highlightActiveCell(event.target);
+        });
+        notasBody.addEventListener("focusout", () => clearActiveCellHighlight());
+        notasBody.addEventListener("click", (event) => {
+            const cell = event.target.closest("td");
+            if (cell) highlightActiveCell(event.target.closest(".rec-input") || cell);
+        });
         notasBody.addEventListener("keydown", (e) => {
             const inp = e.target;
             if (!inp.classList.contains("rec-input")) return;
@@ -646,6 +833,7 @@
                 e.target.classList.add('dirty-rec');
                 e.target.classList.remove('saved-rec');
                 refreshPendingState();
+                updateStatusBar();
             }
         });
     });
@@ -662,6 +850,7 @@
         document.title = _hayPendientes ? '* ' + _BASE_TITLE : _BASE_TITLE;
         const status = document.getElementById('saveStatus');
         if (status) status.textContent = _hayPendientes ? `${pending} cambio(s) pendiente(s)` : 'Sin cambios pendientes';
+        updateStatusBar();
     }
 </script>
 </body>

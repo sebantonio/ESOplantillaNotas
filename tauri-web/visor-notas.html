@@ -9,7 +9,7 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 20px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 20px 20px 74px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
         thead th.th-nombre { position: sticky; left: 0; z-index: 8; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 7; background: #ffffff; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
@@ -37,11 +37,12 @@
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { position: relative; overflow-x: auto; margin: 0 20px 20px; padding: 0; }
+        .table-container { position: relative; overflow: auto; max-height: calc(100vh - 285px); margin: 0 20px 20px; padding: 0; }
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
-        thead th { background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        thead th { position: sticky; top: 0; z-index: 6; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
+        thead tr:nth-child(2) th { top: 36px; z-index: 5; }
         thead th.th-nombre { text-align: left; width: 210px; min-width: 210px; max-width: 210px; padding-left: 12px; }
-        thead th.th-final { position: sticky; left: 210px; z-index: 8; width: 86px; min-width: 86px; background: #1e1b4b !important; color: white !important; vertical-align: middle; box-shadow: 3px 0 7px rgba(31,41,55,0.18); }
+        thead th.th-final { position: sticky; left: 210px; top: 0; z-index: 8; width: 86px; min-width: 86px; background: #1e1b4b !important; color: white !important; vertical-align: middle; box-shadow: 3px 0 7px rgba(31,41,55,0.18); }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
         tbody td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; }
@@ -55,7 +56,7 @@
         .grade-warn { background: #fef3c7; color: #92400e; }
         .grade-bad  { background: #fee2e2; color: #991b1b; }
         .grade-empty{ background: #f3f4f6; color: #9ca3af; }
-        .th-ce-group { font-size: 0.8em; font-weight: 800; text-align: center; padding: 5px 6px; letter-spacing: 0.03em; background: #f8fafc !important; color: #334155 !important; }
+        .th-ce-group { font-size: 0.8em; font-weight: 800; text-align: center; padding: 5px 6px; letter-spacing: 0; background: #f8fafc !important; color: #334155 !important; }
         .th-ce-nota  { font-size: 0.76em; font-weight: 800; background: #ffffff !important; color: #334155 !important; }
         .th-cr-col   { font-size: 0.66em; font-weight: 700; background: #f6f7f9 !important; color: #6b7280 !important; border-right: 1px solid #edf2f7; }
         .th-rec      { font-size: 0.60em; font-weight: 600; background: #fdf6ee !important; color: #9a6a0a !important; width: 44px; }
@@ -63,6 +64,21 @@
         .rec-val     { display: inline-block; padding: 2px 5px; border-radius: 4px; font-weight: 600; font-size: 0.78rem; color: #9a6a0a; }
         .td-cr-cell  { background: #f8fafc; border-right: 1px solid #edf2f7; }
         .td-ce-nota  { background: #ffffff; font-weight: 800; }
+        .density-toggle, .ce-toggle-all { min-height: 32px; padding: 5px 10px; font-size: 0.82rem; }
+        .ce-toggle { min-height: 24px; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; font-size: 0.74rem; font-weight: 850; cursor: pointer; }
+        .ce-toggle:hover { border-color: #6366f1; color: #3730a3; background: #eef2ff; }
+        body.compact-mode .table-container { max-height: calc(100vh - 245px); }
+        body.compact-mode thead th { padding: 5px 4px !important; font-size: 0.72rem !important; }
+        body.compact-mode thead tr:nth-child(2) th { top: 28px; }
+        body.compact-mode tbody td { padding: 4px 5px !important; }
+        body.compact-mode .grade { padding: 2px 6px; font-size: 0.78rem; }
+        tr.row-active > td { background-color: #ecfeff !important; }
+        td.col-active, th.col-active { box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08); }
+        .active-cell { outline: 2px solid #0ea5e9; outline-offset: -2px; }
+        .table-status-bar { position: fixed; left: 16px; right: 16px; bottom: 12px; z-index: 920; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid #dbe4f0; border-radius: 8px; background: rgba(255,255,255,0.96); box-shadow: 0 14px 34px rgba(31,41,55,0.16); backdrop-filter: blur(8px); }
+        .status-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+        .status-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid #e0e7ff; border-radius: 999px; background: #f8fafc; color: #475569; font-size: 0.8rem; font-weight: 650; white-space: nowrap; }
+        .status-chip strong { color: #3730a3; font-weight: 850; }
         .pag-btn { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; }
         .pag-btn:disabled { opacity: 0.4; cursor: default; }
         .pag-btn:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
@@ -111,6 +127,8 @@
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar datos de la evaluación actual">Recargar</button>
         <button class="pag-btn" id="btnClearFilters" type="button" title="Limpiar filtros">Limpiar filtros</button>
+        <button class="pag-btn density-toggle" id="densityToggleButton" type="button">Compacto</button>
+        <button class="pag-btn ce-toggle-all" id="ceToggleAllButton" type="button">Abrir CE</button>
         <span id="lastSync" style="font-size:0.8rem;color:#6b7280;white-space:nowrap;">Sin sincronizar</span>
         <span style="margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <button class="pag-btn" id="btnPrevTop" onclick="changePage(-1)" disabled>&#8249;</button>
@@ -156,6 +174,14 @@
     </div>
 </div>
 
+<div class="table-status-bar" aria-live="polite">
+    <div class="status-group">
+        <span class="status-chip">Filtrados <strong id="statusFiltered">0</strong></span>
+        <span class="status-chip">CE abiertos <strong id="statusOpenCe">0</strong></span>
+        <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
+    </div>
+</div>
+
 <script>
     const evalSelect      = document.getElementById("evalSelect");
     const searchInput     = document.getElementById("searchInput");
@@ -171,8 +197,16 @@
     const btnRefresh      = document.getElementById("btnRefresh");
     const btnClearFilters = document.getElementById("btnClearFilters");
     const lastSyncEl      = document.getElementById("lastSync");
+    const densityToggleButton = document.getElementById("densityToggleButton");
+    const ceToggleAllButton = document.getElementById("ceToggleAllButton");
+    const statusFiltered = document.getElementById("statusFiltered");
+    const statusOpenCe = document.getElementById("statusOpenCe");
+    const statusSync = document.getElementById("statusSync");
     const VIEW_PREFS_KEY  = "visorNotasPrefs";
+    const DENSITY_PREFS_KEY = "visorNotasDensity";
+    const COLLAPSED_CE_KEY = "visorNotasCollapsedCe";
     let focusReloadTimer  = null;
+    let collapsedCeSet = null;
 
     let currentState = null;
     let currentPage  = 0;
@@ -221,6 +255,86 @@
         currentPage = 0;
         saveViewPrefs();
         renderTable();
+    }
+
+    function applyDensityPreference() {
+        const compact = localStorage.getItem(DENSITY_PREFS_KEY) === "compact";
+        document.body.classList.toggle("compact-mode", compact);
+        if (densityToggleButton) {
+            densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
+        }
+    }
+
+    function toggleDensityMode() {
+        const compact = !document.body.classList.contains("compact-mode");
+        localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
+        applyDensityPreference();
+    }
+
+    function ceGroupKey(group) {
+        return String(group.ra.numero || group.ra.colIdx);
+    }
+
+    function ensureCollapsedCePrefs(groups) {
+        if (collapsedCeSet) return;
+        try {
+            const saved = JSON.parse(localStorage.getItem(COLLAPSED_CE_KEY) || "null");
+            collapsedCeSet = Array.isArray(saved)
+                ? new Set(saved.map(String))
+                : new Set(groups.map(ceGroupKey));
+        } catch {
+            collapsedCeSet = new Set(groups.map(ceGroupKey));
+        }
+    }
+
+    function saveCollapsedCePrefs() {
+        try {
+            localStorage.setItem(COLLAPSED_CE_KEY, JSON.stringify(Array.from(collapsedCeSet || [])));
+        } catch {}
+    }
+
+    function toggleCeGroup(key) {
+        if (!collapsedCeSet) collapsedCeSet = new Set();
+        if (collapsedCeSet.has(key)) collapsedCeSet.delete(key);
+        else collapsedCeSet.add(key);
+        saveCollapsedCePrefs();
+        renderTable();
+    }
+
+    function toggleAllCeGroups() {
+        const groups = getCurrentCeGroups();
+        ensureCollapsedCePrefs(groups);
+        const allCollapsed = groups.length > 0 && groups.every((group) => collapsedCeSet.has(ceGroupKey(group)));
+        collapsedCeSet = allCollapsed ? new Set() : new Set(groups.map(ceGroupKey));
+        saveCollapsedCePrefs();
+        renderTable();
+    }
+
+    function updateStatusBar(filteredCount, ceGroups) {
+        const openCount = (ceGroups || []).filter((group) => !collapsedCeSet?.has(ceGroupKey(group))).length;
+        if (statusFiltered) statusFiltered.textContent = String(filteredCount || 0);
+        if (statusOpenCe) statusOpenCe.textContent = String(openCount);
+        if (statusSync) statusSync.textContent = lastSyncEl?.textContent || "Sin sincronizar";
+        if (ceToggleAllButton) ceToggleAllButton.textContent = openCount ? "Plegar CE" : "Abrir CE";
+    }
+
+    function clearActiveCellHighlight() {
+        document.querySelectorAll(".row-active, .col-active, .active-cell").forEach((el) => {
+            el.classList.remove("row-active", "col-active", "active-cell");
+        });
+    }
+
+    function highlightActiveCell(cell) {
+        clearActiveCellHighlight();
+        const row = cell.closest("tr");
+        const colKey = cell.dataset.colKey;
+        if (row) row.classList.add("row-active");
+        cell.classList.add("active-cell");
+        if (colKey) {
+            document.querySelectorAll("[data-col-key]").forEach((el) => {
+                if (el.dataset.colKey === String(colKey)) el.classList.add("col-active");
+            });
+        }
     }
 
     function formatNote(display) {
@@ -272,6 +386,25 @@
         return criterionCeNumber(firstCriterion && firstCriterion.codigo) || Number.MAX_SAFE_INTEGER;
     }
 
+    function getCurrentCeGroups() {
+        const data = currentState;
+        if (!data) return [];
+        const criteria = getIncludedCriteria(data.criteria || []);
+        const raColumns = (data.raColumns || [])
+            .filter((ra) =>
+                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
+            )
+            .sort((a, b) =>
+                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
+                Number(a.colIdx) - Number(b.colIdx)
+            );
+        return raColumns.map((ra, i) => ({
+            ra,
+            color: CE_COLORS[i % CE_COLORS.length],
+            criterios: criteria.filter((c) => Number(c.raColIdx) === Number(ra.colIdx))
+        })).filter((g) => g.criterios.length);
+    }
+
     function renderStats() {
         const alumnos = (currentState && currentState.alumnos) || [];
         const nums = alumnos.map(a => a.final).filter(n => typeof n === "number" && n > 0);
@@ -288,20 +421,20 @@
         const data = currentState;
         if (!data) return;
 
-        const criteria  = getIncludedCriteria(data.criteria || []);
-        const raColumns = (data.raColumns || [])
-            .filter((ra) =>
-                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
-            )
-            .sort((a, b) =>
-                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
-                Number(a.colIdx) - Number(b.colIdx)
-            );
         const filtroAlumno = alumnoSelect.value;
         const query = filtroAlumno ? "" : normalize(searchInput.value);
         const allAlumnos = (data.alumnos || []).filter(a =>
             filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
         );
+        const ceGroups = getCurrentCeGroups();
+        ensureCollapsedCePrefs(ceGroups);
+        ceGroups.forEach((group) => {
+            group.key = ceGroupKey(group);
+            group.collapsed = collapsedCeSet.has(group.key);
+            group.colspan = group.collapsed
+                ? 1
+                : 1 + group.criterios.reduce((sum, cr) => sum + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
+        });
 
         const totalPages = Math.max(1, Math.ceil(allAlumnos.length / perPage));
         if (currentPage >= totalPages) currentPage = totalPages - 1;
@@ -318,20 +451,15 @@
         if (!allAlumnos.length) {
             notasHead.innerHTML = "";
             notasBody.innerHTML = `<tr><td colspan="99" class="empty-msg">Sin alumnos para mostrar.</td></tr>`;
+            updateStatusBar(allAlumnos.length, ceGroups);
             return;
         }
 
         // Agrupar CRs por CE (raColIdx) — calcular colspan teniendo en cuenta columnas Rec
-        const ceGroups = raColumns.map((ra, i) => {
-            const crs = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
-            // colspan = 1 (Nota CE) + sum(cr.recColIdx >= 0 ? 2 : 1)
-            const colspan = 1 + crs.reduce((s, cr) => s + (Number(cr.recColIdx) >= 0 ? 2 : 1), 0);
-            return { ra, color: CE_COLORS[i % CE_COLORS.length], criterios: crs, colspan };
-        }).filter((g) => g.criterios.length);
-
         if (!ceGroups.length) {
             notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
             notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
+            updateStatusBar(allAlumnos.length, ceGroups);
             return;
         }
 
@@ -342,7 +470,8 @@
         ceGroups.forEach((g, i) => {
             const c = g.color;
             const label = `CE ${g.ra.numero || (i + 1)}`;
-            head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="border-left:4px solid ${c.border};border-bottom:1px solid #d8e1ee;">${label}</th>`;
+            const icon = g.collapsed ? "+" : "-";
+            head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="border-left:4px solid ${c.border};border-bottom:1px solid #d8e1ee;"><button class="ce-toggle" type="button" data-ce-key="${escapeHtml(g.key)}">${label} ${icon}</button></th>`;
         });
         head1 += `</tr>`;
 
@@ -350,13 +479,15 @@
         let head2 = `<tr>`;
         ceGroups.forEach(g => {
             const c = g.color;
-            head2 += `<th class="th-ce-nota" style="width:72px;border-left:4px solid ${c.border};border-right:1px solid #cbd5e1;">Nota CE</th>`;
-            g.criterios.forEach((cr, crIdx) => {
-                head2 += `<th class="th-cr-col" style="width:58px;padding:5px 3px;">${escapeHtml(cr.codigo)}</th>`;
-                if (Number(cr.recColIdx) >= 0) {
-                    head2 += `<th class="th-rec" style="width:44px;padding:5px 3px;">Rec</th>`;
-                }
-            });
+            head2 += `<th class="th-ce-nota" data-col-key="${escapeHtml(g.key)}-ce" style="width:72px;border-left:4px solid ${c.border};border-right:1px solid #cbd5e1;">Nota CE</th>`;
+            if (!g.collapsed) {
+                g.criterios.forEach((cr) => {
+                    head2 += `<th class="th-cr-col" data-col-key="${cr.colIdx}" style="width:58px;padding:5px 3px;">${escapeHtml(cr.codigo)}</th>`;
+                    if (Number(cr.recColIdx) >= 0) {
+                        head2 += `<th class="th-rec" data-col-key="${cr.colIdx}-rec" style="width:44px;padding:5px 3px;">Rec</th>`;
+                    }
+                });
+            }
         });
         head2 += `</tr>`;
         notasHead.innerHTML = head1 + head2;
@@ -376,21 +507,24 @@
                 const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
                 const ceDisp = formatNote(raVal ? raVal.display : "");
                 const ceCls  = gradeClass(raVal ? raVal.display : "");
-                bodyHtml += `<td class="td-ce-nota" style="border-left:4px solid ${c.border};border-right:1px solid #cbd5e1;"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
-                g.criterios.forEach((cr, crIdx) => {
+                bodyHtml += `<td class="td-ce-nota" data-col-key="${escapeHtml(g.key)}-ce" style="border-left:4px solid ${c.border};border-right:1px solid #cbd5e1;"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
+                if (!g.collapsed) {
+                g.criterios.forEach((cr) => {
                     const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
                     const disp  = formatNote(crVal ? crVal.display : "");
                     const cls   = gradeClass(crVal ? crVal.display : "");
-                    bodyHtml += `<td class="td-cr-cell"><span class="grade ${cls}">${disp || "—"}</span></td>`;
+                    bodyHtml += `<td class="td-cr-cell" data-col-key="${cr.colIdx}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
                     if (Number(cr.recColIdx) >= 0) {
                         const recDisp = formatNote(crVal ? crVal.recDisplay : "");
-                        bodyHtml += `<td class="td-rec"><span class="rec-val">${recDisp || "—"}</span></td>`;
+                        bodyHtml += `<td class="td-rec" data-col-key="${cr.colIdx}-rec"><span class="rec-val">${recDisp || "—"}</span></td>`;
                     }
                 });
+                }
             });
             bodyHtml += `</tr>`;
         });
         notasBody.innerHTML = bodyHtml;
+        updateStatusBar(allAlumnos.length, ceGroups);
     }
 
     function changePage(delta) {
@@ -438,6 +572,7 @@
                 const fileName = data.fileName ? ` · ${data.fileName}` : "";
                 lastSyncEl.textContent = `Sincronizado ${new Date().toLocaleTimeString()}${fileName}`;
             }
+            updateStatusBar((data.alumnos || []).length, getCurrentCeGroups());
             saveViewPrefs();
             showMessage("Notas cargadas.", "success");
         } catch (e) {
@@ -461,6 +596,7 @@
             } catch {}
         }
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
+        applyDensityPreference();
         searchInput.addEventListener("input", () => {
             alumnoSelect.value = "";
             currentPage = 0;
@@ -475,6 +611,16 @@
         });
         btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
         btnClearFilters?.addEventListener("click", clearFilters);
+        densityToggleButton?.addEventListener("click", toggleDensityMode);
+        ceToggleAllButton?.addEventListener("click", toggleAllCeGroups);
+        notasHead.addEventListener("click", (event) => {
+            const button = event.target.closest(".ce-toggle");
+            if (button) toggleCeGroup(button.dataset.ceKey);
+        });
+        notasBody.addEventListener("click", (event) => {
+            const cell = event.target.closest("td");
+            if (cell) highlightActiveCell(cell);
+        });
 
         document.addEventListener("keydown", (e) => {
             if (e.ctrlKey && e.key.toLowerCase() === "f") {

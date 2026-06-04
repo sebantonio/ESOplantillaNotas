@@ -16,7 +16,7 @@
 
         body {
             min-height: 100vh;
-            padding: 10px 12px 16px;
+            padding: 10px 12px 74px;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
             background: #f3f6fb;
             color: #1f2937;
@@ -375,7 +375,8 @@
         }
 
         .table-container {
-            overflow-x: auto;
+            overflow: auto;
+            max-height: calc(100vh - 255px);
             border: 1px solid #e0e0e0;
             border-radius: 8px;
         }
@@ -383,11 +384,15 @@
         table {
             width: max-content;
             min-width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             table-layout: auto;
         }
 
         th {
+            position: sticky;
+            top: 0;
+            z-index: 6;
             padding: 8px 6px;
             color: #3730a3;
             text-align: center;
@@ -397,9 +402,126 @@
             white-space: nowrap;
         }
 
+        thead tr:nth-child(2) th {
+            top: 34px;
+            z-index: 5;
+        }
+
         td {
             padding: 11px 14px;
             border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            margin: 0 0 8px;
+        }
+
+        .density-toggle {
+            min-height: 32px;
+            padding: 5px 10px;
+            font-size: 0.82rem;
+        }
+
+        body.compact-mode .table-container {
+            max-height: calc(100vh - 220px);
+        }
+
+        body.compact-mode th {
+            padding: 5px 4px !important;
+            font-size: 0.72rem !important;
+        }
+
+        body.compact-mode td {
+            padding: 5px 6px !important;
+        }
+
+        body.compact-mode .nota-cr,
+        body.compact-mode .nota-input {
+            min-height: 26px !important;
+            width: 58px !important;
+            padding: 3px 4px !important;
+            font-size: 0.78rem !important;
+        }
+
+        body.compact-mode .summary-pill,
+        body.compact-mode .quick-filter {
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+            font-size: 0.76rem !important;
+        }
+
+        tr.row-active > td {
+            background-color: #ecfeff !important;
+        }
+
+        td.col-active,
+        th.col-active {
+            box-shadow: inset 0 0 0 9999px rgba(14, 165, 233, 0.08);
+        }
+
+        .active-cell {
+            outline: 2px solid #0ea5e9;
+            outline-offset: -2px;
+        }
+
+        .table-status-bar {
+            position: fixed;
+            left: 16px;
+            right: 16px;
+            bottom: 12px;
+            z-index: 920;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 10px;
+            border: 1px solid #dbe4f0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 14px 34px rgba(31, 41, 55, 0.16);
+            backdrop-filter: blur(8px);
+        }
+
+        .status-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 28px;
+            padding: 4px 9px;
+            border: 1px solid #e0e7ff;
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 0.8rem;
+            font-weight: 650;
+            white-space: nowrap;
+        }
+
+        .status-chip strong {
+            color: #3730a3;
+            font-weight: 850;
+        }
+
+        .status-save-button {
+            min-height: 34px;
+            padding: 7px 14px;
+            border-color: #15803d;
+            background: #16a34a;
+            white-space: nowrap;
+        }
+
+        .status-save-button:hover {
+            background: #15803d;
         }
 
         tr:hover {
@@ -853,7 +975,7 @@
 
         /* Ajustar grid para solo unidad */
         .controls {
-            grid-template-columns: minmax(220px, 1.2fr) minmax(190px, 280px) auto auto !important;
+            grid-template-columns: minmax(220px, 1.2fr) minmax(190px, 280px) auto auto auto !important;
         }
 
         /* Modal visualización */
@@ -924,9 +1046,9 @@
         }
         .modal-close:hover { border-color: #6366f1; color: #4338ca; }
 
-        .col-sticky-n    { position: sticky; left: 0;    z-index: 2; background: white; }
-        .col-sticky-name { position: sticky; left: 40px; z-index: 2; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
-        thead .col-sticky-n, thead .col-sticky-name { z-index: 3; background: #eef2ff; }
+        .col-sticky-n    { position: sticky; left: 0;    z-index: 7; background: white; }
+        .col-sticky-name { position: sticky; left: 40px; z-index: 7; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
+        thead .col-sticky-n, thead .col-sticky-name { z-index: 9; top: 0; background: #eef2ff; }
         tr:hover .col-sticky-n, tr:hover .col-sticky-name { background: #f8f9ff; }
 
         .pagination-bar {
@@ -1078,6 +1200,7 @@
                 </div>
                 <button class="secondary" type="button" id="reloadButton">Recargar</button>
                 <button class="secondary" type="button" id="clearFiltersButton">Limpiar filtros</button>
+                <button class="secondary density-toggle" type="button" id="densityToggleButton">Compacto</button>
             </section>
 
             <section id="criteriosSection" class="criterios-section" style="display:none" aria-label="Criterios de evaluacion">
@@ -1190,7 +1313,15 @@
         </div>
     </div>
 
-    <button class="floating-save-button" type="button" id="floatingSaveButton">Guardar notas</button>
+    <div class="table-status-bar" aria-live="polite">
+        <div class="status-group">
+            <span class="status-chip">Alumnos <strong id="statusStudents">0</strong></span>
+            <span class="status-chip">Pendientes <strong id="statusPending">0</strong></span>
+            <span class="status-chip">Cambios <strong id="statusDirty">0</strong></span>
+            <span class="status-chip">Sync <strong id="statusSync">Sin sincronizar</strong></span>
+        </div>
+        <button class="status-save-button" type="button" id="floatingSaveButton">Guardar notas</button>
+    </div>
 
     <script>
         let currentState = null;
@@ -1226,6 +1357,7 @@
         const studentSearchInput = document.getElementById("studentSearchInput");
         const saveButton = document.getElementById("saveButton");
         const floatingSaveButton = document.getElementById("floatingSaveButton");
+        const densityToggleButton = document.getElementById("densityToggleButton");
         const reloadButton = document.getElementById("reloadButton");
         const clearFiltersButton = document.getElementById("clearFiltersButton");
         const clearButton = document.getElementById("clearButton");
@@ -1236,9 +1368,15 @@
         const raDescBox = document.getElementById("raDescBox");
         const busyOverlay = document.getElementById("busyOverlay");
         const busyText = document.getElementById("busyText");
+        const statusStudents = document.getElementById("statusStudents");
+        const statusPending = document.getElementById("statusPending");
+        const statusDirty = document.getElementById("statusDirty");
+        const statusSync = document.getElementById("statusSync");
+        const DENSITY_PREFS_KEY = "gestorNotasDensity";
         const lastSyncStatus = document.getElementById("lastSyncStatus");
 
         document.addEventListener("DOMContentLoaded", () => {
+            applyDensityPreference();
             if (!window.electronExcel) {
                 showMessage("Abre esta pantalla desde la aplicacion local de Electron para modificar el Excel.", "error");
                 setDisabled(true);
@@ -1248,6 +1386,7 @@
             reloadButton.addEventListener("click", () => loadNotasConGuardado());
             saveButton.addEventListener("click", saveNotas);
             floatingSaveButton?.addEventListener("click", saveNotas);
+            densityToggleButton?.addEventListener("click", toggleDensityMode);
             clearButton.addEventListener("click", clearNotas);
             unidadSelect.addEventListener("change", () => {
                 saveViewPrefs();
@@ -1304,8 +1443,20 @@
                         renderSummary(currentState);
                         marcarCambio();
                         renderStatsRow();
+                        updateStatusBar();
                     }
                 }
+            });
+
+            notasBody.addEventListener("focusin", (event) => {
+                const input = event.target;
+                if (input.classList.contains("nota-cr")) {
+                    highlightActiveCell(input);
+                }
+            });
+
+            notasBody.addEventListener("focusout", () => {
+                clearActiveCellHighlight();
             });
 
             notasBody.addEventListener("keydown", (e) => {
@@ -1467,6 +1618,7 @@
             invalidCount.textContent = stats.invalid;
             updateProgressBar(stats);
             updateQuickFilterCounts(stats);
+            updateStatusBar();
         }
 
         function updateProgressBar(stats) {
@@ -1560,6 +1712,49 @@
                 return JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || "null") || {};
             } catch {
                 return {};
+            }
+        }
+
+        function applyDensityPreference() {
+            const compact = localStorage.getItem(DENSITY_PREFS_KEY) === "compact";
+            document.body.classList.toggle("compact-mode", compact);
+            if (densityToggleButton) {
+                densityToggleButton.textContent = compact ? "Amplio" : "Compacto";
+                densityToggleButton.title = compact ? "Cambiar a vista amplia" : "Cambiar a vista compacta";
+            }
+        }
+
+        function toggleDensityMode() {
+            const compact = !document.body.classList.contains("compact-mode");
+            localStorage.setItem(DENSITY_PREFS_KEY, compact ? "compact" : "wide");
+            applyDensityPreference();
+        }
+
+        function updateStatusBar() {
+            const stats = getNotesStats();
+            if (statusStudents) statusStudents.textContent = String(getNotesToRender().length || stats.total || 0);
+            if (statusPending) statusPending.textContent = String(stats.pending || 0);
+            if (statusDirty) statusDirty.textContent = String(getPendingDirtyCount());
+            if (statusSync) statusSync.textContent = lastSyncStatus?.textContent || "Sin sincronizar";
+        }
+
+        function clearActiveCellHighlight() {
+            document.querySelectorAll(".row-active, .col-active, .active-cell").forEach((el) => {
+                el.classList.remove("row-active", "col-active", "active-cell");
+            });
+        }
+
+        function highlightActiveCell(input) {
+            clearActiveCellHighlight();
+            const row = input.closest("tr");
+            const cell = input.closest("td");
+            const colKey = input.dataset.crColidx;
+            if (row) row.classList.add("row-active");
+            if (cell) cell.classList.add("active-cell");
+            if (colKey) {
+                document.querySelectorAll("[data-col-key]").forEach((el) => {
+                    if (el.dataset.colKey === String(colKey)) el.classList.add("col-active");
+                });
             }
         }
 
@@ -1681,6 +1876,7 @@
             if (!currentNotes.length) {
                 notasBody.innerHTML = '<tr><td class="empty" colspan="999">No hay alumnos en esta unidad.</td></tr>';
                 renderPagination();
+                updateStatusBar();
                 return;
             }
 
@@ -1693,6 +1889,7 @@
                 notasBody.innerHTML = '<tr><td class="empty" colspan="2">No hay CE/CR incluidos en esta unidad.</td></tr>';
                 notasTfoot.innerHTML = "";
                 renderPagination();
+                updateStatusBar();
                 return;
             }
             const ceGroups = buildCeGroups(criterios);
@@ -1719,7 +1916,7 @@
                     const borderL = ci === 0 ? `border-left:3px solid ${c.border};` : '';
                     const bg = tieneP ? c.bg : '#f3f4f6';
                     const fg = tieneP ? c.fg : '#9ca3af';
-                    head2 += `<th style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;background:${bg};color:${fg};${borderL}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+                    head2 += `<th data-col-key="${cr.colIdx}" style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;background:${bg};color:${fg};${borderL}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
                 });
             });
             head2 += '</tr>';
@@ -1756,7 +1953,7 @@
                     const cellBg = tieneP ? (cc.c ? cc.c.bg : '') : '#f3f4f6';
                     const borderL = cc.firstInGroup ? `border-left:3px solid ${cc.c ? cc.c.border : '#ccc'};` : '';
                     if (tieneP) {
-                        html += `<td style="text-align:center;padding:6px 4px;background:${cellBg};${borderL}">
+                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:6px 4px;background:${cellBg};${borderL}">
                             <input type="text" inputmode="decimal" class="nota-cr"
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
@@ -1764,7 +1961,7 @@
                                 style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #d7d7d7;border-radius:5px;min-height:32px"
                             /></td>`;
                     } else {
-                        html += `<td style="text-align:center;padding:6px 4px;background:#f3f4f6;${borderL}">
+                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:6px 4px;background:#f3f4f6;${borderL}">
                             <input type="text" class="nota-cr" disabled
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
@@ -1783,6 +1980,7 @@
             setQuickFilter(currentQuickFilter, false);
             renderPagination();
             renderStatsRow();
+            updateStatusBar();
         }
 
         function renderStatsRow() {
@@ -1867,6 +2065,7 @@
                     const fileInfo = data.fileName ? ` · ${data.fileName}` : "";
                     lastSyncStatus.textContent = `Guardado ${new Date().toLocaleTimeString()}${fileInfo}`;
                 }
+                updateStatusBar();
                 saveViewPrefs();
                 return true;
             } catch (error) {
@@ -2308,6 +2507,7 @@
         function marcarCambio() {
             hayCambiosSinGuardar = true;
             if (!document.title.startsWith('*')) document.title = '* ' + _BASE_TITLE;
+            updateStatusBar();
             if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
             autoSaveTimeout = setTimeout(() => guardarCambiosAutomaticamente(), AUTO_SAVE_DELAY_MS);
         }
@@ -2388,7 +2588,7 @@
         }
 
         function setDisabled(disabled) {
-            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, floatingSaveButton, reloadButton, clearFiltersButton, clearButton, saveCriteriosButton].forEach((element) => {
+            [unidadSelect, tipoSelect, actividadSelect, activityTitleInput, includedInput, saveButton, floatingSaveButton, densityToggleButton, reloadButton, clearFiltersButton, clearButton, saveCriteriosButton].forEach((element) => {
                 element.disabled = disabled;
             });
         }
