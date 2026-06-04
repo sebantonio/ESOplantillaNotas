@@ -20,6 +20,7 @@ const files = [
   'informes.html',
   'diario.html',
   'gestor-instrumentos.html',
+  'utilidades.html',
   'asteroides.html',
   'app-bridge.js',
   'ux-common.css',
