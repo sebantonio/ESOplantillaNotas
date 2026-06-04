@@ -11,8 +11,8 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { min-height: 100vh; padding: 20px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
-        thead th.th-nombre { position: sticky; left: 0; z-index: 5; background: #eef2ff; }
-        tbody td.td-nombre { position: sticky; left: 0; z-index: 4; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
+        thead th.th-nombre { position: sticky; left: 0; z-index: 8; background: #eef2ff; }
+        tbody td.td-nombre { position: sticky; left: 0; z-index: 7; background: #ffffff; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
         tbody tr:hover td.td-nombre { background: #eef2ff; }
         .page-nav { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
         .nav-group { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -37,16 +37,16 @@
         .message.info { background: #eff6ff; color: #1d4ed8; }
         .message.success { background: #f0fdf4; color: #166534; }
         .message.error { background: #fef2f2; color: #991b1b; }
-        .table-container { overflow-x: auto; padding: 0 20px 20px; }
-        table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .table-container { position: relative; overflow-x: auto; margin: 0 20px 20px; padding: 0; }
+        table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
         thead th { background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; }
         thead th.th-nombre { text-align: left; width: 210px; min-width: 210px; max-width: 210px; padding-left: 12px; }
-        thead th.th-final { position: sticky; left: 210px; z-index: 4; width: 86px; min-width: 86px; background: #1e1b4b !important; color: white !important; vertical-align: middle; box-shadow: 3px 0 7px rgba(31,41,55,0.18); }
+        thead th.th-final { position: sticky; left: 210px; z-index: 8; width: 86px; min-width: 86px; background: #1e1b4b !important; color: white !important; vertical-align: middle; box-shadow: 3px 0 7px rgba(31,41,55,0.18); }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
         tbody td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; }
         tbody td.td-nombre { width: 210px; min-width: 210px; max-width: 210px; text-align: left; padding-left: 12px; font-weight: 600; }
-        tbody td.td-final { position: sticky; left: 210px; z-index: 3; width: 86px; min-width: 86px; background: #ffffff; font-weight: 900; box-shadow: 3px 0 7px rgba(31,41,55,0.12); }
+        tbody td.td-final { position: sticky; left: 210px; z-index: 6; width: 86px; min-width: 86px; background: #ffffff; font-weight: 900; box-shadow: 3px 0 7px rgba(31,41,55,0.12); }
         tbody tr:nth-child(even) td.td-final { background: #ffffff; }
         tbody tr:hover td.td-final { background: #fff7ed; }
         .grade { display: inline-block; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 0.88rem; min-width: 42px; }
