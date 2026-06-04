@@ -2,7 +2,7 @@
 
 Aplicacion de escritorio para gestionar calificaciones de ESO sobre una plantilla Excel local. Permite mantener alumnos, unidades, competencias especificas, criterios, instrumentos de evaluacion, actividades, recuperaciones, informes y diario de clase desde una interfaz HTML empaquetada con Tauri.
 
-El proyecto esta pensado para trabajar sin servidor externo: los datos se leen y escriben directamente en un archivo `.xlsx` seleccionado por el usuario.
+El proyecto esta pensado para trabajar sin servidor externo: los datos se leen y escriben directamente en un archivo `.xlsx` o `.xlsm` seleccionado por el usuario.
 
 ## Funcionalidades
 
@@ -26,8 +26,8 @@ El proyecto esta pensado para trabajar sin servidor externo: los datos se leen y
 - Escritorio: Tauri v2.
 - Backend local: Rust.
 - Lectura Excel: `calamine`.
-- Escritura Excel: manipulacion directa del ZIP/XML interno del `.xlsx`.
-- Utilidades JS: `xlsx`, `jszip`.
+- Escritura Excel: manipulacion directa del ZIP/XML interno del `.xlsx`/`.xlsm`, con escritura temporal, validacion ZIP y copia `.autobak`.
+- Utilidades JS: `xlsx` local en `vendor/`, `jszip`.
 - Empaquetado alternativo legado: Electron y `electron-builder`.
 
 ## Requisitos
@@ -43,7 +43,7 @@ Para desarrollo con Tauri debe estar disponible el CLI de Tauri instalado por np
 npm install
 ```
 
-> Nota: en este repositorio `package-lock.json` esta ignorado actualmente, por lo que la instalacion puede resolver versiones compatibles dentro de los rangos definidos en `package.json`.
+> Nota: `package-lock.json` debe versionarse para mantener builds npm reproducibles.
 
 ## Uso
 
@@ -60,7 +60,9 @@ npm install
    - Informes.
    - Diario.
 
-La aplicacion guarda los cambios en el Excel seleccionado. Es recomendable conservar una copia de seguridad de la plantilla antes de hacer cambios masivos.
+La aplicacion guarda los cambios en el Excel seleccionado. Antes de reemplazar el libro, crea una copia `*.autobak.xlsx` o `*.autobak.xlsm` junto al archivo original.
+
+Los archivos `.xls` antiguos no se aceptan para edicion porque no usan el formato ZIP/XML que modifica el backend. Convierte la plantilla a `.xlsx` o `.xlsm` antes de usarla.
 
 ## Comandos
 
@@ -117,6 +119,8 @@ La ruta principal recomendada para esta version del proyecto es Tauri.
 +-- informes.html                      Informes por alumno
 +-- diario.html                        Diario de clase
 +-- app-bridge.js                      Puente JS hacia comandos Tauri
++-- vendor/
+|   +-- xlsx.full.min.js               Libreria XLSX local para importaciones sin CDN
 +-- main.js                            Entrada Electron legado
 +-- preload.js                         Preload Electron legado
 +-- tauri-node-backend.js              Backend Node legado
@@ -192,9 +196,18 @@ La importacion esta orientada a copiar datos al libro activo. Conviene revisar e
 ## Datos y persistencia
 
 - El archivo Excel seleccionado se mantiene en memoria durante la sesion de la aplicacion.
+- Al guardar, el backend escribe primero un temporal, valida que sea un XLSX/XLSM valido, crea una copia `.autobak` y solo entonces reemplaza el archivo original.
 - Algunas pantallas usan `localStorage` para recordar archivos recientes.
 - Si se reinicia la aplicacion y no se encuentra un archivo por defecto junto al ejecutable, puede ser necesario seleccionar de nuevo el Excel.
 - No hay base de datos externa.
+
+## Seguridad y robustez
+
+- Tauri usa una politica CSP local: no se cargan scripts desde CDN.
+- Las importaciones del navegador usan `vendor/xlsx.full.min.js`.
+- La app solo permite abrir enlaces externos `http`/`https` seguros; bloquea rutas locales, `localhost` y rangos privados.
+- El backend valida extensiones editables (`.xlsx`, `.xlsm`) y limites de la plantilla: 37 alumnos, 16 unidades, 10 instrumentos.
+- Las notas guardadas desde backend deben estar entre 0 y 10.
 
 ## Build y distribucion
 
@@ -225,12 +238,14 @@ El `.gitignore` actual excluye:
 ```text
 node_modules/
 src-tauri/target/
-package-lock.json
 *.xlsx
+*.xlsm
+*.xls
+*.tmp
 exe/
 ```
 
-Esto evita subir dependencias, compilaciones, instaladores y archivos Excel reales.
+Esto evita subir dependencias, compilaciones, instaladores, temporales y archivos Excel reales. `package-lock.json` si debe quedar versionado.
 
 ## Consideraciones de mantenimiento
 
@@ -242,11 +257,9 @@ Esto evita subir dependencias, compilaciones, instaladores y archivos Excel real
 
 ## Recomendaciones tecnicas pendientes
 
-- Versionar `package-lock.json` para builds npm reproducibles.
-- Revisar la politica CSP de Tauri antes de distribuir ampliamente.
-- Evitar dependencias cargadas desde CDN en la app de escritorio.
-- Validar de forma estricta las rutas y extensiones de archivos recibidas desde el frontend.
-- Limitar los enlaces permitidos en la funcion que abre URLs externas.
+- Extraer modulos JS comunes para tablas, paginacion, validacion y guardado.
+- Dividir `src-tauri/src/main.rs` en modulos Rust por responsabilidad.
+- Ampliar pruebas automatizadas con un `.xlsx` de prueba para validar lectura/escritura real.
 - Decidir si `tauri-web/` debe seguir versionado o tratarse como artefacto generado.
 
 ## Licencia

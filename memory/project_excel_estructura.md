@@ -3,7 +3,9 @@ name: Estructura del Excel ESO
 description: Rangos exactos de cada tabla en CCGG PLANTILLA - RECUv45.xlsx
 type: project
 ---
-Archivo: `CCGG PLANTILLA - RECUv45.xlsx`
+Archivo base: `CCGG PLANTILLA - RECUv45.xlsx`
+
+Formatos editables en la app: `.xlsx` y `.xlsm`. Los `.xls` antiguos no se guardan porque no usan el formato ZIP/XML que modifica el backend.
 
 **Hoja DATOS — rangos fijos:**
 | Tabla | Rango Excel | 0-indexed (filas, cols) |
@@ -22,8 +24,8 @@ Archivo: `CCGG PLANTILLA - RECUv45.xlsx`
 - R(17)=Nº CE, S(18)=texto CE — header en fila 4 (idx 3), datos desde fila 5 (idx 4)
 - V(21)=nº CE (celda combinada), W(22)=código CR (CR1.1...), X(23)=texto CR
 
-**Hoja PESOS:** ponderaciones por CR y unidad (si existe). Los CE/CR NO se leen de PESOS.
+**Hoja PESOS:** ponderaciones por CR y unidad. La app la usa para CE/criterios y matriz de ponderaciones.
 
 **Why:** El Excel ESO tiene una estructura diferente al Excel FP (plantilla313_dual). Los rangos son fijos y no hay que buscarlos por contenido.
 
-**How to apply:** Siempre usar rangos fijos. No buscar headers ni "UNIDADES" por texto. Si el usuario añade columnas nuevas en el Excel, revisar estos rangos.
+**How to apply:** Siempre usar rangos fijos para unidades e instrumentos. Para alumnos, respetar el bloque A4:B41 con maximo 37 alumnos. Si el usuario añade columnas nuevas en el Excel, revisar estos rangos y los limites backend antes de tocar UI.

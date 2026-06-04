@@ -7,4 +7,4 @@ Actúa con autonomía total en cambios de código — no pedir permiso para cada
 
 **Why:** El usuario lo indicó explícitamente en plantillaNotas: "puedes hacer las modificaciones que creas necesarias, no pidas permiso". Mismo comportamiento esperado en este proyecto.
 
-**How to apply:** Cuando hay una tarea acordada, ejecutarla directamente. La única salvaguarda requerida es crear `copiaseguridad/` con los archivos afectados antes de reescrituras grandes. No preguntar "¿procedo?" antes de cada paso.
+**How to apply:** Cuando hay una tarea acordada, ejecutarla directamente. Antes de reescrituras grandes del repo, crear backup externo o carpeta `copiaseguridad/` con los archivos afectados. Para guardados Excel de la app, mantener el patrón automático: temporal + validación + copia `*.autobak.xlsx`/`*.autobak.xlsm`. No preguntar "¿procedo?" antes de cada paso si la tarea ya está clara.
