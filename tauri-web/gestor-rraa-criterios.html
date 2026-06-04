@@ -237,6 +237,202 @@
             padding-right: 8px;
         }
 
+        .ponderacion-matrix-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 0 0 12px 0;
+        }
+
+        .ponderacion-matrix-summary {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .matrix-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 5px 10px;
+            border: 1px solid #c7d2fe;
+            border-radius: 999px;
+            background: #f8f9ff;
+            color: #3730a3;
+            font-size: 0.82em;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .matrix-chip.muted {
+            border-color: #e5e7eb;
+            background: #f9fafb;
+            color: #4b5563;
+        }
+
+        .ponderaciones-matrix-wrap {
+            max-height: calc(100vh - 250px);
+            overflow: auto;
+            margin-top: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: white;
+        }
+
+        #ponderacionesTable.ponderaciones-matrix {
+            min-width: 100%;
+            width: max-content;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        .ponderaciones-matrix col.matrix-col-unit {
+            width: 260px;
+        }
+
+        .ponderaciones-matrix col.matrix-col-inst {
+            width: 72px;
+        }
+
+        .ponderaciones-matrix col.matrix-col-cr {
+            width: 74px;
+        }
+
+        .ponderaciones-matrix th,
+        .ponderaciones-matrix td {
+            height: 42px;
+            padding: 5px 7px;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .ponderaciones-matrix thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: #eef2ff;
+            color: #1f2937;
+            font-size: 0.82em;
+            font-weight: 900;
+        }
+
+        .ponderaciones-matrix thead tr:nth-child(2) th {
+            top: 42px;
+            z-index: 4;
+        }
+
+        .ponderaciones-matrix .matrix-ce-header {
+            background: var(--ce-bg, #eef2ff);
+            border-top: 4px solid var(--ce-color, #6366f1);
+            color: #111827;
+        }
+
+        .ponderaciones-matrix .matrix-cr-header,
+        .ponderaciones-matrix .matrix-inst-header {
+            background: var(--ce-soft-bg, #f8f9ff);
+            border-top: 2px solid var(--ce-color, #6366f1);
+            color: #374151;
+            line-height: 1.25;
+        }
+
+        .ponderaciones-matrix .matrix-criteria-pct {
+            display: block;
+            margin-top: 2px;
+            color: #64748b;
+            font-size: 0.74em;
+            font-weight: 800;
+        }
+
+        .ponderaciones-matrix .matrix-unit-sticky {
+            position: sticky;
+            left: 0;
+            z-index: 6;
+            text-align: left;
+            background: #f8fafc;
+            color: #111827;
+            box-shadow: 1px 0 0 #cbd5e1;
+        }
+
+        .ponderaciones-matrix thead .matrix-unit-sticky {
+            z-index: 8;
+            background: #e0e7ff;
+            color: #1e1b4b;
+        }
+
+        .ponderaciones-matrix tbody .matrix-unit-sticky {
+            font-weight: 800;
+        }
+
+        .ponderaciones-matrix tbody tr:nth-child(even) td {
+            background-color: #fbfdff;
+        }
+
+        .ponderaciones-matrix tbody tr:nth-child(even) .matrix-unit-sticky {
+            background-color: #f1f5f9;
+        }
+
+        .ponderaciones-matrix tbody tr.matrix-row-active td {
+            background-color: #fff7ed;
+        }
+
+        .ponderaciones-matrix tbody tr.matrix-row-active .matrix-unit-sticky {
+            background-color: #ffedd5;
+        }
+
+        .ponderaciones-matrix td.matrix-col-active,
+        .ponderaciones-matrix th.matrix-col-active {
+            box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.22);
+        }
+
+        .ponderaciones-matrix input[type="number"],
+        .ponderaciones-matrix select {
+            width: 100%;
+            min-width: 0;
+            height: 30px;
+            padding: 3px 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background: white;
+            font-size: 0.88em;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .ponderaciones-matrix select {
+            padding-left: 4px;
+            padding-right: 2px;
+            color: #334155;
+            font-weight: 700;
+        }
+
+        .ponderaciones-matrix input[type="number"]:focus,
+        .ponderaciones-matrix select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.16);
+        }
+
+        .ponderaciones-matrix tfoot td {
+            background: #f3f4f6;
+            color: #374151;
+            font-size: 0.8em;
+            font-weight: 900;
+        }
+
+        .ponderaciones-matrix tfoot .matrix-unit-sticky {
+            background: #e5e7eb;
+        }
+
+        .ponderaciones-matrix .matrix-ce-total {
+            background: var(--ce-bg, #eef2ff);
+            border-top: 2px solid var(--ce-color, #6366f1);
+            color: #111827;
+        }
+
         table input:focus,
         table textarea:focus {
             outline: none;
@@ -819,7 +1015,7 @@
                 <div id="tab-ponderaciones" class="tab-content">
                     <div class="section">
                         <h2>3️⃣ Ponderación de CCEE por Unidad</h2>
-                        <div style="display:flex; gap:14px; margin-bottom:18px; align-items:flex-end;">
+                        <div style="display:none; gap:14px; margin-bottom:18px; align-items:flex-end;">
                             <div style="flex:1;">
                                 <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">📚 Unidad didáctica</label>
                                 <select id="unidadPonderacionSelect" onchange="seleccionarUnidadPonderacion(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
@@ -835,9 +1031,14 @@
                             <select id="instrPorCeSelect" onchange="cambiarInstrumentoCE(this.value)" style="flex:1; padding:7px 10px; border:1px solid #c7d2fe; border-radius:6px; font-size:0.95em; color:#1e1b4b; background:white; cursor:pointer;"></select>
                         </div>
 
-                        <div class="table-container ux-table-wrap">
-                            <table id="ponderacionesTable" class="ux-table">
-                                <thead>
+                        <div class="ponderacion-matrix-toolbar">
+                            <div class="ponderacion-matrix-summary" id="ponderacionesMatrixSummary"></div>
+                        </div>
+
+                        <div class="ponderaciones-matrix-wrap ux-table-wrap">
+                            <table id="ponderacionesTable" class="ux-table ponderaciones-matrix">
+                                <colgroup id="ponderacionesTableCols"></colgroup>
+                                <thead id="ponderacionesTableHead">
                                     <tr>
                                         <th class="col-ra">CE</th>
                                         <th class="col-codigo">Código</th>
@@ -847,6 +1048,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="ponderacionesTableBody"></tbody>
+                                <tfoot id="ponderacionesTableFoot"></tfoot>
                             </table>
                         </div>
                     </div>
@@ -1216,7 +1418,7 @@
             const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
             ponderacionesUnidad = [];
-            for (let rowIdx = 5; rowIdx < 21; rowIdx++) {
+            for (let rowIdx = 4; rowIdx < 19; rowIdx++) {
                 const row = json[rowIdx] || [];
                 const ponderaciones = {};
                 criteriosActuales.forEach((criterio) => {
@@ -1228,7 +1430,7 @@
                 });
 
                 ponderacionesUnidad.push({
-                    numero: rowIdx - 4,
+                    numero: rowIdx - 3,
                     rowIdx,
                     nombre: row[0] && String(row[0]) !== '0' ? String(row[0]) : '',
                     ponderaciones
@@ -1347,6 +1549,294 @@
         }
 
         // ===== ACTUALIZAR ESTADÍSTICAS =====
+        function obtenerUnidadesPonderacionVisibles() {
+            return ponderacionesUnidad.filter((unidad) =>
+                String(unidad.nombre || '').trim() !== '' &&
+                String(unidad.nombre || '').trim() !== '0'
+            );
+        }
+
+        function criteriosPonderacionVisibles() {
+            return criteriosActuales.filter((crit) =>
+                Number(crit.raNumero) &&
+                String(crit.texto || '').trim() !== ''
+            );
+        }
+
+        function gruposCePonderacion() {
+            return listaRANumeros().map((raNumero) => {
+                const ce = raaaActuales.find((item) => Number(item.numero) === Number(raNumero)) || { numero: raNumero, descripcion: '' };
+                const criterios = criteriosPonderacionVisibles().filter((crit) => Number(crit.raNumero) === Number(raNumero));
+                return { ce, criterios };
+            }).filter((grupo) => grupo.criterios.length > 0);
+        }
+
+        const MATRIX_CE_COLORS = [
+            { color: '#4f46e5', bg: '#e0e7ff', soft: '#eef2ff' },
+            { color: '#059669', bg: '#d1fae5', soft: '#ecfdf5' },
+            { color: '#d97706', bg: '#ffedd5', soft: '#fff7ed' },
+            { color: '#be185d', bg: '#fce7f3', soft: '#fdf2f8' },
+            { color: '#0284c7', bg: '#e0f2fe', soft: '#f0f9ff' },
+            { color: '#7c3aed', bg: '#ede9fe', soft: '#f5f3ff' }
+        ];
+
+        function estiloCeMatriz(idx) {
+            const item = MATRIX_CE_COLORS[idx % MATRIX_CE_COLORS.length];
+            return `--ce-color:${item.color};--ce-bg:${item.bg};--ce-soft-bg:${item.soft};`;
+        }
+
+        function valorPonderacionUnidad(unidad, colIdx) {
+            const values = unidad && unidad.ponderaciones ? unidad.ponderaciones[colIdx] : null;
+            const valor = values && values.ponderacion !== undefined ? values.ponderacion : 0;
+            return Number(valor) || 0;
+        }
+
+        function formatearNumeroMatriz(value) {
+            const numero = Number(value) || 0;
+            if (!numero) return '';
+            return Number.isInteger(numero) ? String(numero) : String(Number(numero.toFixed(4))).replace('.', ',');
+        }
+
+        function formatearResumenNumero(value) {
+            const numero = Number(value) || 0;
+            if (!numero) return '-';
+            return Number.isInteger(numero) ? String(numero) : String(Number(numero.toFixed(2))).replace('.', ',');
+        }
+
+        function formatearPorcentajeMatriz(value) {
+            const numero = Number(value) || 0;
+            if (!numero) return '-';
+            return `${String(Number((numero * 100).toFixed(1))).replace('.', ',')}%`;
+        }
+
+        function codigoInstrumentoUnidad(unidad, ceNumero) {
+            const actual = unidad && unidad.instrPorCe ? unidad.instrPorCe[String(ceNumero)] : '';
+            if (!actual) return '';
+            return typeof actual === 'object' ? String(actual.codigo || '') : String(actual || '');
+        }
+
+        function opcionesInstrumentosMatriz(codigoActual) {
+            const actual = String(codigoActual || '');
+            const base = `<option value="" ${actual ? '' : 'selected'}>-</option>`;
+            return base + instrumentosDisponibles.map((instr) => {
+                const codigo = String(instr.codigo || instr || '');
+                const nombre = String(instr.nombre || '');
+                const label = nombre ? `${codigo} - ${nombre}` : codigo;
+                return `<option value="${escaparHtml(codigo)}" ${codigo === actual ? 'selected' : ''}>${escaparHtml(label)}</option>`;
+            }).join('');
+        }
+
+        function mostrarTablaPonderacionesUnidad() {
+            const table = document.getElementById('ponderacionesTable');
+            const colgroup = document.getElementById('ponderacionesTableCols');
+            const thead = document.getElementById('ponderacionesTableHead');
+            const tbody = document.getElementById('ponderacionesTableBody');
+            const tfoot = document.getElementById('ponderacionesTableFoot');
+            const summary = document.getElementById('ponderacionesMatrixSummary');
+            if (!table || !colgroup || !thead || !tbody || !tfoot) return;
+
+            const unidades = obtenerUnidadesPonderacionVisibles();
+            const grupos = gruposCePonderacion();
+            const totalCrs = grupos.reduce((sum, grupo) => sum + grupo.criterios.length, 0);
+
+            if (summary) {
+                summary.innerHTML = `
+                    <span class="matrix-chip">Unidades ${unidades.length}</span>
+                    <span class="matrix-chip">CE ${grupos.length}</span>
+                    <span class="matrix-chip">CR ${totalCrs}</span>
+                    <span class="matrix-chip muted">Enter baja de fila</span>
+                `;
+            }
+
+            if (!unidades.length || !grupos.length) {
+                colgroup.innerHTML = '<col class="matrix-col-unit">';
+                thead.innerHTML = '<tr><th class="matrix-unit-sticky">Unidad</th></tr>';
+                tbody.innerHTML = '<tr><td class="matrix-unit-sticky">No hay unidades o criterios incluidos.</td></tr>';
+                tfoot.innerHTML = '';
+                return;
+            }
+
+            colgroup.innerHTML = '<col class="matrix-col-unit">' + grupos.map((grupo) => {
+                return '<col class="matrix-col-inst">' + grupo.criterios.map(() => '<col class="matrix-col-cr">').join('');
+            }).join('');
+
+            thead.innerHTML = `
+                <tr>
+                    <th class="matrix-unit-sticky" rowspan="2">Unidad</th>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const ceNumero = Number(grupo.ce.numero);
+                        const descripcion = String(grupo.ce.descripcion || '');
+                        const titulo = descripcion ? ` title="${escaparHtml(descripcion)}"` : '';
+                        return `<th class="matrix-ce-header" data-col-group="${ceNumero}" colspan="${grupo.criterios.length + 1}" style="${estiloCeMatriz(grupoIdx)}"${titulo}>CE ${ceNumero}</th>`;
+                    }).join('')}
+                </tr>
+                <tr>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const ceNumero = Number(grupo.ce.numero);
+                        const style = estiloCeMatriz(grupoIdx);
+                        const instCol = `<th class="matrix-inst-header" data-col-key="inst-${ceNumero}" style="${style}">Inst.</th>`;
+                        const crCols = grupo.criterios.map((crit) => {
+                            const pct = Number(crit.ponderacionCR) > 0 ? `<span class="matrix-criteria-pct">${formatearPorcentajeMatriz(crit.ponderacionCR)}</span>` : '';
+                            return `<th class="matrix-cr-header" data-col-key="cr-${crit.colIdx}" style="${style}" title="${escaparHtml(crit.texto || '')}">${escaparHtml(crit.codigo || crit.nombre)}${pct}</th>`;
+                        }).join('');
+                        return instCol + crCols;
+                    }).join('')}
+                </tr>
+            `;
+
+            tbody.innerHTML = unidades.map((unidad, rowPos) => {
+                const nombre = `U${unidad.numero} - ${escaparHtml(unidad.nombre || '')}`;
+                const cells = grupos.map((grupo, grupoIdx) => {
+                    const ceNumero = Number(grupo.ce.numero);
+                    const style = estiloCeMatriz(grupoIdx);
+                    const instrActual = codigoInstrumentoUnidad(unidad, ceNumero);
+                    const instrColIdx = Number(grupo.ce.instrColIdx) || 0;
+                    const instCell = `
+                        <td data-col-key="inst-${ceNumero}" style="${style}">
+                            <select data-matrix-cell data-row-pos="${rowPos}" data-col-pos="${calcularColPosMatriz(grupos, grupoIdx, -1)}"
+                                onfocus="resaltarCeldaMatriz(this)" onkeydown="navegarMatrizPonderaciones(event)"
+                                onchange="actualizarInstrumentoPonderacion(${unidad.rowIdx}, ${ceNumero}, ${instrColIdx}, this.value)">
+                                ${opcionesInstrumentosMatriz(instrActual)}
+                            </select>
+                        </td>`;
+                    const crCells = grupo.criterios.map((crit, critPos) => {
+                        const colPos = calcularColPosMatriz(grupos, grupoIdx, critPos);
+                        const val = valorPonderacionUnidad(unidad, crit.colIdx);
+                        return `
+                            <td data-col-key="cr-${crit.colIdx}" style="${style}">
+                                <input type="number" value="${formatearNumeroMatriz(val).replace(',', '.')}" min="0" step="1"
+                                    data-matrix-cell data-row-pos="${rowPos}" data-col-pos="${colPos}"
+                                    onfocus="resaltarCeldaMatriz(this)" onkeydown="navegarMatrizPonderaciones(event)"
+                                    onchange="actualizarPonderacionUnidadMatriz(${unidad.rowIdx}, ${crit.colIdx}, this.value)" />
+                            </td>`;
+                    }).join('');
+                    return instCell + crCells;
+                }).join('');
+                return `<tr data-row-pos="${rowPos}">
+                    <td class="matrix-unit-sticky">${nombre}</td>
+                    ${cells}
+                </tr>`;
+            }).join('');
+
+            tfoot.innerHTML = construirFooterMatrizPonderaciones(unidades, grupos);
+        }
+
+        function calcularColPosMatriz(grupos, grupoIdx, critPos) {
+            let col = 0;
+            for (let idx = 0; idx < grupoIdx; idx += 1) {
+                col += grupos[idx].criterios.length + 1;
+            }
+            return col + critPos + 1;
+        }
+
+        function construirFooterMatrizPonderaciones(unidades, grupos) {
+            const filaTotalCr = grupos.map((grupo, grupoIdx) => {
+                const style = estiloCeMatriz(grupoIdx);
+                return `<td style="${style}"></td>` + grupo.criterios.map((crit) => {
+                    const total = unidades.reduce((sum, unidad) => sum + valorPonderacionUnidad(unidad, crit.colIdx), 0);
+                    return `<td data-total-cr="${crit.colIdx}" style="${style}">${formatearResumenNumero(total)}</td>`;
+                }).join('');
+            }).join('');
+
+            const filaPctCr = grupos.map((grupo, grupoIdx) => {
+                const style = estiloCeMatriz(grupoIdx);
+                return `<td style="${style}"></td>` + grupo.criterios.map((crit) => {
+                    return `<td style="${style}">${formatearPorcentajeMatriz(crit.ponderacionCR)}</td>`;
+                }).join('');
+            }).join('');
+
+            const filaCe = grupos.map((grupo, grupoIdx) => {
+                const ceTotal = Number(grupo.ce.ponderacionTotal) || grupo.criterios.reduce((sum, crit) => sum + (Number(crit.ponderacionCR) || 0), 0);
+                return `<td class="matrix-ce-total" colspan="${grupo.criterios.length + 1}" style="${estiloCeMatriz(grupoIdx)}">${formatearPorcentajeMatriz(ceTotal)}</td>`;
+            }).join('');
+
+            return `
+                <tr>
+                    <td class="matrix-unit-sticky">Ponderacion final del criterio</td>
+                    ${filaTotalCr}
+                </tr>
+                <tr>
+                    <td class="matrix-unit-sticky">% ponderacion final C.R.</td>
+                    ${filaPctCr}
+                </tr>
+                <tr>
+                    <td class="matrix-unit-sticky">Ponderacion final CE</td>
+                    ${filaCe}
+                </tr>
+            `;
+        }
+
+        function actualizarPonderacionUnidadMatriz(rowIdx, colIdx, value) {
+            const unidad = ponderacionesUnidad.find((item) => Number(item.rowIdx) === Number(rowIdx));
+            if (!unidad) return;
+            if (!unidad.ponderaciones) unidad.ponderaciones = {};
+            unidad.ponderaciones[colIdx] = unidad.ponderaciones[colIdx] || { ponderacion: 0 };
+            unidad.ponderaciones[colIdx].ponderacion = parseFloat(String(value || '').replace(',', '.')) || 0;
+            marcarCambio();
+            actualizarTotalesMatrizPonderaciones();
+            if (ceResumenActivo) mostrarTablaResumen();
+        }
+
+        function actualizarInstrumentoPonderacion(rowIdx, ceNumero, instrColIdx, codigo) {
+            const unidad = ponderacionesUnidad.find((item) => Number(item.rowIdx) === Number(rowIdx));
+            if (!unidad) return;
+            if (!unidad.instrPorCe) unidad.instrPorCe = {};
+            unidad.instrPorCe[String(ceNumero)] = { codigo: String(codigo || ''), colIdx: Number(instrColIdx) || 0 };
+            marcarCambio();
+            if (ceResumenActivo) mostrarTablaResumen();
+        }
+
+        function actualizarTotalesMatrizPonderaciones() {
+            const unidades = obtenerUnidadesPonderacionVisibles();
+            document.querySelectorAll('#ponderacionesTable [data-total-cr]').forEach((cell) => {
+                const colIdx = cell.getAttribute('data-total-cr');
+                const total = unidades.reduce((sum, unidad) => sum + valorPonderacionUnidad(unidad, colIdx), 0);
+                cell.textContent = formatearResumenNumero(total);
+            });
+        }
+
+        function resaltarCeldaMatriz(control) {
+            const table = document.getElementById('ponderacionesTable');
+            if (!table) return;
+            table.querySelectorAll('.matrix-row-active').forEach((row) => row.classList.remove('matrix-row-active'));
+            table.querySelectorAll('.matrix-col-active').forEach((cell) => cell.classList.remove('matrix-col-active'));
+
+            const row = control.closest('tr');
+            if (row) row.classList.add('matrix-row-active');
+
+            const cell = control.closest('[data-col-key]');
+            const colKey = cell ? cell.getAttribute('data-col-key') : '';
+            if (!colKey) return;
+            table.querySelectorAll('[data-col-key]').forEach((item) => {
+                if (item.getAttribute('data-col-key') === colKey) item.classList.add('matrix-col-active');
+            });
+        }
+
+        function navegarMatrizPonderaciones(event) {
+            const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter'];
+            if (!keys.includes(event.key)) return;
+            const cursor = typeof event.target.selectionStart === 'number' ? event.target.selectionStart : null;
+            const valueLength = String(event.target.value || '').length;
+            if (event.key === 'ArrowLeft' && cursor !== null && cursor > 0) return;
+            if (event.key === 'ArrowRight' && cursor !== null && cursor < valueLength) return;
+
+            const rowPos = Number(event.target.dataset.rowPos);
+            const colPos = Number(event.target.dataset.colPos);
+            let nextRow = rowPos;
+            let nextCol = colPos;
+            if (event.key === 'ArrowDown' || event.key === 'Enter') nextRow += 1;
+            if (event.key === 'ArrowUp') nextRow -= 1;
+            if (event.key === 'ArrowRight') nextCol += 1;
+            if (event.key === 'ArrowLeft') nextCol -= 1;
+
+            const selector = `#ponderacionesTable [data-matrix-cell][data-row-pos="${nextRow}"][data-col-pos="${nextCol}"]`;
+            const next = document.querySelector(selector);
+            if (!next) return;
+            event.preventDefault();
+            next.focus();
+            if (typeof next.select === 'function') next.select();
+        }
+
         function actualizarStatsRRAA() {
             document.getElementById('totalRRAA').textContent = raaaActuales.length;
         }
@@ -1490,7 +1980,7 @@
             if (!unidad || !ce) return;
             if (!unidad.instrPorCe) unidad.instrPorCe = {};
             unidad.instrPorCe[String(ponderacionRaActiva)] = { codigo, colIdx: ce.instrColIdx };
-            activarAutoguardado();
+            marcarCambio();
         }
 
         function primeraUnidadPonderacion() {
@@ -1823,7 +2313,7 @@
             if (!unidad) return;
             if (!unidad.instrPorCe) unidad.instrPorCe = {};
             unidad.instrPorCe[String(ceResumenActivo)] = { codigo, colIdx: instrColIdx };
-            activarAutoguardado();
+            marcarCambio();
         }
 
         function cambiarTab(tab) {
