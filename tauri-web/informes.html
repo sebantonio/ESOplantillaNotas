@@ -473,6 +473,7 @@
                 <h1>Informes de alumnos</h1>
                 <p>Resumen imprimible por alumno, evolución por evaluaciones, medias del grupo y detalle de RRAA.</p>
                 <div id="activeFileBadge" class="file-badge">📂 Archivo: —</div>
+                <div id="syncBadge" class="file-badge">🔄 Sin sincronizar</div>
             </div>
         </header>
 
@@ -557,6 +558,7 @@
             students: [],
             selectedStudent: ""
         };
+        const REPORT_PREFS_KEY = "informesViewPrefs";
 
         const messageBox = document.getElementById("message");
         const studentSelect = document.getElementById("studentSelect");
@@ -569,6 +571,7 @@
         const averageGrade = document.getElementById("averageGrade");
         const passedEvaluations = document.getElementById("passedEvaluations");
         const activeFileBadge = document.getElementById("activeFileBadge");
+        const syncBadge = document.getElementById("syncBadge");
         const evolutionChart = document.getElementById("evolutionChart");
         const summaryBody = document.getElementById("summaryBody");
         const focusTitle = document.getElementById("focusTitle");
@@ -581,20 +584,24 @@
                 return;
             }
 
+            const prefs = getReportPrefs();
+
             evaluationFocus.innerHTML = EVALUATIONS.map((item) => (
                 `<option value="${item.value}">${item.label}</option>`
             )).join("");
-            evaluationFocus.value = "final";
+            evaluationFocus.value = prefs.evaluation || "final";
 
             reloadButton.addEventListener("click", loadReports);
             finalButton.addEventListener("click", showFinalEvaluation);
             printButton.addEventListener("click", () => window.print());
             studentSelect.addEventListener("change", () => {
                 state.selectedStudent = studentSelect.value;
+                saveReportPrefs();
                 renderReport();
             });
             evaluationFocus.addEventListener("change", async () => {
                 const evalValue = evaluationFocus.value;
+                saveReportPrefs();
                 if (!_evaluationsCache.has(evalValue)) {
                     showMessage("Cargando evaluación...", "info");
                     await loadEvaluation(evalValue);
@@ -602,6 +609,13 @@
                     clearMessage();
                 }
                 renderReport();
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.ctrlKey && event.key.toLowerCase() === "s") {
+                    event.preventDefault();
+                    loadReports();
+                }
             });
 
             loadReports();
@@ -638,11 +652,18 @@
                 }
 
                 if (!state.selectedStudent || !state.students.includes(state.selectedStudent)) {
-                    state.selectedStudent = state.students[0];
+                    const prefs = getReportPrefs();
+                    state.selectedStudent = prefs.student && state.students.includes(prefs.student)
+                        ? prefs.student
+                        : state.students[0];
                 }
 
                 renderStudentSelect();
                 renderReport();
+                if (syncBadge) {
+                    syncBadge.textContent = `🔄 Sincronizado ${new Date().toLocaleTimeString()}`;
+                }
+                saveReportPrefs();
                 showMessage(`Informe cargado. Última sincronización: ${new Date().toLocaleTimeString()}.`, "success");
             } catch (error) {
                 showMessage(error.message || "No se pudieron cargar los informes.", "error");
@@ -706,6 +727,24 @@
                 `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
             )).join("");
             studentSelect.value = state.selectedStudent;
+        }
+
+        function saveReportPrefs() {
+            try {
+                const prefs = {
+                    evaluation: evaluationFocus.value || "final",
+                    student: state.selectedStudent || ""
+                };
+                localStorage.setItem(REPORT_PREFS_KEY, JSON.stringify(prefs));
+            } catch {}
+        }
+
+        function getReportPrefs() {
+            try {
+                return JSON.parse(localStorage.getItem(REPORT_PREFS_KEY) || "null") || {};
+            } catch {
+                return {};
+            }
         }
 
         // Sistema de batching para reducir reflows.

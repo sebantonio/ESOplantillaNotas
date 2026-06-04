@@ -237,6 +237,7 @@
     <div class="page-header">
         <h1>📓 Diario de Actividades</h1>
         <div class="module-name" id="moduleNameDisplay">Módulo: —</div>
+        <div class="module-name" id="syncStatusDisplay">Sin sincronizar</div>
     </div>
 
     <div class="main-layout">
@@ -358,8 +359,9 @@
             <!-- Entradas completas del día -->
             <div class="card">
                 <div class="card-title">Historial del día</div>
-                <div class="form-group" style="margin-bottom:10px;">
+                <div class="form-group" style="margin-bottom:10px; display:flex; gap:8px;">
                     <input type="search" id="entriesSearch" placeholder="Buscar en actividad, tarea o incidencia...">
+                    <button type="button" class="nav-button" id="clearEntriesSearchBtn">Limpiar</button>
                 </div>
                 <div id="selectedDateLabel">Selecciona un día en el calendario</div>
                 <div id="entriesList"></div>
@@ -384,6 +386,7 @@
     let moduleName = '';
     let allEntries = [];
     let entriesSearch = '';
+    const VIEW_PREFS_KEY = 'diarioViewPrefs';
 
     async function init() {
         if (!bridge) { showToast('No hay conexión con el archivo Excel.', true); return; }
@@ -391,11 +394,19 @@
             const res = await bridge.getDiarioData();
             moduleName = res.modulo || '';
             allEntries = res.entradas || [];
+            document.getElementById('syncStatusDisplay').textContent = `Sincronizado ${new Date().toLocaleTimeString()}`;
         } catch (e) {
             // sin archivo seleccionado: continuar sin módulo
+            document.getElementById('syncStatusDisplay').textContent = 'Sin conexión al Excel';
         }
         document.getElementById('moduleNameDisplay').textContent = 'Módulo: ' + (moduleName || '—');
         document.getElementById('moduleInput').value = moduleName;
+        const prefs = loadViewPrefs();
+        if (prefs.entriesSearch) {
+            entriesSearch = String(prefs.entriesSearch);
+            const searchInput = document.getElementById('entriesSearch');
+            if (searchInput) searchInput.value = entriesSearch;
+        }
         // Pre-seleccionar primera hora
         const firstHora = document.querySelector('.hora-btn');
         if (firstHora) { firstHora.classList.add('active'); selectedHora = firstHora.dataset.hora; }
@@ -602,12 +613,46 @@
         setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
     }
 
+    function saveViewPrefs() {
+        try {
+            localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify({ entriesSearch }));
+        } catch {}
+    }
+
+    function loadViewPrefs() {
+        try {
+            return JSON.parse(localStorage.getItem(VIEW_PREFS_KEY) || 'null') || {};
+        } catch {
+            return {};
+        }
+    }
+
     init();
 
     document.getElementById('entriesSearch')?.addEventListener('input', (e) => {
         entriesSearch = (e.target.value || '').trim();
+        saveViewPrefs();
         renderMiniEntries();
         renderEntries();
+    });
+
+    document.getElementById('clearEntriesSearchBtn')?.addEventListener('click', () => {
+        entriesSearch = '';
+        const search = document.getElementById('entriesSearch');
+        if (search) search.value = '';
+        saveViewPrefs();
+        renderMiniEntries();
+        renderEntries();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn && !saveBtn.disabled) {
+                saveBtn.click();
+            }
+        }
     });
 })();
 </script>
