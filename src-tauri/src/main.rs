@@ -916,10 +916,8 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
         if nombre.is_empty() { continue; }
         let norm = normalize_plain(&nombre);
         if norm.contains("MEDIA") || norm.contains("PONDERACION") { continue; }
-        let rraa_vals: Vec<Value> = ra_columns.iter().map(|ra| {
-            let ci = ra["colIdx"].as_u64().unwrap() as usize;
-            json!({ "colIdx": ci, "label": ra["label"], "nota": cell_f64(&rows, row_idx, ci), "display": cell_str(&rows, row_idx, ci) })
-        }).collect();
+
+        // Criterios: celdas planas (no fórmulas) — siempre correctos
         let crit_vals: Vec<Value> = criteria.iter().map(|c| {
             let ci = c["colIdx"].as_u64().unwrap() as usize;
             let rec_ci = c["recColIdx"].as_i64().filter(|&n| n >= 0).map(|n| n as usize);
@@ -930,10 +928,59 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
                 "recDisplay": rec_ci.map(|r| cell_str(&rows, row_idx, r)).unwrap_or_default(),
             })
         }).collect();
-        let final_display = final_cb_xml.get(&row_idx).cloned()
-            .filter(|s| !s.is_empty() && s.replace(',', ".").parse::<f64>().is_ok())
-            .unwrap_or_else(|| cell_str(&rows, row_idx, final_col));
-        let final_f64 = final_display.parse::<f64>().unwrap_or_else(|_| cell_f64(&rows, row_idx, final_col).unwrap_or(0.0));
+
+        // NOTA CE: calcular desde criterios brutos (evita cache stale de fórmulas Excel)
+        let rraa_vals: Vec<Value> = ra_columns.iter().map(|ra| {
+            let ra_ci = ra["colIdx"].as_u64().unwrap() as usize;
+            let crs: Vec<&Value> = criteria.iter()
+                .filter(|c| c["raColIdx"].as_u64().map(|x| x as usize) == Some(ra_ci))
+                .collect();
+            let (nota, display) = if crs.is_empty() {
+                let n = cell_f64(&rows, row_idx, ra_ci).unwrap_or(0.0);
+                (n, format!("{:.2}", n).replace('.', ","))
+            } else {
+                let mut ws = 0.0f64;
+                let mut ps = 0.0f64;
+                for cr in &crs {
+                    let cr_ci = cr["colIdx"].as_u64().unwrap() as usize;
+                    let peso = cell_f64(&rows, 12, cr_ci).unwrap_or(0.0);
+                    let nota = cell_f64(&rows, row_idx, cr_ci).unwrap_or(0.0);
+                    let rec_ci = cr["recColIdx"].as_i64().filter(|&n| n >= 0).map(|n| n as usize);
+                    let rec = rec_ci.and_then(|r| cell_f64(&rows, row_idx, r));
+                    let eff = match rec { Some(r) if r > 0.0 => r.max(nota), _ => nota };
+                    ws += peso * eff;
+                    ps += peso;
+                }
+                let n = if ps > 0.0 { ws / ps } else { cell_f64(&rows, row_idx, ra_ci).unwrap_or(0.0) };
+                (n, format!("{:.2}", n).replace('.', ","))
+            };
+            json!({ "colIdx": ra_ci, "label": ra["label"], "numero": ra["numero"], "nota": nota, "display": display })
+        }).collect();
+
+        // NOTA FINAL: calcular desde NOTA CE con pesos de la fila 13 (evita cache stale)
+        let (final_f64, final_display) = {
+            let weighted: Vec<(f64, f64)> = ra_columns.iter().zip(rraa_vals.iter()).filter_map(|(ra, rv)| {
+                let peso = ra["peso"].as_str()
+                    .and_then(|s| s.replace(',', ".").parse::<f64>().ok())
+                    .unwrap_or(0.0);
+                let nota = rv["nota"].as_f64().unwrap_or(0.0);
+                if peso > 0.0 { Some((peso, nota)) } else { None }
+            }).collect();
+            if weighted.is_empty() {
+                let fd = final_cb_xml.get(&row_idx).cloned()
+                    .filter(|s| !s.is_empty() && s.replace(',', ".").parse::<f64>().is_ok())
+                    .unwrap_or_else(|| cell_str(&rows, row_idx, final_col));
+                let ff = fd.replace(',', ".").parse::<f64>()
+                    .unwrap_or_else(|_| cell_f64(&rows, row_idx, final_col).unwrap_or(0.0));
+                (ff, fd)
+            } else {
+                let ws: f64 = weighted.iter().map(|(p, n)| p * n).sum();
+                let ps: f64 = weighted.iter().map(|(p, _)| p).sum();
+                let n = if ps > 0.0 { ws / ps } else { 0.0 };
+                (n, format!("{:.2}", n).replace('.', ","))
+            }
+        };
+
         alumnos.push(json!({ "rowIdx": row_idx, "numero": alumnos.len() + 1, "nombre": nombre, "final": final_f64, "finalDisplay": final_display, "rraa": rraa_vals, "criterios": crit_vals }));
     }
 
