@@ -2163,7 +2163,7 @@
         }
 
         function esCodigoCriterio(value) {
-            return Boolean(value && /^\d+\.[a-z]\)/i.test(String(value).trim()));
+            return Boolean(value && /^CR\d+\.\d+$/i.test(String(value).trim()));
         }
 
         function numeroRaDesdeCriterio(value) {

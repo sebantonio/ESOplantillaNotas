@@ -345,7 +345,15 @@ fn excel_save_unidades(unidades: Value) -> Result<Value, String> {
 
 // En ESO los códigos de criterio son del tipo "CR1.1", "CR2.3", etc.
 fn is_cr_code(s: &str) -> bool {
-    Regex::new(r"(?i)^CR\d+\.\d+$").unwrap().is_match(s.trim())
+    parse_cr_code(s).is_some()
+}
+
+fn parse_cr_code(s: &str) -> Option<(i64, i64)> {
+    let re = Regex::new(r"(?i)^CR(\d+)\.(\d+)$").unwrap();
+    let caps = re.captures(s.trim())?;
+    let ce_num = caps.get(1)?.as_str().parse::<i64>().ok()?;
+    let cr_num = caps.get(2)?.as_str().parse::<i64>().ok()?;
+    Some((ce_num, cr_num))
 }
 
 // Compatibilidad: is_criterion_code no se usa en ESO pero se conserva para funciones heredadas
@@ -419,14 +427,15 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         }
         if is_cr_code(&cr_code) {
             empty_streak = 0;
-            let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(current_ce_num))
+            let ce_num = parse_cr_code(&cr_code).map(|(ce, _)| ce).unwrap_or(current_ce_num);
+            let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
                 .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
             criterios.push(json!({
                 "numero": criterios.len() + 1,
                 "codigo": cr_code.clone(),
                 "nombre": cr_code.clone(),
                 "originalCodigo": cr_code.clone(),
-                "raNumero": current_ce_num,
+                "raNumero": ce_num,
                 "raDescripcion": ce_desc,
                 "texto": cr_text,
                 "colIdx": criterios.len()
@@ -445,17 +454,29 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         if rows.len() > 3 {
             for ci in 0..rows[3].len() {
                 let code = cell_str(rows, 3, ci);
-                if is_cr_code(&code) { cr_col_map.insert(code, ci); }
+                if is_cr_code(&code) { cr_col_map.insert(normalize_criterion_code(&code), ci); }
             }
         }
     }
     // Ponderación total por CE (fila idx 22) y por CR (fila idx 21) en PESOS
     // ce_first_col: ce_num → columna mínima de sus CR (puede ser col "Inst ev." anterior)
+    let criterios: Vec<Value> = criterios.into_iter().filter(|c| {
+        let cr_code = c["codigo"].as_str().unwrap_or("");
+        let Some((ce_num, cr_num)) = parse_cr_code(cr_code) else { return false; };
+        c["raNumero"].as_i64() == Some(ce_num)
+            && cr_num <= 6
+            && cr_col_map.contains_key(&normalize_criterion_code(cr_code))
+    }).enumerate().map(|(idx, mut c)| {
+        if let Value::Object(ref mut obj) = c {
+            obj.insert("numero".to_string(), json!(idx + 1));
+        }
+        c
+    }).collect();
     let mut ce_first_col: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
     for c in &criterios {
         let ce_num = c["raNumero"].as_i64().unwrap_or(0);
         let cr_code = c["codigo"].as_str().unwrap_or("");
-        if let Some(&col) = cr_col_map.get(cr_code) {
+        if let Some(&col) = cr_col_map.get(&normalize_criterion_code(cr_code)) {
             let entry = ce_first_col.entry(ce_num).or_insert(col);
             if col < *entry { *entry = col; }
         }
@@ -483,7 +504,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     // Añadir ponderacionCR y actualCol (columna real en PESOS) a cada criterio
     let criterios: Vec<Value> = criterios.into_iter().map(|c| {
         let cr_code = c["codigo"].as_str().unwrap_or("").to_string();
-        let actual_col = cr_col_map.get(&cr_code).copied();
+        let actual_col = cr_col_map.get(&normalize_criterion_code(&cr_code)).copied();
         let pct = actual_col
             .and_then(|col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 21, col)))
             .unwrap_or(0.0);
@@ -513,7 +534,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         for c in &criterios {
             let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
             let cr_code = c["codigo"].as_str().unwrap_or("");
-            let actual_col = cr_col_map.get(cr_code).copied().unwrap_or(ci);
+            let actual_col = cr_col_map.get(&normalize_criterion_code(cr_code)).copied().unwrap_or(ci);
             let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, row_idx, actual_col)).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
