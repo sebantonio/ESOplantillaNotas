@@ -221,6 +221,67 @@
             margin-bottom: 18px;
         }
 
+        .report-chart-pair {
+            display: grid;
+            grid-template-columns: minmax(260px, 0.85fr) minmax(300px, 1.15fr);
+            gap: 14px;
+            align-items: stretch;
+        }
+
+        .report-chart-pair .card {
+            padding: 14px;
+        }
+
+        .report-chart-pair h2 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        .chart-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chart-card-head h2 {
+            margin: 0;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 10px;
+            color: #61708a;
+            font-size: 0.78rem;
+        }
+
+        .chart-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chart-swatch {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            border-radius: 2px;
+        }
+
+        .radar-chart {
+            width: 100%;
+            max-width: 280px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .histogram-chart {
+            width: 100%;
+            display: block;
+        }
+
         .card {
             padding: 18px;
         }
@@ -413,6 +474,7 @@
 
             .toolbar,
             .report-grid,
+            .report-chart-pair,
             .stats {
                 grid-template-columns: 1fr;
             }
@@ -517,23 +579,20 @@
             </article>
         </section>
 
-        <section class="chart-section">
+        <section class="chart-section report-chart-pair">
             <article class="card panel">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-                    <h2 style="margin:0">Diagrama de araña por CE</h2>
-                    <div style="display:flex;gap:14px;font-size:0.82rem;color:#61708a">
-                        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:rgba(99,102,241,0.55);border-radius:3px;display:inline-block"></span>Media grupo</span>
-                        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;background:rgba(220,38,38,0.5);border-radius:3px;display:inline-block"></span>Alumno</span>
+                <div class="chart-card-head">
+                    <h2>Diagrama de araña por CE</h2>
+                    <div class="chart-legend">
+                        <span><span class="chart-swatch" style="background:rgba(99,102,241,0.55)"></span>Grupo</span>
+                        <span><span class="chart-swatch" style="background:rgba(220,38,38,0.5)"></span>Alumno</span>
                     </div>
                 </div>
-                <svg id="radarChart" viewBox="0 0 360 360" role="img" aria-label="Diagrama de araña CE" style="width:100%;max-width:400px;display:block;margin:0 auto"></svg>
+                <svg id="radarChart" class="radar-chart" viewBox="0 0 360 360" role="img" aria-label="Diagrama de araña CE"></svg>
             </article>
-        </section>
-
-        <section class="chart-section">
             <article class="card panel">
                 <h2>Distribución de notas del grupo</h2>
-                <svg id="histogramChart" viewBox="0 0 720 200" role="img" aria-label="Histograma de notas" style="width:100%;display:block"></svg>
+                <svg id="histogramChart" class="histogram-chart" viewBox="0 0 720 200" role="img" aria-label="Histograma de notas"></svg>
             </article>
         </section>
 

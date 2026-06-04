@@ -25,6 +25,7 @@
             --accent: #4338ca;
             --warning: #b45309;
             --shadow: 0 16px 40px rgba(31, 41, 55, 0.12);
+            --section-shadow: 0 18px 44px rgba(31, 41, 55, 0.13), 0 1px 0 rgba(255, 255, 255, 0.78) inset;
         }
 
         body {
@@ -150,11 +151,16 @@
             background: rgba(255, 255, 255, 0.94);
             border: 1px solid rgba(216, 225, 238, 0.9);
             border-radius: 8px;
-            box-shadow: var(--shadow);
+            box-shadow: var(--section-shadow);
         }
 
         .daily-panel {
+            border-left: 5px solid rgba(99, 102, 241, 0.38);
             padding: clamp(24px, 4vw, 38px);
+        }
+
+        .side-panel {
+            border-left: 5px solid rgba(8, 145, 178, 0.34);
         }
 
         .section-kicker {
@@ -488,6 +494,7 @@
         }
 
         .setup-panel {
+            border-left: 5px solid rgba(180, 83, 9, 0.26);
             padding: 22px;
             margin-bottom: 24px;
         }
@@ -790,10 +797,16 @@
 
         .zone {
             margin-top: 14px;
-            background: rgba(248, 250, 252, 0.78);
-            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.84);
+            border: 1px solid rgba(216, 225, 238, 0.95);
+            border-left: 4px solid rgba(99, 102, 241, 0.42);
             border-radius: 8px;
             padding: 12px 14px 14px;
+            box-shadow: 0 10px 24px rgba(31, 41, 55, 0.08);
+        }
+
+        #alertasPanel {
+            border-left-color: rgba(245, 158, 11, 0.58);
         }
 
         .zone-hdr {
@@ -882,8 +895,9 @@
         .consulta-panel {
             background: rgba(255, 255, 255, 0.94);
             border: 1px solid rgba(216, 225, 238, 0.9);
+            border-left: 5px solid rgba(15, 118, 110, 0.34);
             border-radius: 8px;
-            box-shadow: var(--shadow);
+            box-shadow: var(--section-shadow);
             padding: 18px 20px 20px;
             margin-bottom: 22px;
         }
@@ -959,7 +973,7 @@
                     <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
                     <a class="nav-link" href="index.html">⌂ Inicio</a>
                 </nav>
-                <div class="version" id="appVersionBadge">v0.1.101</div>
+                <div class="version" id="appVersionBadge">v0.1.103</div>
             </div>
         </header>
 

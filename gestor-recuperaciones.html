@@ -465,7 +465,7 @@
                         const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
                         const pendiente = crNota > 0 && crNota < 5 && recRaw === "";
                         const pendClass = pendiente ? " rec-pending" : "";
-                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠ pend." : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)"></td>`;
+                        bodyHtml += `<td class="td-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠" : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" onblur="saveRecFromInput(this)"></td>`;
                     }
                 });
             });
