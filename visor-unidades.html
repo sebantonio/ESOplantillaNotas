@@ -196,7 +196,8 @@
     function refreshStickyHeaderOffset() {
         requestAnimationFrame(() => {
             const row = notasHead?.querySelector("tr:first-child");
-            const height = row ? Math.ceil(row.getBoundingClientRect().height) : 34;
+            const anchor = row?.querySelector("th:not([rowspan])") || row;
+            const height = anchor ? Math.ceil(anchor.getBoundingClientRect().height) : 34;
             document.documentElement.style.setProperty("--sticky-head-row-1", `${height}px`);
         });
     }

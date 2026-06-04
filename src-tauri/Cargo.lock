@@ -1017,7 +1017,7 @@ dependencies = [
 
 [[package]]
 name = "eso-notas-local"
-version = "0.1.107"
+version = "0.1.109"
 dependencies = [
  "calamine",
  "chrono",

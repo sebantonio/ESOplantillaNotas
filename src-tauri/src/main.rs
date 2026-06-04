@@ -1067,121 +1067,11 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
     }))
 }
 
-fn collect_unit_note_updates(path: &str) -> HashMap<(String, String), (f64, String)> {
-    let mut updates = HashMap::new();
-    let units = match list_unit_sheets(path) {
-        Ok(units) => units,
-        Err(_) => return updates,
-    };
-
-    for unit in units {
-        let Some(code) = unit["codigo"].as_str() else { continue; };
-        let Ok(data) = load_notas_unidad(path, code) else { continue; };
-        let Some(alumnos) = data["alumnos"].as_array() else { continue; };
-        for alumno in alumnos {
-            let name = normalize_plain(alumno["nombre"].as_str().unwrap_or(""));
-            if name.is_empty() { continue; }
-            let Some(cr_notas) = alumno["crNotas"].as_array() else { continue; };
-            for cr in cr_notas {
-                let cr_code = normalize_plain(cr["codigo"].as_str().unwrap_or(""));
-                if cr_code.is_empty() { continue; }
-                let display_raw = cr["display"].as_str().unwrap_or("").trim();
-                let note = cr["nota"].as_f64()
-                    .or_else(|| display_raw.replace(',', ".").parse::<f64>().ok())
-                    .unwrap_or(0.0);
-                let display = if display_raw.is_empty() {
-                    format!("{:.2}", note).replace('.', ",")
-                } else {
-                    display_raw.to_string()
-                };
-                updates.insert((name.clone(), cr_code), (note, display));
-            }
-        }
-    }
-
-    updates
-}
-
-fn value_note(value: &Value) -> f64 {
-    value.as_f64()
-        .or_else(|| value.as_str().and_then(|s| s.replace(',', ".").parse::<f64>().ok()))
-        .unwrap_or(0.0)
-}
-
-fn overlay_unit_notes_on_evaluation(data: &mut Value, path: &str) {
-    let updates = collect_unit_note_updates(path);
-    if updates.is_empty() { return; }
-
-    let criteria_meta = data["criteria"].as_array().cloned().unwrap_or_default();
-    let ra_meta = data["raColumns"].as_array().cloned().unwrap_or_default();
-    let Some(alumnos) = data["alumnos"].as_array_mut() else { return; };
-
-    for alumno in alumnos {
-        let name = normalize_plain(alumno["nombre"].as_str().unwrap_or(""));
-        if name.is_empty() { continue; }
-
-        if let Some(criterios) = alumno["criterios"].as_array_mut() {
-            for cr in criterios {
-                let code = normalize_plain(cr["codigo"].as_str().unwrap_or(""));
-                if let Some((note, display)) = updates.get(&(name.clone(), code)) {
-                    cr["nota"] = json!(note);
-                    cr["display"] = json!(display);
-                }
-            }
-        }
-
-        let student_criteria = alumno["criterios"].as_array().cloned().unwrap_or_default();
-        if let Some(rraa) = alumno["rraa"].as_array_mut() {
-            for ra in rraa {
-                let ra_col = ra["colIdx"].as_u64().unwrap_or(0);
-                let mut weighted_sum = 0.0;
-                let mut weight_sum = 0.0;
-                for meta in criteria_meta.iter().filter(|c| c["raColIdx"].as_u64() == Some(ra_col)) {
-                    let col = meta["colIdx"].as_u64().unwrap_or(0);
-                    let peso = parse_decimal(&meta["peso"]);
-                    if peso <= 0.0 { continue; }
-                    let Some(cr_val) = student_criteria.iter().find(|c| c["colIdx"].as_u64() == Some(col)) else { continue; };
-                    let note = cr_val["nota"].as_f64().unwrap_or_else(|| value_note(&cr_val["display"]));
-                    let rec = value_note(&cr_val["recDisplay"]);
-                    let effective = if rec > 0.0 { rec.max(note) } else { note };
-                    weighted_sum += peso * effective;
-                    weight_sum += peso;
-                }
-                if weight_sum > 0.0 {
-                    let note = weighted_sum / weight_sum;
-                    ra["nota"] = json!(note);
-                    ra["display"] = json!(format!("{:.2}", note).replace('.', ","));
-                }
-            }
-        }
-
-        let student_rraa = alumno["rraa"].as_array().cloned().unwrap_or_default();
-        let mut weighted_sum = 0.0;
-        let mut weight_sum = 0.0;
-        for meta in &ra_meta {
-            let ra_col = meta["colIdx"].as_u64().unwrap_or(0);
-            let peso = parse_decimal(&meta["peso"]);
-            if peso <= 0.0 { continue; }
-            let Some(ra_val) = student_rraa.iter().find(|r| r["colIdx"].as_u64() == Some(ra_col)) else { continue; };
-            let note = ra_val["nota"].as_f64().unwrap_or_else(|| value_note(&ra_val["display"]));
-            weighted_sum += peso * note;
-            weight_sum += peso;
-        }
-        if weight_sum > 0.0 {
-            let note = weighted_sum / weight_sum;
-            alumno["final"] = json!(note);
-            alumno["finalDisplay"] = json!(format!("{:.2}", note).replace('.', ","));
-        }
-    }
-}
-
 #[tauri::command]
 fn excel_get_notas_evaluacion(payload: Value) -> Result<Value, String> {
     if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
     let path = match get_selected_path() { Some(p) => p, None => return Ok(Value::Null) };
-    let mut data = load_notas_evaluacion(&path, payload["evaluacion"].as_str().unwrap_or("1"))?;
-    overlay_unit_notes_on_evaluation(&mut data, &path);
-    Ok(data)
+    load_notas_evaluacion(&path, payload["evaluacion"].as_str().unwrap_or("1"))
 }
 
 #[tauri::command]
@@ -1244,7 +1134,6 @@ fn excel_get_notas_evaluacion_alumno(payload: Value) -> Result<Value, String> {
     let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
     let alumno = payload["alumno"].as_str().unwrap_or("").to_string();
     let mut data = load_notas_evaluacion(&path, &evaluacion)?;
-    overlay_unit_notes_on_evaluation(&mut data, &path);
     if let Some(arr) = data["alumnos"].as_array_mut() {
         let filtered: Vec<Value> = arr.iter().filter(|a| a["nombre"].as_str().unwrap_or("") == alumno).cloned().collect();
         data["alumnos"] = json!(filtered);
