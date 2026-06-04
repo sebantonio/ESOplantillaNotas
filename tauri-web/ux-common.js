@@ -14,7 +14,6 @@
         patchMessageFunctions();
         observeMessageAreas();
         enhanceTables();
-        setupDestructiveConfirmations();
         setupKeyboardShortcuts();
         setupGestorNotasHelpers();
         setupActividadModes();
@@ -69,7 +68,6 @@
 
     function confirmDialog(message, options = {}) {
         return new Promise((resolve) => {
-            const previousActive = document.activeElement;
             const backdrop = document.createElement("div");
             backdrop.className = "ux-modal-backdrop";
             backdrop.innerHTML = `
@@ -87,32 +85,16 @@
 
             const cancelBtn = backdrop.querySelector(".ux-modal-cancel");
             const confirmBtn = backdrop.querySelector(".ux-modal-confirm");
-            const dialog = backdrop.querySelector(".ux-modal");
-            const focusables = [cancelBtn, confirmBtn];
 
             function close(value) {
                 document.removeEventListener("keydown", onKeydown);
                 backdrop.remove();
-                if (previousActive && typeof previousActive.focus === "function") {
-                    previousActive.focus({ preventScroll: true });
-                }
                 resolve(value);
             }
 
             function onKeydown(event) {
                 if (event.key === "Escape") close(false);
                 if (event.key === "Enter" && document.activeElement === confirmBtn) close(true);
-                if (event.key === "Tab") {
-                    const first = focusables[0];
-                    const last = focusables[focusables.length - 1];
-                    if (event.shiftKey && document.activeElement === first) {
-                        event.preventDefault();
-                        last.focus();
-                    } else if (!event.shiftKey && document.activeElement === last) {
-                        event.preventDefault();
-                        first.focus();
-                    }
-                }
             }
 
             cancelBtn.addEventListener("click", () => close(false));
@@ -120,7 +102,6 @@
             backdrop.addEventListener("click", (event) => {
                 if (event.target === backdrop) close(false);
             });
-            dialog.addEventListener("click", (event) => event.stopPropagation());
             document.addEventListener("keydown", onKeydown);
             document.body.appendChild(backdrop);
             cancelBtn.focus();
@@ -144,41 +125,6 @@
 
         const nav = document.querySelector(".page-nav");
         if (nav) nav.classList.add("ux-sticky-nav");
-    }
-
-    function setupDestructiveConfirmations() {
-        document.addEventListener("click", async (event) => {
-            const target = event.target.closest && event.target.closest("button, a");
-            if (!target || target.dataset.uxSkipConfirm === "1") return;
-
-            if (target.dataset.uxConfirmed === "1") {
-                delete target.dataset.uxConfirmed;
-                return;
-            }
-
-            const handler = target.getAttribute("onclick") || "";
-            const text = (target.textContent || target.title || target.getAttribute("aria-label") || "").trim();
-            const signature = `${handler} ${text}`;
-            const destructive = target.matches(".delete, .entry-delete, .lista-del-col")
-                || /\b(eliminar|borrar|delete|quitar)\b/i.test(signature)
-                || /(limpiar todo|horarioLimpiar|listaLimpiar|semLimpiarFecha)/i.test(signature);
-
-            if (!destructive) return;
-
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            const ok = await confirmDialog("Esta accion no se puede deshacer. ¿Quieres continuar?", {
-                title: "Confirmar accion",
-                confirmText: "Continuar",
-                cancelText: "Cancelar"
-            });
-
-            if (ok) {
-                target.dataset.uxConfirmed = "1";
-                target.click();
-            }
-        }, true);
     }
 
     function patchMessageFunctions() {
@@ -387,10 +333,7 @@
         const msg = String(text || "").trim();
         if (!msg) return "";
         if (/No se encontr[oó] el Excel|No hay archivo local seleccionado|No se encontr[oó] un Excel activo/i.test(msg)) {
-            return `${msg} Abre Inicio y selecciona un archivo .xlsx o .xlsm valido.`;
-        }
-        if (/\.xls antiguos|\.xlsx o \.xlsm/i.test(msg)) {
-            return `${msg} Convierte la plantilla antigua a .xlsx o .xlsm antes de usarla.`;
+            return `${msg} Abre Inicio y selecciona un archivo .xlsx válido.`;
         }
         if (/permiso|denegado|denied|EACCES/i.test(msg)) {
             return `${msg} Cierra el Excel en otras ventanas y vuelve a intentar guardar.`;

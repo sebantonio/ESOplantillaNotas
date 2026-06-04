@@ -10,7 +10,6 @@ type: project
 - `zip 2` (features: deflate) — abrir/reescribir el ZIP interno del XLSX
 - `regex 1` — manipulación XML de hojas
 - `once_cell 1` + `chrono 0.4` — estado global y fechas seriales Excel
-- `rfd 0.15` — dialogos nativos de seleccion/guardado
 
 **Comandos Tauri registrados en main.rs:**
 excel_select_file, excel_get_selected_file, excel_set_selected_file, excel_verify_file_exists,
@@ -23,8 +22,7 @@ excel_add_actividad, excel_save_ce_notas,
 excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
 excel_get_alumnos_informes, excel_get_notas_unidad,
 excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
-excel_get_instrumentos, excel_save_instrumentos,
-app_open_external, save_csv_template
+app_open_external
 
 **Estructura Excel ESO — hoja DATOS (rangos fijos):**
 - Alumnos: A4:B41 — fila 4=header "Alumnado", datos filas 5-41 (0-idx:4-40), max 37; Rust busca header dinámicamente
@@ -33,17 +31,8 @@ app_open_external, save_csv_template
 
 **Hoja PESOS:** CE (criterios de evaluación) y sus ponderaciones por unidad. Códigos tipo CR1.1, CR2.3...
 
-**Escritura XML:** Se abre el XLSX/XLSM como ZIP, se edita el XML de cada hoja con regex (`set_xml_cell`), se elimina calcChain, se fuerza forceFullCalc=1 y se genera un ZIP nuevo. El guardado debe pasar por `write_excel_safely`: escribir temporal, validar `xl/workbook.xml`, crear copia `.autobak`, reemplazar original y restaurar desde backup si falla.
-
-**Validaciones de seguridad:**
-- Solo se editan `.xlsx` y `.xlsm`; `.xls` queda bloqueado.
-- Backend valida limites fijos: 37 alumnos, 16 unidades, 10 instrumentos.
-- Notas: `parse_grade` acepta vacio o numero 0-10; cualquier otro valor devuelve error.
-- `app_open_external` solo abre enlaces `http`/`https` no locales.
-- Tauri CSP activa: origen local, scripts/estilos inline permitidos por compatibilidad actual e IPC permitido.
+**Escritura XML:** Se abre el XLSX como ZIP, se edita el XML de cada hoja con regex (`set_xml_cell`), se elimina calcChain, se fuerza forceFullCalc=1, se reescribe el ZIP.
 
 **Patrón IPC:** HTML → app-bridge.js → `window.__TAURI__.core.invoke("comando", {args})` → Rust fn → Result<Value, String>
 
-**Frontend/assets:** HTML/CSS/JS vanilla. Las importaciones usan `vendor/xlsx.full.min.js`; no cargar `xlsx` desde CDN. `scripts/prepare-tauri-web.js` copia `vendor/` a `tauri-web/vendor/`.
-
-**How to apply:** main.rs es la fuente de verdad para lógica Excel. Los rangos son FIJOS. No romper `write_excel_safely`, CSP ni vendor local al añadir pantallas.
+**How to apply:** main.rs es la única fuente de verdad para lógica Excel. Los rangos son FIJOS — nunca buscar por contenido de celda para alumnos/unidades/instrumentos.

@@ -24,8 +24,7 @@ const files = [
   'asteroides.html',
   'app-bridge.js',
   'ux-common.css',
-  'ux-common.js',
-  'vendor/xlsx.full.min.js'
+  'ux-common.js'
 ];
 
 fs.rmSync(outDir, { recursive: true, force: true });
@@ -35,9 +34,7 @@ files.forEach((file) => {
   const src = path.join(root, file);
   let content = fs.readFileSync(src, 'utf8');
   content = content.replace(/v0\.\d+\.\d+/g, `v${version}`);
-  const dest = path.join(outDir, file);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, content, 'utf8');
+  fs.writeFileSync(path.join(outDir, file), content, 'utf8');
 });
 
 console.log(`Preparados ${files.length} archivos para Tauri en ${outDir} (v${version})`);

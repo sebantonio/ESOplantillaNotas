@@ -4,11 +4,9 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::fs;
 use std::io::{Read as IoRead, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 // ---------------------------------------------------------------------------
 // Estado global: ruta del Excel seleccionado
@@ -41,84 +39,6 @@ fn require_selected_path() -> Result<String, String> {
         Some(p) => Ok(p),
         None => Err("No hay ningun archivo Excel seleccionado.".to_string()),
     }
-}
-
-fn excel_extension(path: &Path) -> String {
-    path.extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or_default()
-        .to_ascii_lowercase()
-}
-
-fn is_editable_excel_path(path: &Path) -> bool {
-    matches!(excel_extension(path).as_str(), "xlsx" | "xlsm")
-}
-
-fn ensure_editable_excel_path(path: &Path) -> Result<(), String> {
-    if !path.exists() {
-        return Err(format!("El archivo no existe: {}", path.display()));
-    }
-    if !path.is_file() {
-        return Err(format!("La ruta no es un archivo: {}", path.display()));
-    }
-    if !is_editable_excel_path(path) {
-        return Err("Selecciona un archivo .xlsx o .xlsm. Los .xls antiguos no se pueden guardar de forma segura.".to_string());
-    }
-    Ok(())
-}
-
-fn excel_backup_path(path: &Path) -> PathBuf {
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("excel");
-    let ext = excel_extension(path);
-    path.with_file_name(format!("{stem}.autobak.{ext}"))
-}
-
-fn unique_temp_excel_path(path: &Path) -> PathBuf {
-    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("workbook.xlsx");
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0);
-    path.with_file_name(format!(".{file_name}.{millis}.tmp"))
-}
-
-fn validate_excel_zip(path: &Path) -> Result<(), String> {
-    let input = fs::read(path).map_err(|e| format!("No se pudo validar el Excel temporal: {e}"))?;
-    let cursor = std::io::Cursor::new(input);
-    let mut zip = zip::ZipArchive::new(cursor).map_err(|e| format!("El archivo generado no es un XLSX valido: {e}"))?;
-    zip.by_name("xl/workbook.xml")
-        .map_err(|e| format!("El archivo generado no contiene xl/workbook.xml: {e}"))?;
-    Ok(())
-}
-
-fn write_excel_safely(path: &str, bytes: Vec<u8>) -> Result<(), String> {
-    let original = Path::new(path);
-    ensure_editable_excel_path(original)?;
-
-    let temp = unique_temp_excel_path(original);
-    fs::write(&temp, bytes).map_err(|e| format!("No se pudo escribir el temporal del Excel: {e}"))?;
-
-    if let Err(e) = validate_excel_zip(&temp) {
-        let _ = fs::remove_file(&temp);
-        return Err(e);
-    }
-
-    let backup = excel_backup_path(original);
-    fs::copy(original, &backup)
-        .map_err(|e| format!("No se pudo crear la copia de seguridad {}: {e}", backup.display()))?;
-
-    if let Err(e) = fs::remove_file(original) {
-        let _ = fs::remove_file(&temp);
-        return Err(format!("No se pudo reemplazar el Excel. Cierra el archivo si esta abierto en Excel: {e}"));
-    }
-
-    if let Err(e) = fs::rename(&temp, original) {
-        let _ = fs::copy(&backup, original);
-        let _ = fs::remove_file(&temp);
-        return Err(format!("No se pudo activar el Excel actualizado; se intento restaurar la copia: {e}"));
-    }
-
-    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +171,25 @@ fn cell_f64(rows: &[Vec<Value>], row: usize, col: usize) -> Option<f64> {
     })
 }
 
+fn normalise_date_for_ui(rows: &[Vec<Value>], row: usize, col: usize) -> String {
+    let v = rows.get(row).and_then(|r| r.get(col)).cloned().unwrap_or(Value::Null);
+    match &v {
+        Value::String(s) if !s.is_empty() => s.clone(),
+        Value::Number(n) => {
+            if let Some(serial) = n.as_f64() {
+                let days = serial as i64 - 25569;
+                let secs = days * 86400;
+                chrono::DateTime::from_timestamp(secs, 0)
+                    .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%Y-%m-%d").to_string())
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            }
+        }
+        _ => String::new(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Buscar filas de secciones en hoja DATOS
 // ---------------------------------------------------------------------------
@@ -286,6 +225,11 @@ fn find_unidades_start(rows: &[Vec<Value>]) -> Option<usize> {
     find_unidades_bloques(rows).into_iter().map(|(_, s)| s).next()
 }
 
+// No hay sección RRAA en el Excel ESO — no se usa
+fn find_rraa_start(_rows: &[Vec<Value>]) -> Option<usize> {
+    None
+}
+
 // ---------------------------------------------------------------------------
 // Comandos: selectFile / getSelectedFile / setSelectedFile
 // ---------------------------------------------------------------------------
@@ -294,11 +238,10 @@ fn find_unidades_start(rows: &[Vec<Value>]) -> Option<usize> {
 fn excel_select_file() -> Result<Value, String> {
     let file = rfd::FileDialog::new()
         .set_title("Selecciona la plantilla Excel")
-        .add_filter("Excel moderno", &["xlsx", "xlsm"])
+        .add_filter("Excel", &["xlsx", "xlsm", "xls"])
         .pick_file();
     match file {
         Some(path) => {
-            ensure_editable_excel_path(&path)?;
             let p = path.to_string_lossy().to_string();
             set_selected_path(Some(p.clone()));
             load_alumnos(&p)
@@ -318,10 +261,9 @@ fn excel_get_selected_file() -> Result<Value, String> {
 
 #[tauri::command]
 fn excel_set_selected_file(file_path: String) -> Result<Value, String> {
-    if file_path.is_empty() { return Err("No se especifico ningun archivo.".to_string()); }
-    let path = Path::new(&file_path);
-    ensure_editable_excel_path(path)?;
-    let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+    if file_path.is_empty() { return Err("No se especificó ningún archivo.".to_string()); }
+    if !Path::new(&file_path).exists() { return Err(format!("El archivo no existe: {file_path}")); }
+    let name = Path::new(&file_path).file_name().unwrap_or_default().to_string_lossy().to_string();
     set_selected_path(Some(file_path.clone()));
     Ok(json!({ "filePath": file_path, "fileName": name }))
 }
@@ -360,9 +302,6 @@ fn excel_get_alumnos() -> Result<Value, String> {
 fn excel_save_alumnos(alumnos: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = alumnos.as_array().ok_or("La lista de alumnos no es valida.")?.clone();
-    if arr.len() > 37 {
-        return Err("La plantilla admite como maximo 37 alumnos.".to_string());
-    }
     save_alumnos_to_file(&path, &arr)?;
     load_alumnos(&path)
 }
@@ -396,9 +335,6 @@ fn excel_get_unidades() -> Result<Value, String> {
 fn excel_save_unidades(unidades: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = unidades.as_array().ok_or("La lista de unidades no es valida.")?.clone();
-    if arr.len() > 16 {
-        return Err("La plantilla admite como maximo 16 unidades.".to_string());
-    }
     save_unidades_to_file(&path, &arr)?;
     load_unidades(&path)
 }
@@ -1025,6 +961,8 @@ fn load_notas_evaluacion(path: &str, evaluacion: &str) -> Result<Value, String> 
     let final_cb_xml = read_col_values_from_xml(path, &sheet_name, col_index("CB"));
 
     let code_row = rows.get(code_row_idx).cloned().unwrap_or_default();
+    // Fila de sub-etiquetas "Rec" está justo debajo de la fila de cabecera
+    let rec_label_row = rows.get(code_row_idx + 1).cloned().unwrap_or_default();
     let mut criteria: Vec<Value> = Vec::new();
     for (ra_idx, ra) in ra_columns.iter().enumerate() {
         let ra_ci = ra["colIdx"].as_u64().unwrap() as usize;
@@ -1690,7 +1628,7 @@ fn edit_workbook_sheets_xml(path: &str, sheet_edits: Vec<(&str, Box<dyn Fn(&str)
         }
     }
     let out_cursor = zw.finish().map_err(|e| e.to_string())?;
-    write_excel_safely(path, out_cursor.into_inner())?;
+    std::fs::write(path, out_cursor.into_inner()).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1835,23 +1773,12 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
 // save_notas_actividad
 // ---------------------------------------------------------------------------
 
-fn parse_grade(value: &Value) -> Result<Option<f64>, String> {
-    let parsed = match value {
-        Value::Null => return Ok(None),
-        Value::Number(n) => n.as_f64().ok_or_else(|| "Nota numerica no valida.".to_string())?,
-        Value::String(s) => {
-            let s2 = s.trim().replace(',', ".");
-            if s2.is_empty() {
-                return Ok(None);
-            }
-            s2.parse::<f64>().map_err(|_| format!("Nota no numerica: {s}"))?
-        }
-        _ => return Err("Nota no valida.".to_string()),
-    };
-    if !(0.0..=10.0).contains(&parsed) {
-        return Err(format!("La nota debe estar entre 0 y 10: {parsed}"));
+fn normalize_grade(value: &Value) -> Option<f64> {
+    match value {
+        Value::Number(n) => n.as_f64(),
+        Value::String(s) => { let s2 = s.replace(',', "."); if s2.trim().is_empty() { None } else { s2.trim().parse().ok() } }
+        _ => None,
     }
-    Ok(Some(parsed))
 }
 
 #[tauri::command]
@@ -1882,7 +1809,7 @@ fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
             if let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) {
                 if ri < block.first_student_row { continue; }
                 if cell_str(&rows, ri, block.name_col).is_empty() { continue; }
-                match parse_grade(&nota_item["nota"])? {
+                match normalize_grade(&nota_item["nota"]) {
                     Some(n) => { s = set_xml_cell(&s, ri, block.note_col, Some(&json!(n)), "number")?; }
                     None    => { s = set_xml_cell(&s, ri, block.note_col, None, "number")?; }
                 }
@@ -1890,7 +1817,7 @@ fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
                 if let Some(ce_notas) = nota_item["ceNotas"].as_object() {
                     for (code, ci) in &block.ce_cols {
                         if let Some(val) = ce_notas.get(code) {
-                            match parse_grade(val)? {
+                            match normalize_grade(val) {
                                 Some(n) => { s = set_xml_cell(&s, ri, *ci, Some(&json!(n)), "number")?; }
                                 None    => { s = set_xml_cell(&s, ri, *ci, None, "number")?; }
                             }
@@ -1950,10 +1877,7 @@ fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value
         let Some(cr_notas) = nota_item["crNotas"].as_object() else { continue; };
         for (code, val_obj) in cr_notas {
             let code_norm = normalize_plain(code);
-            let value = match val_obj.get("nota") {
-                Some(v) => parse_grade(v)?,
-                None => None,
-            };
+            let value = val_obj.get("nota").and_then(normalize_grade);
             updates.insert((alumno.clone(), code_norm), value);
         }
     }
@@ -2023,7 +1947,7 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
                     for (_code, val_obj) in cr_notas {
                         if let Some(ci) = val_obj.get("colIdx").and_then(|v| v.as_u64()).map(|n| n as usize) {
                             if let Some(val) = val_obj.get("nota") {
-                                match parse_grade(val)? {
+                                match normalize_grade(val) {
                                     Some(n) => { s = set_xml_cell(&s, ri, ci, Some(&json!(n)), "number")?; }
                                     None    => { s = set_xml_cell(&s, ri, ci, None, "number")?; }
                                 }
@@ -2161,7 +2085,7 @@ fn expand_shared_formulas_in_range(sheet_xml: &str, src_row_start: i64, src_row_
     let cell_re = Regex::new(r#"<c\b[^>/]*(?:/>|>[\s\S]*?</c>)"#).unwrap();
 
     // Paso 1: recopilar masters (celdas con <f t="shared" si=N ref=...>FORMULA</f>)
-    struct Master { formula: String, master_row: i64 }
+    struct Master { formula: String, master_col: String, master_row: i64 }
     let mut masters: HashMap<String, Master> = HashMap::new();
 
     for m in cell_re.find_iter(sheet_xml) {
@@ -2176,8 +2100,9 @@ fn expand_shared_formulas_in_range(sheet_xml: &str, src_row_start: i64, src_row_
             let si_attr = get_xml_attr(&f_tag, "si");
             let ref2 = get_xml_attr(&f_tag, "ref");
             if t_attr.as_deref() == Some("shared") && si_attr.is_some() && ref2.is_some() && !formula.is_empty() {
+                let col_part: String = ref_attr.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
                 let row_num: i64 = ref_attr.chars().skip_while(|c| c.is_ascii_alphabetic()).collect::<String>().parse().unwrap_or(0);
-                masters.insert(si_attr.unwrap(), Master { formula, master_row: row_num });
+                masters.insert(si_attr.unwrap(), Master { formula, master_col: col_part, master_row: row_num });
             }
         }
     }
@@ -2332,7 +2257,7 @@ fn excel_save_ce_notas(payload: Value) -> Result<Value, String> {
             if nombre.is_empty() || nombre == "0" { break; }
             for (code, ci) in &block.ce_cols {
                 if let Some(val) = ce_notas.get(code) {
-                    if let Some(n) = parse_grade(val)? {
+                    if let Some(n) = normalize_grade(val) {
                         s = set_xml_cell(&s, ri, *ci, Some(&json!(n)), "number")?;
                     }
                 }
@@ -2436,7 +2361,7 @@ fn ensure_diario_sheet(path: &str) -> Result<(), String> {
         }
     }
     let out_cursor = zw.finish().map_err(|e| e.to_string())?;
-    write_excel_safely(path, out_cursor.into_inner())?;
+    std::fs::write(path, out_cursor.into_inner()).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -2599,9 +2524,6 @@ fn excel_get_instrumentos() -> Result<Value, String> {
 fn excel_save_instrumentos(instrumentos: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = instrumentos.as_array().ok_or("Lista de instrumentos no valida.")?.clone();
-    if arr.len() > 10 {
-        return Err("La plantilla admite como maximo 10 instrumentos.".to_string());
-    }
     save_instrumentos_to_file(&path, &arr)?;
     load_instrumentos(&path)
 }
@@ -2610,49 +2532,8 @@ fn excel_save_instrumentos(instrumentos: Value) -> Result<Value, String> {
 // open external + main
 // ---------------------------------------------------------------------------
 
-fn external_url_host(url: &str) -> Option<String> {
-    let trimmed = url.trim();
-    let lower = trimmed.to_ascii_lowercase();
-    let rest = lower
-        .strip_prefix("https://")
-        .or_else(|| lower.strip_prefix("http://"))?;
-    let authority = rest.split('/').next().unwrap_or_default();
-    if authority.is_empty() || authority.contains('@') {
-        return None;
-    }
-    let host = authority.split(':').next().unwrap_or_default();
-    if host.is_empty() {
-        return None;
-    }
-    Some(host.to_string())
-}
-
-fn is_safe_external_url(url: &str) -> bool {
-    if url.chars().any(|c| c.is_control()) {
-        return false;
-    }
-    let Some(host) = external_url_host(url) else {
-        return false;
-    };
-    if matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1") {
-        return false;
-    }
-    if host.starts_with("127.")
-        || host.starts_with("10.")
-        || host.starts_with("192.168.")
-        || (host.starts_with("172.")
-            && host.split('.').nth(1).and_then(|n| n.parse::<u8>().ok()).is_some_and(|n| (16..=31).contains(&n)))
-    {
-        return false;
-    }
-    true
-}
-
 #[tauri::command]
 fn app_open_external(url: String) -> Result<(), String> {
-    if !is_safe_external_url(&url) {
-        return Err("Enlace externo bloqueado por seguridad.".to_string());
-    }
     webbrowser::open(&url).map_err(|e| format!("No se pudo abrir el enlace: {e}"))
 }
 
@@ -2669,41 +2550,6 @@ fn save_csv_template(filename: String, content: String) -> Result<bool, String> 
             Ok(true)
         }
         None => Ok(false),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn editable_excel_extensions_are_modern_zip_formats() {
-        assert!(is_editable_excel_path(Path::new("notas.xlsx")));
-        assert!(is_editable_excel_path(Path::new("notas.xlsm")));
-        assert!(!is_editable_excel_path(Path::new("notas.xls")));
-        assert!(!is_editable_excel_path(Path::new("notas.csv")));
-    }
-
-    #[test]
-    fn backup_path_keeps_original_extension() {
-        let backup = excel_backup_path(Path::new("grupo.xlsx"));
-        assert_eq!(backup.file_name().and_then(|s| s.to_str()), Some("grupo.autobak.xlsx"));
-    }
-
-    #[test]
-    fn grades_accept_decimal_comma_and_reject_out_of_range() {
-        assert_eq!(parse_grade(&json!("7,5")).unwrap(), Some(7.5));
-        assert_eq!(parse_grade(&json!("")).unwrap(), None);
-        assert!(parse_grade(&json!(11)).is_err());
-        assert!(parse_grade(&json!("texto")).is_err());
-    }
-
-    #[test]
-    fn external_urls_block_local_targets() {
-        assert!(is_safe_external_url("https://example.com/recurso"));
-        assert!(!is_safe_external_url("file:///C:/Windows"));
-        assert!(!is_safe_external_url("http://localhost:8080"));
-        assert!(!is_safe_external_url("http://192.168.1.10"));
     }
 }
 

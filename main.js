@@ -57,73 +57,6 @@ function clearDataCaches() {
   clearEvaluationsCache();
   clearActivityTypeCache();
 }
-
-function isSafeExternalUrl(rawUrl) {
-  try {
-    const url = new URL(String(rawUrl || '').trim());
-    if (!['http:', 'https:'].includes(url.protocol)) return false;
-    const host = url.hostname.toLowerCase();
-    if (['localhost', '127.0.0.1', '::1'].includes(host)) return false;
-    if (host.startsWith('127.') || host.startsWith('10.') || host.startsWith('192.168.')) return false;
-    if (host.startsWith('172.')) {
-      const second = Number(host.split('.')[1]);
-      if (second >= 16 && second <= 31) return false;
-    }
-    return true;
-  } catch (_error) {
-    return false;
-  }
-}
-
-function isEditableExcelFile(filePath) {
-  return ['.xlsx', '.xlsm'].includes(path.extname(String(filePath || '')).toLowerCase());
-}
-
-function assertEditableExcelFile(filePath) {
-  if (!filePath) throw new Error('No se especifico ningun archivo.');
-  if (!fs.existsSync(filePath)) throw new Error('El archivo no existe: ' + filePath);
-  if (!isEditableExcelFile(filePath)) {
-    throw new Error('Selecciona un archivo .xlsx o .xlsm. Los .xls antiguos no se pueden guardar de forma segura.');
-  }
-}
-
-function getExcelBackupPath(filePath) {
-  const ext = path.extname(filePath);
-  const stem = path.basename(filePath, ext);
-  return path.join(path.dirname(filePath), `${stem}.autobak${ext}`);
-}
-
-function getExcelTempPath(filePath) {
-  return path.join(path.dirname(filePath), `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
-}
-
-async function writeExcelSafely(filePath, output) {
-  assertEditableExcelFile(filePath);
-
-  const validationZip = await JSZip.loadAsync(output);
-  if (!validationZip.file('xl/workbook.xml')) {
-    throw new Error('El archivo generado no contiene xl/workbook.xml.');
-  }
-
-  const tempPath = getExcelTempPath(filePath);
-  const backupPath = getExcelBackupPath(filePath);
-  fs.writeFileSync(tempPath, output);
-  fs.copyFileSync(filePath, backupPath);
-
-  try {
-    fs.unlinkSync(filePath);
-    fs.renameSync(tempPath, filePath);
-  } catch (error) {
-    try {
-      if (fs.existsSync(backupPath)) fs.copyFileSync(backupPath, filePath);
-      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-    } catch (_restoreError) {
-      // Best effort restore; the original error is more useful to the caller.
-    }
-    throw new Error(`No se pudo reemplazar el Excel. Cierra el archivo si esta abierto: ${error.message}`);
-  }
-}
-
 const defaultExcelName = 'plantilla313_dual - copia.xlsx';
 const ACTIVITY_TYPES = [
   { key: 'practicas', label: 'Practicas', baseCol: 0 },
@@ -158,9 +91,7 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isSafeExternalUrl(url)) {
-      shell.openExternal(url);
-    }
+    shell.openExternal(url);
     return { action: 'deny' };
   });
 
@@ -213,7 +144,7 @@ ipcMain.handle('excel:selectFile', async () => {
     title: 'Selecciona la plantilla Excel',
     properties: ['openFile'],
     filters: [
-      { name: 'Excel moderno', extensions: ['xlsx', 'xlsm'] }
+      { name: 'Excel', extensions: ['xlsx', 'xlsm', 'xls'] }
     ]
   });
 
@@ -221,7 +152,6 @@ ipcMain.handle('excel:selectFile', async () => {
     return null;
   }
 
-  assertEditableExcelFile(result.filePaths[0]);
   selectedExcelPath = result.filePaths[0];
   invalidateWorkbookCache();
   clearEvaluationsCache();
@@ -457,7 +387,8 @@ ipcMain.handle('excel:getAlumnosInformes', async () => {
 });
 
 ipcMain.handle('excel:setSelectedFile', async (_event, filePath) => {
-  assertEditableExcelFile(filePath);
+  if (!filePath) throw new Error('No se especificó ningún archivo.');
+  if (!fs.existsSync(filePath)) throw new Error('El archivo no existe: ' + filePath);
   selectedExcelPath = filePath;
   invalidateWorkbookCache();
   clearEvaluationsCache();
@@ -470,9 +401,6 @@ ipcMain.handle('excel:verifyFileExists', async (_event, filePath) => {
 });
 
 ipcMain.handle('app:openExternal', async (_event, url) => {
-  if (!isSafeExternalUrl(url)) {
-    throw new Error('Enlace externo bloqueado por seguridad.');
-  }
   await shell.openExternal(url);
 });
 }
@@ -1863,7 +1791,7 @@ async function editWorkbookSheetsXml(filePath, sheetEdits) {
     compressionOptions: { level: 6 }
   });
 
-  await writeExcelSafely(filePath, output);
+  fs.writeFileSync(filePath, output);
   clearDataCaches();
 }
 

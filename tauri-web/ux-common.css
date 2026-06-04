@@ -739,73 +739,9 @@ body.ux-page-incluir-actividad [data-mode-panel][hidden] {
 }
 .ux-dark-toggle:hover { background: #f3f4f6; border-color: #6366f1; }
 
-/* Dark mode */
-html.dark-mode {
-    color-scheme: dark;
-    --ux-primary: #818cf8;
-    --ux-primary-strong: #312e81;
-    --ux-primary-soft: #1e1b4b;
-    --ux-accent: #2dd4bf;
-    --ux-border: #334155;
-    --ux-border-strong: #475569;
-    --ux-surface: #111827;
-    --ux-surface-muted: #182235;
-    --ux-page-bg: #0f172a;
-    --ux-text: #e5e7eb;
-    --ux-muted: #a9b5c7;
-    --ux-shadow: 0 16px 40px rgba(0, 0, 0, 0.36);
-    --bg: #0f172a;
-    --panel: #111827;
-    --panel-soft: #182235;
-    --text: #e5e7eb;
-    --muted: #a9b5c7;
-    --line: #334155;
-    --primary: #818cf8;
-    --primary-dark: #6366f1;
-    --accent: #2dd4bf;
-}
-
-html.dark-mode body {
-    color: var(--ux-text);
-    background: var(--ux-page-bg);
-}
-
-html.dark-mode :is(.ux-shell, .container, .shell, .daily-panel, .side-panel, .setup-panel, .content, .modal, .ux-panel) {
-    color: var(--ux-text);
-    background-color: var(--ux-surface);
-    border-color: var(--ux-border);
-}
-
-html.dark-mode :is(.ux-page-nav, .page-nav, .ux-toolbar, .toolbar, .controls, .stats, .setup-panel-header) {
-    color: var(--ux-text);
-    background-color: var(--ux-surface-muted);
-    border-color: var(--ux-border);
-}
-
-html.dark-mode :is(.ux-button, .ux-link-button, .nav-button, .nav-link, button.secondary, .mini-action, select, input, textarea) {
-    color: var(--ux-text);
-    background-color: #0f172a;
-    border-color: var(--ux-border-strong);
-}
-
-html.dark-mode :is(.ux-button.primary, .ux-link-button.primary, .nav-button.primary, a.nav-button) {
-    color: #ffffff;
-    background-color: #4f46e5;
-    border-color: #6366f1;
-}
-
-html.dark-mode :is(.ux-table th, table.ux-table th) {
-    color: #ffffff;
-    background-color: #3730a3;
-}
-
-html.dark-mode :is(.ux-table td, table.ux-table td, th, td) {
-    border-color: var(--ux-border);
-}
-
-html.dark-mode :is(.ux-table tr:hover td, table.ux-table tr:hover td) {
-    background-color: #1e293b;
-}
+/* ── DARK MODE ── */
+html.dark-mode { filter: invert(0.88) hue-rotate(180deg); }
+html.dark-mode img, html.dark-mode video { filter: invert(1) hue-rotate(180deg); }
 
 @media (max-width: 720px) {
     body.ux-app-shell {
