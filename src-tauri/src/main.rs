@@ -652,18 +652,35 @@ fn list_unit_sheets(path: &str) -> Result<Vec<Value>, String> {
     let names = sheet_names(path)?;
     let datos_rows = read_sheet_rows(path, "DATOS").unwrap_or_default();
     let mut units_from_datos: HashMap<String, String> = HashMap::new();
-    if let Some(start) = find_unidades_start(&datos_rows) {
-        for idx in 0..16 {
-            let code = { let s = cell_str(&datos_rows, start + idx, 8); if s.is_empty() { format!("U{}", idx + 1) } else { s } };
-            let nombre = cell_str(&datos_rows, start + idx, 9);
+    let unidad_start = find_unidades_start(&datos_rows).unwrap_or(4);
+    for idx in 0..16 {
+        let code = { let s = cell_str(&datos_rows, unidad_start + idx, 8); if s.is_empty() { format!("U{}", idx + 1) } else { s } };
+        let nombre = cell_str(&datos_rows, unidad_start + idx, 9);
+        if !code.is_empty() || !nombre.is_empty() {
             units_from_datos.insert(code.to_uppercase(), nombre);
         }
     }
     let re = Regex::new(r"(?i)^U\d+$").unwrap();
+    let re_code_prefix = Regex::new(r"(?i)^U\d+[\s.\-\u{2013}]+").unwrap();
     let mut unit_names: Vec<String> = names.iter().filter(|n| re.is_match(n)).cloned().collect();
     unit_names.sort_by_key(|n| n.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i64>().unwrap_or(0));
     Ok(unit_names.iter().map(|codigo| {
-        let nombre = units_from_datos.get(&codigo.to_uppercase()).cloned().unwrap_or_default();
+        let raw = units_from_datos.get(&codigo.to_uppercase()).cloned().unwrap_or_default();
+        // Si el nombre de DATOS está vacío o es igual al código, leer título del sheet de la unidad
+        let nombre = if raw.is_empty() || raw.to_uppercase() == codigo.to_uppercase() {
+            read_sheet_rows(path, codigo)
+                .ok()
+                .and_then(|rows| {
+                    let t = cell_str(&rows, 2, 0);
+                    if t.is_empty() { return None; }
+                    // Quitar prefijo "U1. " o "U1 - "
+                    let limpio = re_code_prefix.replace(&t, "").trim().to_string();
+                    if limpio.is_empty() { Some(t) } else { Some(limpio) }
+                })
+                .unwrap_or(raw)
+        } else {
+            raw
+        };
         let label = if nombre.is_empty() { codigo.clone() } else { format!("{} - {}", codigo, nombre) };
         json!({ "codigo": codigo, "nombre": nombre, "label": label })
     }).collect())
