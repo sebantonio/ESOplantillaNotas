@@ -118,22 +118,24 @@
             justify-content: center;
             min-height: 38px;
             padding: 8px 13px;
-            color: var(--text);
-            background: rgba(255, 255, 255, 0.82);
-            border: 1px solid var(--line);
+            color: #312e81;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
             border-radius: 8px;
             font: inherit;
             font-size: 0.9rem;
             font-weight: 800;
             text-decoration: none;
             cursor: pointer;
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.10);
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
         }
 
         .nav-button:hover,
         .nav-link:hover {
-            background: #ffffff;
-            border-color: rgba(37, 99, 235, 0.45);
+            background: #e0e7ff;
+            border-color: rgba(79, 70, 229, 0.45);
+            box-shadow: 0 10px 22px rgba(79, 70, 229, 0.16);
             transform: translateY(-1px);
         }
 
@@ -416,6 +418,44 @@
             font-style: italic;
         }
 
+        .quick-access {
+            padding-top: 14px;
+            border-top: 1px solid rgba(148, 163, 184, 0.28);
+        }
+
+        .quick-access-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .quick-access-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 8px;
+            min-height: 40px;
+            padding: 8px 10px;
+            color: #312e81;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 0.84rem;
+            font-weight: 850;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.08);
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .quick-access-link:hover {
+            background: #e0e7ff;
+            border-color: rgba(79, 70, 229, 0.48);
+            box-shadow: 0 10px 22px rgba(79, 70, 229, 0.14);
+            transform: translateY(-1px);
+        }
+
         .side-action {
             display: flex;
             flex-direction: column;
@@ -520,20 +560,33 @@
             gap: 8px;
             min-height: 38px;
             padding: 8px 13px;
-            color: var(--text);
-            background: var(--panel-soft);
-            border: 1px solid var(--line);
+            color: #312e81;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
             border-radius: 8px;
             text-decoration: none;
             font-size: 0.92rem;
             font-weight: 800;
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.10);
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
         }
 
         .small-button:hover {
-            background: #ffffff;
-            border-color: rgba(37, 99, 235, 0.42);
+            background: #e0e7ff;
+            border-color: rgba(79, 70, 229, 0.48);
+            box-shadow: 0 10px 22px rgba(79, 70, 229, 0.16);
             transform: translateY(-2px);
+        }
+
+        .file-actions .small-button:first-child {
+            color: #ffffff;
+            background: #4f46e5;
+            border-color: #4f46e5;
+        }
+
+        .file-actions .small-button:first-child:hover {
+            background: #4338ca;
+            border-color: #4338ca;
         }
 
         .workflow {
@@ -1067,6 +1120,16 @@
                         <button class="recent-clear-btn" type="button" id="clearAllRecentBtn" title="Limpiar historial" style="display:none">🗑️</button>
                     </div>
                     <div class="recent-list" id="recentFilesList"></div>
+                </div>
+
+                <div class="quick-access" aria-label="Accesos rápidos">
+                    <div class="section-kicker">Accesos rápidos</div>
+                    <div class="quick-access-grid">
+                        <button class="quick-access-link" type="button" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">📝 Notas</button>
+                        <a class="quick-access-link" href="visor-notas.html">📊 Ver notas</a>
+                        <a class="quick-access-link" href="diario.html">📓 Diario</a>
+                        <a class="quick-access-link" href="utilidades.html">⏱ Utilidades</a>
+                    </div>
                 </div>
 
             </aside>
