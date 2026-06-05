@@ -2054,6 +2054,12 @@
                 return true;
             }
 
+            const validationMessage = validarNotasAntesDeGuardar();
+            if (validationMessage) {
+                showMessage(validationMessage, "error");
+                return false;
+            }
+
             try {
                 setDisabled(true);
                 beginBusy("Guardando notas en Excel...");
@@ -2112,6 +2118,27 @@
                 setDisabled(false);
                 endBusy();
             }
+        }
+
+        function validarNotasAntesDeGuardar() {
+            const invalidRows = [];
+            currentNotes.forEach((alumno, idx) => {
+                const invalid = (alumno.crNotas || []).find((crNota) => {
+                    const value = crNota.display !== undefined ? crNota.display : crNota.nota;
+                    return validateGrade(value).isInvalid;
+                });
+                if (invalid) {
+                    invalidRows.push(alumno.nombre || `fila ${idx + 1}`);
+                }
+            });
+
+            if (!invalidRows.length) {
+                return "";
+            }
+
+            const muestra = invalidRows.slice(0, 3).join(", ");
+            const resto = invalidRows.length > 3 ? ` y ${invalidRows.length - 3} mas` : "";
+            return `No se puede guardar: hay notas fuera de 0-10 en ${muestra}${resto}. Corrige las celdas marcadas.`;
         }
 
         function renderCriterios(data) {

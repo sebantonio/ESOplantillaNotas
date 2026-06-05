@@ -2546,9 +2546,61 @@
             }
         }
 
+        function totalCePonderacion(grupo) {
+            const totalCe = Number(grupo.ce && grupo.ce.ponderacionTotal);
+            if (totalCe > 0) return totalCe;
+            const totalUnidad = obtenerUnidadesPonderacionVisibles().reduce((sum, unidad) => {
+                return sum + (grupo.criterios || []).reduce((sub, crit) => sub + valorPonderacionUnidad(unidad, crit.colIdx), 0);
+            }, 0);
+            if (totalUnidad > 0) return totalUnidad;
+            return (grupo.criterios || []).reduce((sum, crit) => {
+                return sum + (Number(crit.ponderacionCR) || Number(crit.ponderacion) || 0);
+            }, 0);
+        }
+
+        function totalUnidadEsValido(total) {
+            const n = Number(total) || 0;
+            return Math.abs(n - 100) <= 0.01 || Math.abs(n - 1) <= 0.0001;
+        }
+
+        function validarRraaAntesDeGuardar() {
+            const grupos = gruposCePonderacion();
+            const ceSinPeso = grupos
+                .filter((grupo) => totalCePonderacion(grupo) <= 0)
+                .map((grupo) => `CE ${grupo.ce.numero}`);
+
+            if (ceSinPeso.length) {
+                const muestra = ceSinPeso.slice(0, 5).join(', ');
+                const resto = ceSinPeso.length > 5 ? ` y ${ceSinPeso.length - 5} mas` : '';
+                return `No se puede guardar: hay CE sin peso (${muestra}${resto}).`;
+            }
+
+            const unidadesMal = obtenerUnidadesPonderacionVisibles()
+                .map((unidad) => ({ unidad, total: sumaPonderacionUnidad(unidad, grupos) }))
+                .filter((item) => !totalUnidadEsValido(item.total));
+
+            if (unidadesMal.length) {
+                const muestra = unidadesMal.slice(0, 4).map(({ unidad, total }) => {
+                    const nombre = unidad.codigo || unidad.nombre || `fila ${unidad.rowIdx + 1}`;
+                    return `${nombre}: ${formatearResumenNumero(total)}`;
+                }).join(', ');
+                const resto = unidadesMal.length > 4 ? ` y ${unidadesMal.length - 4} mas` : '';
+                return `No se puede guardar: hay unidades cuyos pesos no suman 100 (${muestra}${resto}).`;
+            }
+
+            return '';
+        }
+
         async function guardarCambiosAutomaticamente() {
             if (!hayChangesSinGuardar || !isElectronMode) {
                 return true;
+            }
+
+            const validationMessage = validarRraaAntesDeGuardar();
+            if (validationMessage) {
+                mostrarEstadoGuardado('error', `❌ ${validationMessage}`);
+                mostrarMensaje(validationMessage, 'error');
+                return false;
             }
 
             try {
@@ -2612,6 +2664,12 @@
 
         async function guardarExcelLocal() {
             try {
+                const validationMessage = validarRraaAntesDeGuardar();
+                if (validationMessage) {
+                    mostrarMensaje(validationMessage, 'error');
+                    return false;
+                }
+
                 mostrarLoading(true);
 
                 const payload = {

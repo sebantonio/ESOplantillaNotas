@@ -895,6 +895,12 @@
                 return;
             }
 
+            const validationMessage = validarAlumnosAntesDeGuardar();
+            if (validationMessage) {
+                mostrarMensaje(validationMessage, 'error');
+                return;
+            }
+
             if (!workbook) {
                 mostrarMensaje('❌ No hay archivo cargado', 'error');
                 return;
@@ -981,6 +987,12 @@
                 return false;
             }
 
+            const validationMessage = validarAlumnosAntesDeGuardar();
+            if (validationMessage) {
+                mostrarMensaje(validationMessage, 'error');
+                return false;
+            }
+
             mostrarLoading(true);
 
             try {
@@ -998,6 +1010,21 @@
                 mostrarLoading(false);
                 return false;
             }
+        }
+
+        function validarAlumnosAntesDeGuardar() {
+            const alumnos = window.alumnosActuales || [];
+            const vacios = alumnos
+                .map((alumno, idx) => ({ alumno, idx }))
+                .filter(({ alumno }) => !String(alumno.nombre || '').trim());
+
+            if (!vacios.length) {
+                return '';
+            }
+
+            const filas = vacios.slice(0, 5).map(({ idx }) => idx + 1).join(', ');
+            const resto = vacios.length > 5 ? ` y ${vacios.length - 5} mas` : '';
+            return `No se puede guardar: hay alumnos sin nombre en las filas ${filas}${resto}.`;
         }
 
         function marcarCambio() {

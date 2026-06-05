@@ -706,6 +706,12 @@
         }
 
         async function guardarExcel() {
+            const validationMessage = validarUnidadesAntesDeGuardar();
+            if (validationMessage) {
+                mostrarMensaje(validationMessage, 'error');
+                return false;
+            }
+
             if (isElectronMode) {
                 try {
                     mostrarLoading(true);
@@ -747,6 +753,40 @@
                 mostrarMensaje('Error al guardar: ' + error.message, 'error');
                 return false;
             }
+        }
+
+        function validarUnidadesAntesDeGuardar() {
+            const vistas = (unidadesActuales || [])
+                .map((unidad, idx) => ({
+                    idx,
+                    codigo: String(unidad.codigo || '').trim(),
+                    nombre: String(unidad.nombre || '').trim()
+                }))
+                .filter((unidad) => unidad.codigo || unidad.nombre);
+            const codigos = new Map();
+            const nombres = new Map();
+            const duplicadas = [];
+
+            vistas.forEach((unidad) => {
+                const codigoKey = normalize(unidad.codigo);
+                const nombreKey = normalize(unidad.nombre);
+                if (codigoKey) {
+                    if (codigos.has(codigoKey)) duplicadas.push(unidad.codigo);
+                    else codigos.set(codigoKey, unidad.idx);
+                }
+                if (nombreKey) {
+                    if (nombres.has(nombreKey)) duplicadas.push(unidad.nombre);
+                    else nombres.set(nombreKey, unidad.idx);
+                }
+            });
+
+            if (!duplicadas.length) {
+                return '';
+            }
+
+            const muestra = duplicadas.slice(0, 5).join(', ');
+            const resto = duplicadas.length > 5 ? ` y ${duplicadas.length - 5} mas` : '';
+            return `No se puede guardar: hay unidades duplicadas (${muestra}${resto}).`;
         }
 
         function marcarCambio() {

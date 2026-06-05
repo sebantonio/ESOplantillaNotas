@@ -70,6 +70,7 @@
         .rec-input { width: 52px; padding: 2px 4px; border: 1px solid #d1d5db; border-radius: 4px; text-align: center; font-size: 0.85rem; background: #fffef0; font-family: inherit; }
         .rec-input:focus { outline: 2px solid #f59e0b; background: white; border-color: #f59e0b; }
         .rec-input.dirty-rec { background: #fff7ed; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15); }
+        .rec-input.invalid-rec { background: #fff1f2; border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16); }
         .rec-input.saved-rec { background: #ecfdf5; border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.14); }
         .btn-save { padding: 7px 18px; border: 2px solid #16a34a; border-radius: 7px; background: #16a34a; color: white; font-weight: 700; font-size: 0.92em; cursor: pointer; white-space: nowrap; }
         .btn-save:hover { background: #15803d; border-color: #15803d; }
@@ -521,6 +522,13 @@
 
     function saveRecFromInput(input) {
         if (savingAll) return;
+        const validation = validateRecValue(input.value);
+        input.classList.toggle('invalid-rec', validation.isInvalid);
+        input.title = validation.message || '';
+        if (validation.isInvalid) {
+            showMessage(validation.message, 'error');
+            return;
+        }
         const rowIdx = parseInt(input.dataset.row, 10);
         const colIdx = parseInt(input.dataset.col, 10);
         if (isNaN(rowIdx) || isNaN(colIdx)) return;
@@ -547,6 +555,17 @@
         if (savingAll) return;
         const inputs = document.querySelectorAll('.rec-input');
         if (!inputs.length) return;
+        const invalidInputs = Array.from(inputs).filter(inp => validateRecValue(inp.value).isInvalid);
+        if (invalidInputs.length) {
+            invalidInputs.forEach(inp => {
+                const validation = validateRecValue(inp.value);
+                inp.classList.add('invalid-rec');
+                inp.title = validation.message;
+            });
+            showMessage(`No se puede guardar: hay ${invalidInputs.length} recuperacion(es) fuera de 0-10.`, 'error');
+            invalidInputs[0].focus();
+            return false;
+        }
         const changes = [];
         for (const inp of inputs) {
             const rowIdx = parseInt(inp.dataset.row, 10);
@@ -836,6 +855,9 @@
             if (e.target.classList.contains('rec-input')) {
                 e.target.classList.add('dirty-rec');
                 e.target.classList.remove('saved-rec');
+                const validation = validateRecValue(e.target.value);
+                e.target.classList.toggle('invalid-rec', validation.isInvalid);
+                e.target.title = validation.message || '';
                 refreshPendingState();
                 updateStatusBar();
             }
@@ -843,9 +865,22 @@
     });
 
     function markRecSaved(input) {
-        input.classList.remove('dirty-rec');
+        input.classList.remove('dirty-rec', 'invalid-rec');
         input.classList.add('saved-rec');
         setTimeout(() => input.classList.remove('saved-rec'), 1200);
+    }
+
+    function validateRecValue(value) {
+        const raw = String(value ?? '').trim();
+        if (!raw) return { isInvalid: false, message: '' };
+        if (!/^\d{1,2}([,.]\d{1,2})?$/.test(raw)) {
+            return { isInvalid: true, message: 'La recuperacion debe ser un numero de 0 a 10.' };
+        }
+        const numeric = Number(raw.replace(',', '.'));
+        if (Number.isNaN(numeric) || numeric < 0 || numeric > 10) {
+            return { isInvalid: true, message: 'La recuperacion debe estar entre 0 y 10.' };
+        }
+        return { isInvalid: false, message: '' };
     }
 
     function refreshPendingState() {
