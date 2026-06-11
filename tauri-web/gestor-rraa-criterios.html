@@ -1462,7 +1462,8 @@
                         ponderacionInstituto: ponderaciones[colIdx + 1] || 0,
                         ponderacionEmpresa: ponderaciones[colIdx + 2] || 0,
                         texto: textos[normalizarCodigoCriterio(codigo)] || '',
-                        colIdx
+                        colIdx,
+                        actualCol: colIdx
                     });
                 }
             }
@@ -2167,7 +2168,7 @@
         }
 
         function numeroRaDesdeCriterio(value) {
-            const match = String(value || '').match(/^(\d+)/);
+            const match = String(value || '').trim().match(/^CR(\d+)\.\d+$/i);
             return match ? Number(match[1]) : 0;
         }
 
@@ -2186,8 +2187,8 @@
             const textos = {};
 
             rows.forEach((row) => {
-                const codigo = row && row[21];
-                const texto = row && row[22];
+                const codigo = row && row[22];
+                const texto = row && row[23];
 
                 if (codigo && texto) {
                     textos[normalizarCodigoCriterio(codigo)] = String(texto).trim();
@@ -2767,7 +2768,8 @@
                             ponderacionInstituto: pesosRows[21] && pesosRows[21][colIdx + 1] ? pesosRows[21][colIdx + 1] : 0,
                             ponderacionEmpresa: pesosRows[21] && pesosRows[21][colIdx + 2] ? pesosRows[21][colIdx + 2] : 0,
                             texto: importTextos[normalizarCodigoCriterio(codigo)] || '',
-                            colIdx
+                            colIdx,
+                            actualCol: colIdx
                         });
                     }
 

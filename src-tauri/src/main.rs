@@ -464,7 +464,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         let cr_code = c["codigo"].as_str().unwrap_or("");
         let Some((ce_num, cr_num)) = parse_cr_code(cr_code) else { return false; };
         c["raNumero"].as_i64() == Some(ce_num)
-            && cr_num <= 6
+            && cr_num <= 20
             && cr_col_map.contains_key(&normalize_criterion_code(cr_code))
     }).enumerate().map(|(idx, mut c)| {
         if let Value::Object(ref mut obj) = c {
@@ -1713,23 +1713,41 @@ fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
 fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad: &[Value], path: &str) -> Result<(), String> {
     let criterios_owned = criterios.to_vec();
     let pond_owned = pond_unidad.to_vec();
+    let mut code_col_map: HashMap<String, usize> = HashMap::new();
+    if let Ok(rows) = read_sheet_rows(path, "PESOS") {
+        if rows.len() > 3 {
+            for ci in 0..rows[3].len() {
+                let code = cell_str(&rows, 3, ci);
+                if is_cr_code(&code) {
+                    code_col_map.insert(normalize_criterion_code(&code), ci);
+                }
+            }
+        }
+    }
 
     edit_workbook_sheets_xml(path, vec![
         ("PESOS", Box::new({
-            let criterios2 = criterios_owned.clone(); let pond2 = pond_owned.clone();
+            let criterios2 = criterios_owned.clone(); let pond2 = pond_owned.clone(); let code_col_map2 = code_col_map.clone();
             move |xml: &str| {
                 let mut s = xml.to_string();
                 // Mapa colIdx secuencial → columna real en PESOS
                 let col_map: std::collections::HashMap<usize, usize> = criterios2.iter()
                     .filter_map(|c| {
                         let ci = c["colIdx"].as_u64()? as usize;
-                        let ac = c["actualCol"].as_u64()? as usize;
-                        if ac > 0 { Some((ci, ac)) } else { None }
+                        let by_actual = c["actualCol"].as_u64().map(|n| n as usize).filter(|&n| n > 0);
+                        let by_code = c["codigo"].as_str()
+                            .and_then(|code| code_col_map2.get(&normalize_criterion_code(code)).copied());
+                        let actual = by_actual.or(by_code).unwrap_or(ci);
+                        if actual > 0 { Some((ci, actual)) } else { None }
                     })
                     .collect();
                 // Fila 4 (idx 3): escribir códigos CR en su columna real
                 for criterio in &criterios2 {
-                    if let Some(ac) = criterio["actualCol"].as_u64().map(|n| n as usize) {
+                    if let Some(ac) = criterio["actualCol"].as_u64().map(|n| n as usize)
+                        .filter(|&n| n > 0)
+                        .or_else(|| criterio["codigo"].as_str()
+                            .and_then(|code| code_col_map2.get(&normalize_criterion_code(code)).copied()))
+                        .or_else(|| criterio["colIdx"].as_u64().map(|n| n as usize)) {
                         if ac > 0 {
                             s = set_xml_cell(&s, 3, ac, Some(&criterio["codigo"]), "text")?;
                         }
