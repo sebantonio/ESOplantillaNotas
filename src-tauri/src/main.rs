@@ -417,34 +417,35 @@ fn excel_save_rraa_criterios(payload: Value) -> Result<Value, String> {
 fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Vec<Value>)> {
     let datos_rows = read_sheet_rows(path, "DATOS").ok()?;
 
-    // Ponderaciones: hoja PESOS si existe (pesos por CR y unidad)
+    // Ponderaciones: hoja PESOS — leer filas 3 y 4 via ZIP/XML para alcanzar columnas lejanas
     let pesos_rows = read_sheet_rows(path, "PESOS").ok();
+    // Fila 3 (row_1=3) = CE headers, Fila 4 (row_1=4) = CR headers — via XML directo
+    let pesos_ce_row = read_row_from_xml(path, "PESOS", 3);  // col_idx -> texto CE
+    let pesos_cr_row = read_row_from_xml(path, "PESOS", 4);  // col_idx -> código CR
 
-    // Mapa CR código → columna real en PESOS (fila idx 3)
+    // Mapa CR código → columna real en PESOS (fila 4)
     let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-    if let Some(ref rows) = pesos_rows {
-        if rows.len() > 3 {
-            let mut last_cr_by_ce: HashMap<i64, i64> = HashMap::new();
-            for ci in 0..rows[3].len() {
-                let code = cell_str(rows, 3, ci);
-                if let Some((_, _, fixed_code)) = next_cr_code_for_ce(&code, &mut last_cr_by_ce) {
-                    cr_col_map.insert(normalize_criterion_code(&fixed_code), ci);
-                }
+    {
+        let mut last_cr_by_ce: HashMap<i64, i64> = HashMap::new();
+        let mut sorted_cols: Vec<usize> = pesos_cr_row.keys().cloned().collect();
+        sorted_cols.sort();
+        for ci in sorted_cols {
+            let code = pesos_cr_row.get(&ci).cloned().unwrap_or_default();
+            if let Some((_, _, fixed_code)) = next_cr_code_for_ce(&code, &mut last_cr_by_ce) {
+                cr_col_map.insert(normalize_criterion_code(&fixed_code), ci);
             }
         }
     }
 
-    // CE: leer de PESOS fila idx=2 (headers de CE) — formato "CE1. texto", "CE.1 texto", etc.
-    let re_ce_header = Regex::new(r"(?i)^CE\.?\s*(\d+)[.\s]").unwrap();
+    // CE: leer de PESOS fila 3 via XML directo — formato "CE1. texto", "CE.1 texto", "CE10", etc.
+    let re_ce_header = Regex::new(r"(?i)^CE\.?\s*(\d+)").unwrap();
     let mut ce_list: Vec<Value> = Vec::new();
-    // Fallback: inferir CE desde DATOS fila idx=1 si PESOS no tiene fila idx=2
-    let ce_source_rows = pesos_rows.as_ref().filter(|r| r.len() > 2).map(|r| (r, 2usize))
-        .or_else(|| if datos_rows.len() > 1 { Some((&datos_rows, 1usize)) } else { None });
-    if let Some((rows, row_idx)) = ce_source_rows {
-        let row_len = rows[row_idx].len();
+    {
         let mut seen_ce: std::collections::HashSet<i64> = std::collections::HashSet::new();
-        for ci in 0..row_len {
-            let text = cell_str(rows, row_idx, ci);
+        let mut sorted_cols: Vec<usize> = pesos_ce_row.keys().cloned().collect();
+        sorted_cols.sort();
+        for ci in sorted_cols {
+            let text = pesos_ce_row.get(&ci).cloned().unwrap_or_default();
             if text.is_empty() || text == "UNIDADES" { continue; }
             if let Some(caps) = re_ce_header.captures(&text) {
                 let num: i64 = caps.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
@@ -454,7 +455,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             }
         }
     }
-    // Fallback final: si no se encontraron CE, inferirlos desde los CR ya conocidos
+    // Fallback: inferir CE desde CR conocidos si PESOS fila 3 no tiene headers CE
     if ce_list.is_empty() {
         let mut seen: std::collections::BTreeSet<i64> = std::collections::BTreeSet::new();
         for key in cr_col_map.keys() {
@@ -465,47 +466,30 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         }
     }
 
-    // CR: construir desde cr_col_map (PESOS fila idx=3), ya que DATOS puede no tener columnas V/W/X
-    // Texto de CR: buscar en DATOS fila idx=2 (row 3) si tiene texto, o dejar vacío
-    let cr_text_map: std::collections::HashMap<String, String> = if datos_rows.len() > 2 {
-        let row_len = datos_rows[2].len();
-        (0..row_len).filter_map(|ci| {
-            let code = cell_str(&datos_rows, 2, ci);
-            if !is_cr_code(&code) { return None; }
-            // Texto en col siguiente si no es otro CR
-            let texto = if ci + 1 < row_len {
-                let next = cell_str(&datos_rows, 2, ci + 1);
-                if !is_cr_code(&next) && !next.is_empty() { next } else { String::new() }
-            } else { String::new() };
-            Some((normalize_criterion_code(&code), texto))
-        }).collect()
-    } else { std::collections::HashMap::new() };
-
+    // CR: construir desde cr_col_map (PESOS fila 4 via XML)
     let mut criterios: Vec<Value> = Vec::new();
     let mut last_cr_by_ce2: HashMap<i64, i64> = HashMap::new();
-    if let Some(ref rows) = pesos_rows {
-        if rows.len() > 3 {
-            for ci in 0..rows[3].len() {
-                let code = cell_str(rows, 3, ci);
-                if !is_cr_code(&code) { continue; }
-                let (ce_num, _, fixed_cr_code) = match next_cr_code_for_ce(&code, &mut last_cr_by_ce2) {
-                    Some(v) => v, None => continue,
-                };
-                let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
-                    .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
-                let texto = cr_text_map.get(&normalize_criterion_code(&fixed_cr_code))
-                    .cloned().unwrap_or_default();
-                criterios.push(json!({
-                    "numero": criterios.len() + 1,
-                    "codigo": fixed_cr_code.clone(),
-                    "nombre": fixed_cr_code.clone(),
-                    "originalCodigo": code,
-                    "raNumero": ce_num,
-                    "raDescripcion": ce_desc,
-                    "texto": texto,
-                    "colIdx": criterios.len()
-                }));
-            }
+    {
+        let mut sorted_cols: Vec<usize> = pesos_cr_row.keys().cloned().collect();
+        sorted_cols.sort();
+        for ci in sorted_cols {
+            let code = pesos_cr_row.get(&ci).cloned().unwrap_or_default();
+            if !is_cr_code(&code) { continue; }
+            let (ce_num, _, fixed_cr_code) = match next_cr_code_for_ce(&code, &mut last_cr_by_ce2) {
+                Some(v) => v, None => continue,
+            };
+            let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
+                .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
+            criterios.push(json!({
+                "numero": criterios.len() + 1,
+                "codigo": fixed_cr_code.clone(),
+                "nombre": fixed_cr_code.clone(),
+                "originalCodigo": code,
+                "raNumero": ce_num,
+                "raDescripcion": ce_desc,
+                "texto": "",
+                "colIdx": criterios.len()
+            }));
         }
     }
     // Ponderación total por CE (fila idx 22) y por CR (fila idx 21) en PESOS
@@ -535,15 +519,16 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     let ce_instr_col: std::collections::HashMap<i64, usize> = ce_first_col.iter()
         .filter_map(|(&ce, &col)| if col > 0 { Some((ce, col - 1)) } else { None })
         .collect();
+    // Filas de totales en PESOS via XML: fila 22 = ponderacionTotal CE, fila 21 = % CR
+    let pesos_row22 = read_row_from_xml(path, "PESOS", 22); // ponderacionTotal por CE
+    let pesos_row21 = read_row_from_xml(path, "PESOS", 21); // ponderacionCR %
     // Añadir ponderacionTotal e instrColIdx a cada CE
     let ce_list: Vec<Value> = ce_list.into_iter().map(|ce| {
         let ce_num = ce["numero"].as_i64().unwrap_or(0);
         let pond_total = ce_first_col.get(&ce_num).and_then(|&col| {
-            pesos_rows.as_ref().and_then(|r| {
-                let v = cell_f64(r, 22, col).unwrap_or(0.0);
-                if v != 0.0 { return Some(v); }
-                if col > 0 { cell_f64(r, 22, col - 1) } else { None }
-            })
+            let v: f64 = pesos_row22.get(&col).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+            if v != 0.0 { return Some(v); }
+            if col > 0 { pesos_row22.get(&(col-1)).and_then(|s| s.parse().ok()) } else { None }
         }).unwrap_or(0.0);
         let instr_col = ce_instr_col.get(&ce_num).copied().unwrap_or(0);
         let mut obj = ce.as_object().cloned().unwrap_or_default();
@@ -555,8 +540,8 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     let criterios: Vec<Value> = criterios.into_iter().map(|c| {
         let cr_code = c["codigo"].as_str().unwrap_or("").to_string();
         let actual_col = cr_col_map.get(&normalize_criterion_code(&cr_code)).copied();
-        let pct = actual_col
-            .and_then(|col| pesos_rows.as_ref().and_then(|r| cell_f64(r, 21, col)))
+        let pct: f64 = actual_col
+            .and_then(|col| pesos_row21.get(&col).and_then(|s| s.parse().ok()))
             .unwrap_or(0.0);
         let mut obj = c.as_object().cloned().unwrap_or_default();
         obj.insert("ponderacionCR".to_string(), json!(pct));
@@ -564,13 +549,17 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         Value::Object(obj)
     }).collect();
 
+    // Leer ponderaciones por unidad desde PESOS filas 5-20 via XML directo
     let mut ponderaciones_unidad: Vec<Value> = Vec::new();
     for i in 0..16usize {
-        let row_idx = i + 4;
+        let row_idx = i + 4;    // 0-indexed para calamine (DATOS)
+        let row_1 = i + 5;     // 1-indexed para XML (PESOS: fila 5 = U1, ..., fila 20 = U16)
         let codigo_datos = cell_str(&datos_rows, row_idx, 8);
         let nombre_datos = cell_str(&datos_rows, row_idx, 9);
         let evaluacion_datos = cell_str(&datos_rows, row_idx, 10);
-        let nombre_raw = pesos_rows.as_ref().map(|r| cell_str(r, row_idx, 0)).unwrap_or_default();
+        // Leer fila de pesos vía XML para alcanzar columnas lejanas
+        let pesos_xml_row = read_row_from_xml(path, "PESOS", row_1);
+        let nombre_raw = pesos_xml_row.get(&0).cloned().unwrap_or_default();
         let nombre = if !nombre_raw.is_empty() && nombre_raw != "0" {
             nombre_raw
         } else if !nombre_datos.is_empty() && nombre_datos != "0" {
@@ -585,12 +574,13 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             let ci = c["colIdx"].as_u64().unwrap_or(0) as usize;
             let cr_code = c["codigo"].as_str().unwrap_or("");
             let actual_col = cr_col_map.get(&normalize_criterion_code(cr_code)).copied().unwrap_or(ci);
-            let pond = pesos_rows.as_ref().and_then(|r| cell_f64(r, row_idx, actual_col)).unwrap_or(0.0);
+            let pond: f64 = pesos_xml_row.get(&actual_col)
+                .and_then(|v| v.parse::<f64>().ok()).unwrap_or(0.0);
             ponderaciones.insert(ci.to_string(), json!({ "ponderacion": pond }));
         }
         let mut instr_por_ce = serde_json::Map::new();
         for (&ce_num, &instr_col) in &ce_instr_col {
-            let instr = pesos_rows.as_ref().map(|r| cell_str(r, row_idx, instr_col)).unwrap_or_default();
+            let instr = pesos_xml_row.get(&instr_col).cloned().unwrap_or_default();
             instr_por_ce.insert(ce_num.to_string(), json!({ "codigo": instr, "colIdx": instr_col }));
         }
         ponderaciones_unidad.push(json!({
@@ -794,15 +784,12 @@ fn load_notas_actividad(path: &str, unidad: &str, tipo: &str, actividad: i64, ma
     // Filtro: CR presentes en la hoja Ux (fila idx=2), no por ponderación
     let (rraa, todas_criterios, ponderaciones_unidad, criterios_unidad) =
         if let Some((rraa, criterios, pu)) = extract_rraa_criterios_data(path) {
-            // Detectar qué CR existen en la hoja Ux (fila idx=2)
+            // Detectar qué CR existen en la hoja Ux (fila 3 = row_1=3) via ZIP/XML directo
             let cr_en_hoja: std::collections::HashSet<String> = {
-                let unit_rows = read_sheet_rows(path, unidad).unwrap_or_default();
-                if unit_rows.len() > 2 {
-                    (0..unit_rows[2].len()).filter_map(|ci| {
-                        let code = cell_str(&unit_rows, 2, ci);
-                        if is_cr_code(&code) { Some(normalize_criterion_code(&code)) } else { None }
-                    }).collect()
-                } else { std::collections::HashSet::new() }
+                let row_map = read_row_from_xml(path, unidad, 3);
+                row_map.values().filter_map(|v| {
+                    if is_cr_code(v) { Some(normalize_criterion_code(v)) } else { None }
+                }).collect()
             };
             let unidad_idx = unidades.iter().position(|u| u["codigo"].as_str() == Some(unidad));
             let criterios_filtrados = criterios.iter().filter_map(|c| {
@@ -1596,6 +1583,60 @@ fn read_col_values_from_xml(path: &str, sheet_name: &str, col: usize) -> HashMap
         if !val.is_empty() { result.insert(row_1 - 1, val); }
     }
     result
+}
+
+// Lee todos los valores de texto de una fila (1-indexed) directamente del ZIP/XML
+// Devuelve mapa col_0indexed -> valor_string (con shared strings resueltos)
+fn read_row_from_xml(path: &str, sheet_name: &str, row_1: usize) -> HashMap<usize, String> {
+    let mut result = HashMap::new();
+    let input = match std::fs::read(path) { Ok(b) => b, Err(_) => return result };
+    let cursor = std::io::Cursor::new(input);
+    let mut zip = match zip::ZipArchive::new(cursor) { Ok(z) => z, Err(_) => return result };
+    let mut files: HashMap<String, Vec<u8>> = HashMap::new();
+    for i in 0..zip.len() {
+        let mut f = match zip.by_index(i) { Ok(f) => f, Err(_) => continue };
+        let name = f.name().to_string();
+        if !name.contains("workbook") && !name.contains("worksheet") && !name.contains("sharedStrings") { continue; }
+        let mut buf = Vec::new();
+        let _ = f.read_to_end(&mut buf);
+        files.insert(name, buf);
+    }
+    // Shared strings
+    let shared: Vec<String> = if let Some(b) = files.get("xl/sharedStrings.xml") {
+        let xml = String::from_utf8_lossy(b).to_string();
+        let re_si = Regex::new(r"<si>([\s\S]*?)</si>").unwrap();
+        let re_t = Regex::new(r"<t[^>]*>([^<]*)</t>").unwrap();
+        re_si.captures_iter(&xml).map(|cap| {
+            re_t.captures_iter(&cap[1]).map(|t| t[1].to_string()).collect::<Vec<_>>().join("")
+        }).collect()
+    } else { vec![] };
+    let wb = match files.get("xl/workbook.xml") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    let rels = match files.get("xl/_rels/workbook.xml.rels") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    let sheet_path = match find_worksheet_path_in_zip(&wb, &rels, sheet_name) { Ok(p) => p, Err(_) => return result };
+    let xml = match files.get(&sheet_path) { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
+    // Buscar la fila exacta
+    let row_re = Regex::new(&format!(r#"<row\b[^>]*\br="{}"[^>]*>([\s\S]*?)</row>"#, row_1)).unwrap();
+    let row_xml = match row_re.captures(&xml) { Some(c) => c[1].to_string(), None => return result };
+    let cell_re = Regex::new(r#"<c\b[^>]*\br="([A-Z]+)\d+"([^>]*)>([\s\S]*?)</c>"#).unwrap();
+    for cap in cell_re.captures_iter(&row_xml) {
+        let col_str = &cap[1];
+        let attrs = &cap[2];
+        let content = &cap[3];
+        let v_re = Regex::new(r"<v>([^<]*)</v>").unwrap();
+        let val_raw = match v_re.captures(content) { Some(c) => c[1].to_string(), None => continue };
+        let val = if attrs.contains("t=\"s\"") {
+            let idx: usize = val_raw.trim().parse().unwrap_or(usize::MAX);
+            shared.get(idx).cloned().unwrap_or_default()
+        } else { val_raw.trim().to_string() };
+        if val.is_empty() { continue; }
+        let col_idx = col_name_to_idx(col_str);
+        result.insert(col_idx, val);
+    }
+    result
+}
+
+fn col_name_to_idx(name: &str) -> usize {
+    name.chars().fold(0usize, |acc, c| acc * 26 + (c as usize - 'A' as usize + 1)) - 1
 }
 
 fn assert_worksheet_xml_safe(sheet_xml: &str, sheet_name: &str) -> Result<(), String> {

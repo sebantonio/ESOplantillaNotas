@@ -1,6 +1,6 @@
 {
   "name": "eso-notas-local",
-  "version": "0.1.136",
+  "version": "0.1.137",
   "description": "Aplicacion local para gestionar notas ESO en una plantilla Excel.",
   "main": "main.js",
   "scripts": {
