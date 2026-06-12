@@ -2166,7 +2166,6 @@
                 todasCriterios.some((c) =>
                     Number(c.raNumero) === Number(ra.numero) &&
                     (c.codigo || "").trim() &&
-                    (c.texto || "").trim() &&
                     isCriterionIncludedForCurrentUnit(c)
                 )
             );
@@ -2338,11 +2337,9 @@
                 return `<option value="${escapeHtml(String(ra.numero))}"${sel}>${escapeHtml(label)}</option>`;
             }).join("");
 
-            // Lista CE del RA seleccionado (excluye criterios sin código o sin texto)
             const criteriosRa = currentCriteriosState.criterios.filter(
                 (c) => Number(c.raNumero) === raNum &&
                     (c.codigo || "").trim() &&
-                    (c.texto || "").trim() &&
                     isCriterionIncludedForCurrentUnit(c)
             );
             const ceNotas = item.ceNotas || {};
