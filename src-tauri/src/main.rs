@@ -791,24 +791,37 @@ fn load_notas_actividad(path: &str, unidad: &str, tipo: &str, actividad: i64, ma
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
 
     // Cargar RRAA y criterios filtrados para la unidad actual
+    // Filtro: CR presentes en la hoja Ux (fila idx=2), no por ponderación
     let (rraa, todas_criterios, ponderaciones_unidad, criterios_unidad) =
         if let Some((rraa, criterios, pu)) = extract_rraa_criterios_data(path) {
-            let unidad_idx = unidades.iter().position(|u| u["codigo"].as_str() == Some(unidad));
-            let criterios_filtrados = if let Some(idx) = unidad_idx {
-                if let Some(pu_entry) = pu.get(idx) {
-                    criterios.iter().filter_map(|c| {
-                        let ci_key = c["colIdx"].as_u64().unwrap_or(0).to_string();
-                        let pesos = pu_entry["ponderaciones"].get(&ci_key)?;
-                        let p = pesos["ponderacion"].as_f64().unwrap_or(0.0);
-                        let pi = pesos["ponderacionInstituto"].as_f64().unwrap_or(0.0);
-                        let pe = pesos["ponderacionEmpresa"].as_f64().unwrap_or(0.0);
-                        if p == 0.0 && pi == 0.0 && pe == 0.0 { return None; }
-                        let mut c2 = c.clone();
-                        if let Value::Object(ref mut obj) = c2 { obj.insert("ponderacionUnidad".to_string(), pesos.clone()); }
-                        Some(c2)
+            // Detectar qué CR existen en la hoja Ux (fila idx=2)
+            let cr_en_hoja: std::collections::HashSet<String> = {
+                let unit_rows = read_sheet_rows(path, unidad).unwrap_or_default();
+                if unit_rows.len() > 2 {
+                    (0..unit_rows[2].len()).filter_map(|ci| {
+                        let code = cell_str(&unit_rows, 2, ci);
+                        if is_cr_code(&code) { Some(normalize_criterion_code(&code)) } else { None }
                     }).collect()
-                } else { vec![] }
-            } else { vec![] };
+                } else { std::collections::HashSet::new() }
+            };
+            let unidad_idx = unidades.iter().position(|u| u["codigo"].as_str() == Some(unidad));
+            let criterios_filtrados = criterios.iter().filter_map(|c| {
+                let cr_code = c["codigo"].as_str().unwrap_or("");
+                if !cr_en_hoja.contains(&normalize_criterion_code(cr_code)) { return None; }
+                let mut c2 = c.clone();
+                // Adjuntar pesos si existen
+                if let Some(idx) = unidad_idx {
+                    if let Some(pu_entry) = pu.get(idx) {
+                        let ci_key = c["colIdx"].as_u64().unwrap_or(0).to_string();
+                        if let Some(pesos) = pu_entry["ponderaciones"].get(&ci_key) {
+                            if let Value::Object(ref mut obj) = c2 {
+                                obj.insert("ponderacionUnidad".to_string(), pesos.clone());
+                            }
+                        }
+                    }
+                }
+                Some(c2)
+            }).collect();
             (rraa, criterios, pu, criterios_filtrados)
         } else {
             (vec![], vec![], vec![], vec![])

@@ -1888,6 +1888,10 @@
         }
 
         function isCriterionIncludedForCurrentUnit(criterion) {
+            // Incluido si está en data.criterios (presente en hoja Ux) o tiene peso > 0
+            const enUnidad = currentState && currentState.criterios &&
+                currentState.criterios.some(c => c.codigo === criterion.codigo);
+            if (enUnidad) return true;
             return unitWeightBreakdown(criterion).total > 0;
         }
 
