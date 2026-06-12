@@ -230,9 +230,9 @@
         }
 
         .codigo-input {
-            width: 58px !important;
-            min-width: 58px !important;
-            max-width: 58px !important;
+            width: 76px !important;
+            min-width: 76px !important;
+            max-width: 76px !important;
             padding-left: 8px;
             padding-right: 8px;
         }
@@ -298,7 +298,7 @@
         }
 
         .ponderaciones-matrix col.matrix-col-cr {
-            width: 74px;
+            width: 88px;
         }
 
         .ponderaciones-matrix th,
@@ -340,6 +340,12 @@
             border-top: 2px solid var(--ce-color, #6366f1);
             color: #374151;
             line-height: 1.25;
+        }
+
+        .ponderaciones-matrix .matrix-cr-code {
+            display: block;
+            white-space: nowrap;
+            font-size: 0.96em;
         }
 
         .ponderaciones-matrix .matrix-ce-start {
@@ -1444,24 +1450,26 @@
             const criterios = [];
             const headerCriterios = json[3] || [];
             const ponderaciones = json[21] || [];
+            const ultimoCrPorCe = new Map();
 
             for (let colIdx = 0; colIdx < headerCriterios.length; colIdx++) {
                 const codigo = headerCriterios[colIdx];
 
                 if (esCodigoCriterio(codigo)) {
-                    const raNumero = numeroRaDesdeCriterio(codigo);
+                    const codigoCorregido = codigoCriterioEnSecuencia(codigo, ultimoCrPorCe);
+                    const raNumero = numeroRaDesdeCriterio(codigoCorregido);
                     const rraa = raaaActuales.find(item => Number(item.numero) === raNumero);
                     criterios.push({
                         numero: criterios.length + 1,
-                        codigo: String(codigo),
-                        nombre: String(codigo),
+                        codigo: codigoCorregido,
+                        nombre: codigoCorregido,
                         originalCodigo: String(codigo),
                         raNumero,
                         raDescripcion: rraa ? rraa.descripcion : '',
                         ponderacion: ponderaciones[colIdx] || 0,
                         ponderacionInstituto: ponderaciones[colIdx + 1] || 0,
                         ponderacionEmpresa: ponderaciones[colIdx + 2] || 0,
-                        texto: textos[normalizarCodigoCriterio(codigo)] || '',
+                        texto: textos[normalizarCodigoCriterio(codigoCorregido)] || textos[normalizarCodigoCriterio(codigo)] || '',
                         colIdx,
                         actualCol: colIdx
                     });
@@ -1557,7 +1565,6 @@
             const badge = document.getElementById('criteriosVisiblesBadge');
             const criteriosVisibles = criteriosActuales.filter((crit) =>
                 Number(crit.raNumero) === Number(criterioRaActivo) &&
-                String(crit.texto || "").trim() !== "" &&
                 (!criterioBusqueda ||
                     normalizarBusqueda(crit.codigo).includes(criterioBusqueda) ||
                     normalizarBusqueda(crit.texto).includes(criterioBusqueda))
@@ -1602,8 +1609,7 @@
             }
 
             const criteriosVisibles = criteriosActuales.filter((crit) =>
-                Number(crit.raNumero) === Number(ponderacionRaActiva) &&
-                String(crit.texto || "").trim() !== ""
+                Number(crit.raNumero) === Number(ponderacionRaActiva)
             );
             tbody.innerHTML = criteriosVisibles.map((crit) => {
                 const critIdx = criteriosActuales.indexOf(crit);
@@ -1617,7 +1623,7 @@
                 return `
                     <tr>
                         <td>CE ${crit.raNumero}</td>
-                        <td><input class="codigo-input" type="text" value="${escaparHtml(crit.codigo || crit.nombre)}" maxlength="6" onchange="actualizarCriterioCampo(${critIdx}, 'codigo', this.value)" /></td>
+                        <td><input class="codigo-input" type="text" value="${escaparHtml(crit.codigo || crit.nombre)}" maxlength="10" onchange="actualizarCriterioCampo(${critIdx}, 'codigo', this.value)" /></td>
                         <td><textarea onchange="actualizarCriterioCampo(${critIdx}, 'texto', this.value)">${escaparHtml(crit.texto || '')}</textarea></td>
                         <td><input type="number" value="${values.ponderacion || 0}" min="0" max="1" step="0.01" onchange="actualizarPonderacionUnidad(${unidad.rowIdx}, ${crit.colIdx}, 'ponderacion', this.value)" /></td>
                         <td><button class="delete" onclick="mostrarTablaPonderacionesUnidad()" title="Actualizar">🔄</button></td>
@@ -1636,8 +1642,7 @@
 
         function criteriosPonderacionVisibles() {
             return criteriosActuales.filter((crit) =>
-                Number(crit.raNumero) &&
-                String(crit.texto || '').trim() !== ''
+                Number(crit.raNumero)
             );
         }
 
@@ -1770,7 +1775,9 @@
                         const crCols = grupo.criterios.map((crit, critIdx) => {
                             const pct = Number(crit.ponderacionCR) > 0 ? `<span class="matrix-criteria-pct">${formatearPorcentajeMatriz(crit.ponderacionCR)}</span>` : '';
                             const isLast = critIdx === grupo.criterios.length - 1;
-                            return `<th class="matrix-cr-header ${isLast ? 'matrix-ce-end' : ''}" data-col-key="cr-${crit.colIdx}" style="${style}" title="${escaparHtml(crit.texto || '')}">${escaparHtml(crit.codigo || crit.nombre)}${pct}</th>`;
+                            const codigo = escaparHtml(crit.codigo || crit.nombre);
+                            const title = [crit.codigo || crit.nombre, crit.texto || ''].filter(Boolean).join(' - ');
+                            return `<th class="matrix-cr-header ${isLast ? 'matrix-ce-end' : ''}" data-col-key="cr-${crit.colIdx}" style="${style}" title="${escaparHtml(title)}"><span class="matrix-cr-code">${codigo}</span>${pct}</th>`;
                         }).join('');
                         return instCol + crCols;
                     }).join('')}
@@ -2172,6 +2179,19 @@
             return match ? Number(match[1]) : 0;
         }
 
+        function codigoCriterioEnSecuencia(value, ultimoCrPorCe) {
+            const match = String(value || '').trim().match(/^CR(\d+)\.(\d+)$/i);
+            if (!match) return String(value || '').trim();
+            const ceNumero = Number(match[1]);
+            let crNumero = Number(match[2]);
+            const ultimo = ultimoCrPorCe.get(ceNumero) || 0;
+            if (crNumero <= ultimo) {
+                crNumero = ultimo + 1;
+            }
+            ultimoCrPorCe.set(ceNumero, crNumero);
+            return `CR${ceNumero}.${crNumero}`;
+        }
+
         function normalizarCodigoCriterio(value) {
             return String(value || '').trim().replace(/\)$/u, '').toLowerCase();
         }
@@ -2185,13 +2205,15 @@
             }
 
             const textos = {};
+            const ultimoCrPorCe = new Map();
 
             rows.forEach((row) => {
                 const codigo = row && row[22];
                 const texto = row && row[23];
+                const codigoCorregido = codigoCriterioEnSecuencia(codigo, ultimoCrPorCe);
 
-                if (codigo && texto) {
-                    textos[normalizarCodigoCriterio(codigo)] = String(texto).trim();
+                if (codigoCorregido && texto) {
+                    textos[normalizarCodigoCriterio(codigoCorregido)] = String(texto).trim();
                 }
             });
 
@@ -2329,7 +2351,6 @@
 
             const crs = criteriosActuales.filter(c =>
                 Number(c.raNumero) === Number(ceResumenActivo) &&
-                String(c.texto || '').trim() !== '' &&
                 c.ponderacionCR > 0
             );
             const unidades = ponderacionesUnidad.filter(u => String(u.nombre || '').trim() !== '' && u.nombre !== '0');
@@ -2749,25 +2770,27 @@
                     const pesosRows = XLSX.utils.sheet_to_json(importWb.Sheets['PESOS'], { header: 1 });
                     const importTextos = extraerTextosCriterios(datosRows, importWb.Sheets['DATOS']);
                     const importCriterios = [];
+                    const ultimoCrPorCe = new Map();
 
                     for (let colIdx = 0; colIdx < (pesosRows[3] || []).length; colIdx++) {
                         const codigo = pesosRows[3] && pesosRows[3][colIdx];
 
                         if (!esCodigoCriterio(codigo)) continue;
 
-                        const raNumero = numeroRaDesdeCriterio(codigo);
+                        const codigoCorregido = codigoCriterioEnSecuencia(codigo, ultimoCrPorCe);
+                        const raNumero = numeroRaDesdeCriterio(codigoCorregido);
                         const rraa = importRraa.find(item => Number(item.numero) === raNumero);
 
                         importCriterios.push({
                             numero: importCriterios.length + 1,
-                            codigo: String(codigo),
-                            nombre: String(codigo),
+                            codigo: codigoCorregido,
+                            nombre: codigoCorregido,
                             raNumero,
                             raDescripcion: rraa ? rraa.descripcion : '',
                             ponderacion: pesosRows[21] && pesosRows[21][colIdx] ? pesosRows[21][colIdx] : 0,
                             ponderacionInstituto: pesosRows[21] && pesosRows[21][colIdx + 1] ? pesosRows[21][colIdx + 1] : 0,
                             ponderacionEmpresa: pesosRows[21] && pesosRows[21][colIdx + 2] ? pesosRows[21][colIdx + 2] : 0,
-                            texto: importTextos[normalizarCodigoCriterio(codigo)] || '',
+                            texto: importTextos[normalizarCodigoCriterio(codigoCorregido)] || importTextos[normalizarCodigoCriterio(codigo)] || '',
                             colIdx,
                             actualCol: colIdx
                         });

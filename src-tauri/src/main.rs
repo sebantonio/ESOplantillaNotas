@@ -356,6 +356,20 @@ fn parse_cr_code(s: &str) -> Option<(i64, i64)> {
     Some((ce_num, cr_num))
 }
 
+fn canonical_cr_code(ce_num: i64, cr_num: i64) -> String {
+    format!("CR{}.{}", ce_num, cr_num)
+}
+
+fn next_cr_code_for_ce(raw_code: &str, last_by_ce: &mut HashMap<i64, i64>) -> Option<(i64, i64, String)> {
+    let (ce_num, mut cr_num) = parse_cr_code(raw_code)?;
+    let last = last_by_ce.entry(ce_num).or_insert(0);
+    if cr_num <= *last {
+        cr_num = *last + 1;
+    }
+    *last = cr_num;
+    Some((ce_num, cr_num, canonical_cr_code(ce_num, cr_num)))
+}
+
 // Compatibilidad: is_criterion_code no se usa en ESO pero se conserva para funciones heredadas
 fn is_criterion_code(_s: &str) -> bool { false }
 
@@ -403,58 +417,94 @@ fn excel_save_rraa_criterios(payload: Value) -> Result<Value, String> {
 fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Vec<Value>)> {
     let datos_rows = read_sheet_rows(path, "DATOS").ok()?;
 
-    // CE: hoja DATOS, col R(17)=nº, S(18)=descripcion, header en idx 3, datos desde idx 4
-    let mut ce_list: Vec<Value> = Vec::new();
-    for row_idx in 4..datos_rows.len() {
-        let ce_text = cell_str(&datos_rows, row_idx, 18);
-        if ce_text.is_empty() { break; }
-        let num: i64 = cell_f64(&datos_rows, row_idx, 17).map(|f| f as i64)
-            .unwrap_or((ce_list.len() + 1) as i64);
-        ce_list.push(json!({ "numero": num, "descripcion": ce_text, "colIdx": ce_list.len() }));
-    }
-
-    // CR: hoja DATOS, col V(21)=nº CE (celda combinada), W(22)=código CR, X(23)=texto CR
-    let mut criterios: Vec<Value> = Vec::new();
-    let mut current_ce_num: i64 = 0;
-    let mut empty_streak: usize = 0;
-    for row_idx in 4..datos_rows.len() {
-        let ce_col = cell_str(&datos_rows, row_idx, 21);
-        let cr_code = cell_str(&datos_rows, row_idx, 22);
-        let cr_text = cell_str(&datos_rows, row_idx, 23);
-        if !ce_col.is_empty() {
-            current_ce_num = ce_col.parse::<i64>().unwrap_or(current_ce_num);
-            empty_streak = 0;
-        }
-        if is_cr_code(&cr_code) {
-            empty_streak = 0;
-            let ce_num = parse_cr_code(&cr_code).map(|(ce, _)| ce).unwrap_or(current_ce_num);
-            let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
-                .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
-            criterios.push(json!({
-                "numero": criterios.len() + 1,
-                "codigo": cr_code.clone(),
-                "nombre": cr_code.clone(),
-                "originalCodigo": cr_code.clone(),
-                "raNumero": ce_num,
-                "raDescripcion": ce_desc,
-                "texto": cr_text,
-                "colIdx": criterios.len()
-            }));
-        } else if ce_col.is_empty() && cr_code.is_empty() {
-            empty_streak += 1;
-            if empty_streak >= 3 { break; }
-        }
-    }
-
     // Ponderaciones: hoja PESOS si existe (pesos por CR y unidad)
     let pesos_rows = read_sheet_rows(path, "PESOS").ok();
+
     // Mapa CR código → columna real en PESOS (fila idx 3)
     let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     if let Some(ref rows) = pesos_rows {
         if rows.len() > 3 {
+            let mut last_cr_by_ce: HashMap<i64, i64> = HashMap::new();
             for ci in 0..rows[3].len() {
                 let code = cell_str(rows, 3, ci);
-                if is_cr_code(&code) { cr_col_map.insert(normalize_criterion_code(&code), ci); }
+                if let Some((_, _, fixed_code)) = next_cr_code_for_ce(&code, &mut last_cr_by_ce) {
+                    cr_col_map.insert(normalize_criterion_code(&fixed_code), ci);
+                }
+            }
+        }
+    }
+
+    // CE: leer de PESOS fila idx=2 (headers de CE) — formato "CE1. texto", "CE.1 texto", etc.
+    let re_ce_header = Regex::new(r"(?i)^CE\.?\s*(\d+)[.\s]").unwrap();
+    let mut ce_list: Vec<Value> = Vec::new();
+    // Fallback: inferir CE desde DATOS fila idx=1 si PESOS no tiene fila idx=2
+    let ce_source_rows = pesos_rows.as_ref().filter(|r| r.len() > 2).map(|r| (r, 2usize))
+        .or_else(|| if datos_rows.len() > 1 { Some((&datos_rows, 1usize)) } else { None });
+    if let Some((rows, row_idx)) = ce_source_rows {
+        let row_len = rows[row_idx].len();
+        let mut seen_ce: std::collections::HashSet<i64> = std::collections::HashSet::new();
+        for ci in 0..row_len {
+            let text = cell_str(rows, row_idx, ci);
+            if text.is_empty() || text == "UNIDADES" { continue; }
+            if let Some(caps) = re_ce_header.captures(&text) {
+                let num: i64 = caps.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
+                if num > 0 && seen_ce.insert(num) {
+                    ce_list.push(json!({ "numero": num, "descripcion": text, "colIdx": ce_list.len() }));
+                }
+            }
+        }
+    }
+    // Fallback final: si no se encontraron CE, inferirlos desde los CR ya conocidos
+    if ce_list.is_empty() {
+        let mut seen: std::collections::BTreeSet<i64> = std::collections::BTreeSet::new();
+        for key in cr_col_map.keys() {
+            if let Some((ce_num, _)) = parse_cr_code(key) { seen.insert(ce_num); }
+        }
+        for num in seen {
+            ce_list.push(json!({ "numero": num, "descripcion": format!("CE{}", num), "colIdx": ce_list.len() }));
+        }
+    }
+
+    // CR: construir desde cr_col_map (PESOS fila idx=3), ya que DATOS puede no tener columnas V/W/X
+    // Texto de CR: buscar en DATOS fila idx=2 (row 3) si tiene texto, o dejar vacío
+    let cr_text_map: std::collections::HashMap<String, String> = if datos_rows.len() > 2 {
+        let row_len = datos_rows[2].len();
+        (0..row_len).filter_map(|ci| {
+            let code = cell_str(&datos_rows, 2, ci);
+            if !is_cr_code(&code) { return None; }
+            // Texto en col siguiente si no es otro CR
+            let texto = if ci + 1 < row_len {
+                let next = cell_str(&datos_rows, 2, ci + 1);
+                if !is_cr_code(&next) && !next.is_empty() { next } else { String::new() }
+            } else { String::new() };
+            Some((normalize_criterion_code(&code), texto))
+        }).collect()
+    } else { std::collections::HashMap::new() };
+
+    let mut criterios: Vec<Value> = Vec::new();
+    let mut last_cr_by_ce2: HashMap<i64, i64> = HashMap::new();
+    if let Some(ref rows) = pesos_rows {
+        if rows.len() > 3 {
+            for ci in 0..rows[3].len() {
+                let code = cell_str(rows, 3, ci);
+                if !is_cr_code(&code) { continue; }
+                let (ce_num, _, fixed_cr_code) = match next_cr_code_for_ce(&code, &mut last_cr_by_ce2) {
+                    Some(v) => v, None => continue,
+                };
+                let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
+                    .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
+                let texto = cr_text_map.get(&normalize_criterion_code(&fixed_cr_code))
+                    .cloned().unwrap_or_default();
+                criterios.push(json!({
+                    "numero": criterios.len() + 1,
+                    "codigo": fixed_cr_code.clone(),
+                    "nombre": fixed_cr_code.clone(),
+                    "originalCodigo": code,
+                    "raNumero": ce_num,
+                    "raDescripcion": ce_desc,
+                    "texto": texto,
+                    "colIdx": criterios.len()
+                }));
             }
         }
     }
@@ -1716,10 +1766,11 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
     let mut code_col_map: HashMap<String, usize> = HashMap::new();
     if let Ok(rows) = read_sheet_rows(path, "PESOS") {
         if rows.len() > 3 {
+            let mut last_cr_by_ce: HashMap<i64, i64> = HashMap::new();
             for ci in 0..rows[3].len() {
                 let code = cell_str(&rows, 3, ci);
-                if is_cr_code(&code) {
-                    code_col_map.insert(normalize_criterion_code(&code), ci);
+                if let Some((_, _, fixed_code)) = next_cr_code_for_ce(&code, &mut last_cr_by_ce) {
+                    code_col_map.insert(normalize_criterion_code(&fixed_code), ci);
                 }
             }
         }
