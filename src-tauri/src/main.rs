@@ -488,7 +488,8 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
                 "raNumero": ce_num,
                 "raDescripcion": ce_desc,
                 "texto": "",
-                "colIdx": criterios.len()
+                "colIdx": criterios.len(),  // índice secuencial (lo usa el frontend como key)
+                "actualCol": ci  // columna real en PESOS (para leer ponderaciones)
             }));
         }
     }
@@ -503,6 +504,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     }).enumerate().map(|(idx, mut c)| {
         if let Value::Object(ref mut obj) = c {
             obj.insert("numero".to_string(), json!(idx + 1));
+            obj.insert("colIdx".to_string(), json!(idx)); // recalcular secuencial post-filter
         }
         c
     }).collect();
@@ -520,8 +522,8 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
         .filter_map(|(&ce, &col)| if col > 0 { Some((ce, col - 1)) } else { None })
         .collect();
     // Filas de totales en PESOS via XML: fila 22 = ponderacionTotal CE, fila 21 = % CR
-    let pesos_row22 = read_row_from_xml(path, "PESOS", 22); // ponderacionTotal por CE
-    let pesos_row21 = read_row_from_xml(path, "PESOS", 21); // ponderacionCR %
+    let pesos_row22 = read_row_from_xml(path, "PESOS", 23); // fila 23 = Ponderación final CE (%)
+    let pesos_row21 = read_row_from_xml(path, "PESOS", 22); // fila 22 = %ponderación final C.R.
     // Añadir ponderacionTotal e instrColIdx a cada CE
     let ce_list: Vec<Value> = ce_list.into_iter().map(|ce| {
         let ce_num = ce["numero"].as_i64().unwrap_or(0);
@@ -1246,42 +1248,77 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         Err(_) => Vec::new(),
     };
 
-    // Detectar códigos CR en la fila de encabezados (idx 2 o 3), scan desde col 0
+    // Detectar CRs en hoja Ux usando XML directo (calamine trunca columnas lejanas)
+    // Fila 3 en Excel = row_1=3 (1-indexed)
     let mut cr_cols: Vec<(String, usize)> = Vec::new();
-    for check_ri in 2..=3 {
-        if let Some(row) = rows.get(check_ri) {
-            for ci in 0..row.len().min(110) {
-                let s = cell_val_str(row.get(ci).unwrap_or(&Value::Null));
-                if is_cr_code(&s) {
-                    cr_cols.push((s.to_uppercase(), ci));
-                }
+    for check_row_1 in [3usize, 4usize] {
+        let xml_row = read_row_from_xml(path, unidad, check_row_1);
+        if !xml_row.is_empty() {
+            let mut sorted: Vec<(usize, String)> = xml_row.into_iter().collect();
+            sorted.sort_by_key(|(ci, _)| *ci);
+            for (ci, s) in sorted {
+                if is_cr_code(&s) { cr_cols.push((s.to_uppercase(), ci)); }
             }
         }
         if !cr_cols.is_empty() { break; }
     }
-
-    // Leer ponderaciones de PESOS para la unidad actual
-    let ponderaciones_por_cr: std::collections::HashMap<String, f64> = {
-        let mut map = std::collections::HashMap::new();
-        if let Ok(pesos_rows) = read_sheet_rows(path, "PESOS") {
-            // CR col map: fila idx 3 tiene los códigos CR
-            let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-            if pesos_rows.len() > 3 {
-                for ci in 0..pesos_rows[3].len() {
-                    let code = cell_str(&pesos_rows, 3, ci);
-                    if is_cr_code(&code) { cr_col_map.insert(code.to_uppercase(), ci); }
+    // Fallback a calamine si XML falla
+    if cr_cols.is_empty() {
+        for check_ri in 2..=3 {
+            if let Some(row) = rows.get(check_ri) {
+                for ci in 0..row.len().min(200) {
+                    let s = cell_val_str(row.get(ci).unwrap_or(&Value::Null));
+                    if is_cr_code(&s) { cr_cols.push((s.to_uppercase(), ci)); }
                 }
             }
-            // Buscar fila de la unidad actual (col A, filas idx 4-19)
-            let unidad_norm = normalize_plain(unidad);
-            for ri in 4..pesos_rows.len().min(20) {
-                let nombre_pesos = normalize_plain(&cell_str(&pesos_rows, ri, 0));
-                if nombre_pesos == unidad_norm || nombre_pesos.contains(&unidad_norm) || unidad_norm.contains(&nombre_pesos) {
-                    for (cr_code, col) in &cr_col_map {
-                        let pond = cell_f64(&pesos_rows, ri, *col).unwrap_or(0.0);
+            if !cr_cols.is_empty() { break; }
+        }
+    }
+
+    // Leer ponderaciones de PESOS usando XML directo para ambas filas (CR map y valores de unidad)
+    let ponderaciones_por_cr: std::collections::HashMap<String, f64> = {
+        let mut map = std::collections::HashMap::new();
+        // CR col map desde PESOS fila 4 (1-indexed) vía XML
+        let pesos_cr_row = read_row_from_xml(path, "PESOS", 4);
+        let cr_col_map: std::collections::HashMap<String, usize> = pesos_cr_row.into_iter()
+            .filter(|(_, v)| is_cr_code(v))
+            .map(|(ci, v)| (v.to_uppercase(), ci))
+            .collect();
+        // Calcular fila directamente del nombre de unidad: U1→fila5, U2→fila6, ...
+        // unidad tiene formato "U1", "U2", ..., "U16"
+        let unidad_num: Option<usize> = {
+            let u = unidad.to_uppercase();
+            let u = u.trim_start_matches('U');
+            u.parse::<usize>().ok()
+        };
+        if let Some(u_num) = unidad_num {
+            let target_row_1 = 4 + u_num; // U1→5, U2→6, ...
+            if target_row_1 <= 20 {
+                let pesos_row = read_row_from_xml(path, "PESOS", target_row_1);
+                for (cr_code, col) in &cr_col_map {
+                    if let Some(pond_str) = pesos_row.get(col) {
+                        let pond: f64 = pond_str.replace(',', ".").trim().parse().unwrap_or(0.0);
                         map.insert(cr_code.clone(), pond);
                     }
-                    break;
+                }
+            }
+        }
+        // Fallback: buscar por nombre en col A si el índice directo no funciona
+        if map.is_empty() {
+            let unidad_norm = normalize_plain(unidad);
+            for unidad_row_1 in 5..=20usize {
+                let pesos_row = read_row_from_xml(path, "PESOS", unidad_row_1);
+                if let Some(nombre) = pesos_row.get(&0) {
+                    let nombre_norm = normalize_plain(nombre);
+                    if nombre_norm.contains(&unidad_norm) || unidad_norm.contains(&nombre_norm) {
+                        for (cr_code, col) in &cr_col_map {
+                            if let Some(pond_str) = pesos_row.get(col) {
+                                let pond: f64 = pond_str.replace(',', ".").trim().parse().unwrap_or(0.0);
+                                map.insert(cr_code.clone(), pond);
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
@@ -1587,6 +1624,45 @@ fn read_col_values_from_xml(path: &str, sheet_name: &str, col: usize) -> HashMap
 
 // Lee todos los valores de texto de una fila (1-indexed) directamente del ZIP/XML
 // Devuelve mapa col_0indexed -> valor_string (con shared strings resueltos)
+fn parse_shared_strings_xml(xml: &str) -> Vec<String> {
+    // Extraer todos los <si>...</si> usando posición de string (sin regex multilinea)
+    let mut shared = Vec::new();
+    let mut pos = 0;
+    while let Some(si_start) = xml[pos..].find("<si>") {
+        let abs_start = pos + si_start + 4; // justo después de <si>
+        let end = match xml[abs_start..].find("</si>") { Some(e) => abs_start + e, None => break };
+        let si_content = &xml[abs_start..end];
+        // Concatenar todos los <t>...</t> dentro del <si>
+        let mut text = String::new();
+        let mut p2 = 0;
+        while let Some(t_start) = si_content[p2..].find("<t") {
+            let abs_t = p2 + t_start;
+            let gt = match si_content[abs_t..].find('>') { Some(g) => abs_t + g + 1, None => break };
+            let t_end = match si_content[gt..].find("</t>") { Some(e) => gt + e, None => break };
+            text.push_str(&si_content[gt..t_end]);
+            p2 = t_end + 4;
+        }
+        shared.push(text);
+        pos = end + 5; // después de </si>
+    }
+    shared
+}
+
+fn extract_cell_value(cell_xml: &str, shared: &[String]) -> Option<String> {
+    // cell_xml: contenido entre <c ...> y </c> (sin las etiquetas)
+    let is_shared = cell_xml.contains("t=\"s\"") || cell_xml.contains("t='s'");
+    // Buscar <v>...</v>
+    let v_start = cell_xml.find("<v>")? + 3;
+    let v_end = cell_xml[v_start..].find("</v>")? + v_start;
+    let raw = cell_xml[v_start..v_end].trim();
+    if is_shared {
+        let idx: usize = raw.parse().ok()?;
+        Some(shared.get(idx).cloned().unwrap_or_default())
+    } else {
+        Some(raw.to_string())
+    }
+}
+
 fn read_row_from_xml(path: &str, sheet_name: &str, row_1: usize) -> HashMap<usize, String> {
     let mut result = HashMap::new();
     let input = match std::fs::read(path) { Ok(b) => b, Err(_) => return result };
@@ -1601,36 +1677,65 @@ fn read_row_from_xml(path: &str, sheet_name: &str, row_1: usize) -> HashMap<usiz
         let _ = f.read_to_end(&mut buf);
         files.insert(name, buf);
     }
-    // Shared strings
     let shared: Vec<String> = if let Some(b) = files.get("xl/sharedStrings.xml") {
-        let xml = String::from_utf8_lossy(b).to_string();
-        let re_si = Regex::new(r"<si>([\s\S]*?)</si>").unwrap();
-        let re_t = Regex::new(r"<t[^>]*>([^<]*)</t>").unwrap();
-        re_si.captures_iter(&xml).map(|cap| {
-            re_t.captures_iter(&cap[1]).map(|t| t[1].to_string()).collect::<Vec<_>>().join("")
-        }).collect()
+        parse_shared_strings_xml(&String::from_utf8_lossy(b))
     } else { vec![] };
     let wb = match files.get("xl/workbook.xml") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
     let rels = match files.get("xl/_rels/workbook.xml.rels") { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
     let sheet_path = match find_worksheet_path_in_zip(&wb, &rels, sheet_name) { Ok(p) => p, Err(_) => return result };
     let xml = match files.get(&sheet_path) { Some(b) => String::from_utf8_lossy(b).to_string(), None => return result };
-    // Buscar la fila exacta
-    let row_re = Regex::new(&format!(r#"<row\b[^>]*\br="{}"[^>]*>([\s\S]*?)</row>"#, row_1)).unwrap();
-    let row_xml = match row_re.captures(&xml) { Some(c) => c[1].to_string(), None => return result };
-    let cell_re = Regex::new(r#"<c\b[^>]*\br="([A-Z]+)\d+"([^>]*)>([\s\S]*?)</c>"#).unwrap();
-    for cap in cell_re.captures_iter(&row_xml) {
-        let col_str = &cap[1];
-        let attrs = &cap[2];
-        let content = &cap[3];
-        let v_re = Regex::new(r"<v>([^<]*)</v>").unwrap();
-        let val_raw = match v_re.captures(content) { Some(c) => c[1].to_string(), None => continue };
-        let val = if attrs.contains("t=\"s\"") {
-            let idx: usize = val_raw.trim().parse().unwrap_or(usize::MAX);
-            shared.get(idx).cloned().unwrap_or_default()
-        } else { val_raw.trim().to_string() };
-        if val.is_empty() { continue; }
-        let col_idx = col_name_to_idx(col_str);
+    // Encontrar la fila r="N" usando búsqueda de string (no regex — el XML puede tener newlines)
+    let row_attr = format!("r=\"{}\"", row_1);
+    let row_attr2 = format!("r='{}'", row_1); // por si acaso
+    let mut pos = 0;
+    let row_content = loop {
+        let found = match xml[pos..].find("<row ") { Some(f) => pos + f, None => return result };
+        let tag_gt = match xml[found..].find('>') { Some(g) => found + g, None => return result };
+        let tag = &xml[found..=tag_gt];
+        let has_attr = tag.contains(&row_attr) || tag.contains(&row_attr2);
+        if has_attr {
+            // Verificar que no es r="10" cuando buscamos r="1"
+            let re_check = Regex::new(&format!(r#"\br="{}""#, row_1)).unwrap();
+            if re_check.is_match(tag) {
+                let content_start = tag_gt + 1;
+                let content_end = match xml[content_start..].find("</row>") { Some(e) => content_start + e, None => return result };
+                break xml[content_start..content_end].to_string();
+            }
+        }
+        pos = found + 1;
+    };
+    // Parsear celdas — iterar sobre <c ...>...</c> usando string search
+    // Maneja celdas self-closing (<c r="X4"/>) y celdas con contenido (<c r="X4">...</c>)
+    let re_cell_ref = Regex::new(r#"\br="([A-Z]+)\d+""#).unwrap();
+    let mut cpos = 0;
+    while let Some(c_start) = row_content[cpos..].find("<c ") {
+        let abs_c = cpos + c_start;
+        let c_gt = match row_content[abs_c..].find('>') { Some(g) => abs_c + g, None => break };
+        let c_tag = &row_content[abs_c..=c_gt];
+        // Extraer referencia de celda (ej: B3, DG4)
+        let col_str = match re_cell_ref.captures(c_tag) {
+            Some(cap) => cap[1].to_string(),
+            None => { cpos = c_gt + 1; continue; }
+        };
+        // Detectar celda self-closing (<c ... />) — no tiene contenido
+        let is_self_closing = c_tag.ends_with("/>") || c_tag.ends_with("/ >");
+        if is_self_closing {
+            cpos = c_gt + 1;
+            continue;
+        }
+        // Encontrar cierre </c> — si no existe, continuar (no hacer break)
+        let cell_end = match row_content[c_gt+1..].find("</c>") {
+            Some(e) => c_gt + 1 + e,
+            None => { cpos = c_gt + 1; continue; } // <-- continuar, no break
+        };
+        let cell_content = &row_content[c_gt+1..cell_end];
+        let val = match extract_cell_value(&format!("{}{}", c_tag, cell_content), &shared) {
+            Some(v) if !v.is_empty() => v,
+            _ => { cpos = cell_end + 4; continue; }
+        };
+        let col_idx = col_name_to_idx(&col_str);
         result.insert(col_idx, val);
+        cpos = cell_end + 4;
     }
     result
 }
