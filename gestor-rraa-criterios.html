@@ -2413,14 +2413,13 @@
                 <tr>
                     <td colspan="2" style="${footTdStyle} text-align:left;color:#6366f1;">% peso del criterio</td>
                     ${crs.map(cr => {
-                        const sumaCr = unidades.reduce((s,u) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
-                        const pct = sumaTotal > 0 ? (sumaCr / sumaTotal * 100).toFixed(1) : 0;
-                        return `<td style="${footTdStyle} color:#6366f1;">${pct}%</td>`;
+                        const pct = Number(cr.ponderacionCR) > 0 ? (cr.ponderacionCR * 100).toFixed(1) + '%' : '—';
+                        return `<td style="${footTdStyle} color:#6366f1;">${pct}</td>`;
                     }).join('')}
                 </tr>
                 <tr>
                     <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:#4338ca;font-size:0.95em;">
-                        Peso total CE ${ce.numero}: <strong>${pesoCeTotal > 0 ? pesoCeTotal : '—'}</strong>
+                        Peso total CE ${ce.numero}: <strong>${Number(ce.ponderacionTotal) > 0 ? (ce.ponderacionTotal * 100).toFixed(1) + '%' : pesoCeTotal > 0 ? pesoCeTotal : '—'}</strong>
                     </td>
                 </tr>`;
         }
