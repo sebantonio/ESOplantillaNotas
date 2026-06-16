@@ -1651,6 +1651,13 @@ fn parse_shared_strings_xml(xml: &str) -> Vec<String> {
 fn extract_cell_value(cell_xml: &str, shared: &[String]) -> Option<String> {
     // cell_xml: contenido entre <c ...> y </c> (sin las etiquetas)
     let is_shared = cell_xml.contains("t=\"s\"") || cell_xml.contains("t='s'");
+    let is_inline = cell_xml.contains("t=\"inlineStr\"") || cell_xml.contains("t='inlineStr'");
+    if is_inline {
+        let t_start = cell_xml.find("<t")?;
+        let t_gt = cell_xml[t_start..].find('>')? + t_start + 1;
+        let t_end = cell_xml[t_gt..].find("</t>")? + t_gt;
+        return Some(cell_xml[t_gt..t_end].to_string());
+    }
     // Buscar <v>...</v>
     let v_start = cell_xml.find("<v>")? + 3;
     let v_end = cell_xml[v_start..].find("</v>")? + v_start;
