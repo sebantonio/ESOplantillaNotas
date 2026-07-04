@@ -1036,7 +1036,7 @@
                     <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
                     <a class="nav-link" href="index.html">⌂ Inicio</a>
                 </nav>
-                <div class="version" id="appVersionBadge">v0.1.152</div>
+                <div class="version" id="appVersionBadge">v0.1.162</div>
             </div>
         </header>
 
@@ -1084,27 +1084,6 @@
                         </a>
                     </div>
                 </div>
-
-                <!-- ZONA 2: Alertas -->
-                <div class="zone" id="alertasPanel" style="display:none" aria-label="Alertas de evaluación">
-                    <div class="zone-hdr">
-                        <div class="zone-info">
-                            <div class="zone-kicker">Alertas</div>
-                            <strong class="zone-title">Alumnos en riesgo</strong>
-                        </div>
-                        <select class="alertas-eva-select" id="alertasEvaSelect" onchange="loadAlertas()">
-                            <option value="1">1ª EVA</option>
-                            <option value="2">2ª EVA</option>
-                            <option value="3">3ª EVA</option>
-                            <option value="final">Final</option>
-                        </select>
-                        <a href="visor-notas.html" style="font-size:0.78rem;color:var(--primary);font-weight:700;text-decoration:none;">Ver todos →</a>
-                        <span class="zone-badge alerta">ALERTAS</span>
-                    </div>
-                    <div class="alertas-list" id="alertasList">
-                        <span class="alertas-loading">Cargando...</span>
-                    </div>
-                </div>
             </div>
 
             <aside class="side-panel" aria-labelledby="excel-title">
@@ -1144,6 +1123,27 @@
 
             </aside>
         </section>
+
+        <!-- ALERTAS: full-width -->
+        <div class="zone" id="alertasPanel" style="display:none;margin-top:0;margin-bottom:22px" aria-label="Alertas de evaluación">
+            <div class="zone-hdr">
+                <div class="zone-info">
+                    <div class="zone-kicker">Alertas</div>
+                    <strong class="zone-title">Alumnos en riesgo</strong>
+                </div>
+                <select class="alertas-eva-select" id="alertasEvaSelect" onchange="loadAlertas()">
+                    <option value="1">1ª EVA</option>
+                    <option value="2">2ª EVA</option>
+                    <option value="3">3ª EVA</option>
+                    <option value="final">Final</option>
+                </select>
+                <a href="visor-notas.html" style="font-size:0.78rem;color:var(--primary);font-weight:700;text-decoration:none;">Ver todos →</a>
+                <span class="zone-badge alerta">ALERTAS</span>
+            </div>
+            <div class="alertas-list" id="alertasList">
+                <span class="alertas-loading">Cargando...</span>
+            </div>
+        </div>
 
         <!-- CONSULTA: full-width -->
         <section class="consulta-panel" aria-label="Consultar notas">

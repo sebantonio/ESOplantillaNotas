@@ -423,6 +423,16 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
     let pesos_ce_row = read_row_from_xml(path, "PESOS", 3);  // col_idx -> texto CE
     let pesos_cr_row = read_row_from_xml(path, "PESOS", 4);  // col_idx -> código CR
 
+    // Texto de criterio: DATOS col W(22)=código CR, col X(23)=texto — una fila por CR
+    let mut cr_text_map: HashMap<String, String> = HashMap::new();
+    for row_idx in 0..datos_rows.len() {
+        let code = cell_str(&datos_rows, row_idx, 22);
+        if is_cr_code(&code) {
+            let texto = cell_str(&datos_rows, row_idx, 23);
+            cr_text_map.insert(normalize_criterion_code(&code), texto);
+        }
+    }
+
     // Mapa CR código → columna real en PESOS (fila 4)
     let mut cr_col_map: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     {
@@ -480,6 +490,9 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
             };
             let ce_desc = ce_list.iter().find(|ce| ce["numero"].as_i64() == Some(ce_num))
                 .and_then(|ce| ce["descripcion"].as_str()).unwrap_or("").to_string();
+            let texto = cr_text_map.get(&normalize_criterion_code(&fixed_cr_code))
+                .or_else(|| cr_text_map.get(&normalize_criterion_code(&code)))
+                .cloned().unwrap_or_default();
             criterios.push(json!({
                 "numero": criterios.len() + 1,
                 "codigo": fixed_cr_code.clone(),
@@ -487,7 +500,7 @@ fn extract_rraa_criterios_data(path: &str) -> Option<(Vec<Value>, Vec<Value>, Ve
                 "originalCodigo": code,
                 "raNumero": ce_num,
                 "raDescripcion": ce_desc,
-                "texto": "",
+                "texto": texto,
                 "colIdx": criterios.len(),  // índice secuencial (lo usa el frontend como key)
                 "actualCol": ci  // columna real en PESOS (para leer ponderaciones)
             }));
@@ -1332,6 +1345,28 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         })
         .collect();
 
+    // Rec: buscar en la hoja de evaluación (1ª/2ª/3ª) a la que pertenece esta unidad,
+    // ya que la Rec se guarda por evaluación, no por unidad. Mapa (alumno|CR) -> recDisplay.
+    let rec_map: HashMap<(String, String), String> = (|| {
+        let unidades_data = load_unidades(path).ok()?;
+        let eval_raw = unidades_data["unidades"].as_array()?.iter()
+            .find(|u| u["codigo"].as_str().map(|c| c.eq_ignore_ascii_case(unidad)).unwrap_or(false))
+            .and_then(|u| u["evaluacion"].as_str())?.to_string();
+        let eval_digit: String = eval_raw.chars().find(|c| c.is_ascii_digit())?.to_string();
+        let eval_data = load_notas_evaluacion(path, &eval_digit).ok()?;
+        let mut map = HashMap::new();
+        for a in eval_data["alumnos"].as_array().unwrap_or(&vec![]) {
+            let nombre_norm = normalize_plain(a["nombre"].as_str().unwrap_or(""));
+            for c in a["criterios"].as_array().unwrap_or(&vec![]) {
+                let rec = c["recDisplay"].as_str().unwrap_or("").to_string();
+                if rec.is_empty() { continue; }
+                let codigo = normalize_criterion_code(c["codigo"].as_str().unwrap_or(""));
+                map.insert((nombre_norm.clone(), codigo), rec);
+            }
+        }
+        Some(map)
+    })().unwrap_or_default();
+
     // Iterar filas de alumnos: usar nombre de DATOS por posición
     let mut alumnos: Vec<Value> = Vec::new();
     let max_alumnos = nombres_datos.len().max(37);
@@ -1339,11 +1374,13 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
         let alumno_idx = ri - first_row;
         let nombre = nombres_datos.get(alumno_idx).cloned().unwrap_or_default();
         if nombre.is_empty() { break; }
+        let nombre_norm = normalize_plain(&nombre);
 
         let cr_notas: Vec<Value> = cr_cols.iter().map(|(code, ci)| {
             let n = cell_f64(&rows, ri, *ci);
             let d = cell_str(&rows, ri, *ci);
-            json!({ "codigo": code, "colIdx": ci, "nota": n, "display": d })
+            let rec = rec_map.get(&(nombre_norm.clone(), normalize_criterion_code(code))).cloned().unwrap_or_default();
+            json!({ "codigo": code, "colIdx": ci, "nota": n, "display": d, "recDisplay": rec })
         }).collect();
 
         alumnos.push(json!({ "nombre": nombre, "rowIdx": ri, "crNotas": cr_notas }));
@@ -1929,6 +1966,18 @@ fn save_unidades_to_file(path: &str, unidades: &[Value]) -> Result<(), String> {
 fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad: &[Value], path: &str) -> Result<(), String> {
     let criterios_owned = criterios.to_vec();
     let pond_owned = pond_unidad.to_vec();
+
+    // Mapa código CR → fila en DATOS (col W=22) para persistir el texto (col X=23)
+    let mut cr_datos_row: HashMap<String, usize> = HashMap::new();
+    if let Ok(datos_rows) = read_sheet_rows(path, "DATOS") {
+        for row_idx in 0..datos_rows.len() {
+            let code = cell_str(&datos_rows, row_idx, 22);
+            if is_cr_code(&code) {
+                cr_datos_row.insert(normalize_criterion_code(&code), row_idx);
+            }
+        }
+    }
+
     let mut code_col_map: HashMap<String, usize> = HashMap::new();
     if let Ok(rows) = read_sheet_rows(path, "PESOS") {
         if rows.len() > 3 {
@@ -1995,6 +2044,22 @@ fn save_rraa_criterios_to_file(_rraa: &[Value], criterios: &[Value], pond_unidad
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                Ok(s)
+            }
+        })),
+        ("DATOS", Box::new({
+            let criterios3 = criterios_owned.clone(); let cr_datos_row2 = cr_datos_row.clone();
+            move |xml: &str| {
+                let mut s = xml.to_string();
+                for criterio in &criterios3 {
+                    if let Some(codigo) = criterio["codigo"].as_str() {
+                        if let Some(&row_idx) = cr_datos_row2.get(&normalize_criterion_code(codigo)) {
+                            let texto = criterio["texto"].as_str().unwrap_or("");
+                            let texto_val = json!(texto);
+                            s = set_xml_cell(&s, row_idx, 23, if texto.is_empty() { None } else { Some(&texto_val) }, "text")?;
                         }
                     }
                 }

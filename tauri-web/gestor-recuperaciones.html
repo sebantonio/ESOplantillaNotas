@@ -615,7 +615,9 @@
 
     function resetAutoSave() {
         if (autoSaveTimer) clearInterval(autoSaveTimer);
-        autoSaveTimer = setInterval(saveAllRec, 10000);
+        autoSaveTimer = setInterval(() => {
+            if (document.querySelectorAll('.rec-input.dirty-rec').length) saveAllRec();
+        }, 10000);
     }
 
     function renderStats() {
@@ -723,7 +725,9 @@
                         const cls   = gradeClass(crVal ? crVal.display : "");
                         bodyHtml += `<td data-col-key="${cr.colIdx}" style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
                         if (Number(cr.recColIdx) >= 0) {
-                            const recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
+                            let recRaw = (crVal && crVal.recDisplay) ? escapeHtml(crVal.recDisplay) : "";
+                            const recNum = parseFloat(recRaw.replace(",", "."));
+                            if (!isNaN(recNum) && recNum === 0) recRaw = "";
                             const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
                             const pendiente = crNota > 0 && crNota < 5 && recRaw === "";
                             const pendClass = pendiente ? " rec-pending" : "";

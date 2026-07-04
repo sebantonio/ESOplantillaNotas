@@ -289,15 +289,15 @@
         ceGroups.forEach((g, i) => { ceColorMap[g.ce] = CE_COLORS[i % CE_COLORS.length]; });
         const isFirstInCe = criterios.map((cr, i) => ceGroups.some(g => g.firstIdx === i));
 
-        // Fila 1: grupos CE con colspan
+        // Fila 1: grupos CE con colspan (x2: nota + Rec por cada CR)
         let headRow1 = `<tr><th class="th-nombre" rowspan="2">Alumno</th>`;
         ceGroups.forEach(g => {
             const c = ceColorMap[g.ce];
-            headRow1 += `<th colspan="${g.count}" class="th-ce" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">CE${g.ce}</th>`;
+            headRow1 += `<th colspan="${g.count * 2}" class="th-ce" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}">CE${g.ce}</th>`;
         });
         headRow1 += `</tr>`;
 
-        // Fila 2: columnas CR individuales
+        // Fila 2: columnas CR + Rec
         let headRow2 = `<tr>`;
         criterios.forEach((cr, i) => {
             const pond = numberFrom(cr.ponderacion);
@@ -310,6 +310,7 @@
             const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
             const bgStyle = tieneP ? "" : "background:#f3f4f6;color:#9ca3af;";
             headRow2 += `<th data-col-key="${escapeHtml(cr.codigo)}" style="width:80px;font-size:0.72em;padding:6px 4px;${sepStyle}${bgStyle}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+            headRow2 += `<th data-col-key="${escapeHtml(cr.codigo)}-rec" style="width:56px;font-size:0.72em;padding:6px 4px;${bgStyle}">Rec</th>`;
         });
         headRow2 += `</tr>`;
         notasHead.innerHTML = headRow1 + headRow2;
@@ -325,6 +326,7 @@
                 const c = ceColorMap[ce];
                 const crNota = (alumno.crNotas || []).find(n => n.codigo === cr.codigo);
                 const display = crNota ? crNota.display : "";
+                const recDisplay = crNota ? crNota.recDisplay : "";
                 const cls = gradeClass(display);
                 const val = (display && display !== "") ? escapeHtml(display) : "—";
                 const sepStyle = isFirstInCe[i] ? `border-left:3px solid ${c.border};` : "";
@@ -332,6 +334,11 @@
                     bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}" style="${sepStyle}"><span class="grade ${cls}">${val}</span></td>`;
                 } else {
                     bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}" style="background:#f9fafb;${sepStyle}"><span class="grade grade-empty">—</span></td>`;
+                }
+                if (recDisplay) {
+                    bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}-rec"><span class="grade ${gradeClass(recDisplay)}">${escapeHtml(recDisplay)}</span></td>`;
+                } else {
+                    bodyHtml += `<td data-col-key="${escapeHtml(cr.codigo)}-rec"></td>`;
                 }
             });
             bodyHtml += `</tr>`;

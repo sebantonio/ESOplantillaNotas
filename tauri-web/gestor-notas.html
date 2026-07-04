@@ -2065,9 +2065,9 @@
             }
 
             try {
-                setDisabled(true);
-                beginBusy("Guardando notas en Excel...");
                 if (!options.silent) {
+                    setDisabled(true);
+                    beginBusy("Guardando notas en Excel...");
                     showMessage("Guardando notas en el Excel...", "info");
                 }
 
@@ -2095,9 +2095,11 @@
                 // Invalidar caché de esta clave para que la próxima carga relean datos actualizados
                 const savedKey = `${currentState.unidad}`;
                 _notasCache.set(savedKey, data);
-                renderControls(data);
                 renderSummary(data);
-                renderTable();
+                if (!options.silent) {
+                    renderControls(data);
+                    renderTable();
+                }
                 markDirtyInputsAsSaved();
                 hayCambiosSinGuardar = false;
                 document.title = _BASE_TITLE;
@@ -2119,8 +2121,10 @@
                 showMessage(error.message || "No se pudieron guardar las notas.", "error");
                 return false;
             } finally {
-                setDisabled(false);
-                endBusy();
+                if (!options.silent) {
+                    setDisabled(false);
+                    endBusy();
+                }
             }
         }
 
