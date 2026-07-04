@@ -617,7 +617,7 @@
         if (autoSaveTimer) clearInterval(autoSaveTimer);
         autoSaveTimer = setInterval(() => {
             if (document.querySelectorAll('.rec-input.dirty-rec').length) saveAllRec();
-        }, 10000);
+        }, 60000);
     }
 
     function renderStats() {
