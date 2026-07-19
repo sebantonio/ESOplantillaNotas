@@ -396,8 +396,28 @@
         } catch {}
     }
 
-    async function toggleCeGroup(key) {
-        await saveAllRec();
+    function syncVisibleRecInputsToState() {
+        if (!currentState) return;
+        const inputs = document.querySelectorAll('.rec-input');
+        const affected = new Set();
+        for (const inp of inputs) {
+            const rowIdx = parseInt(inp.dataset.row, 10);
+            const colIdx = parseInt(inp.dataset.col, 10);
+            if (isNaN(rowIdx) || isNaN(colIdx)) continue;
+            const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
+            if (!alumno) continue;
+            const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === colIdx);
+            if (cr) cr.recDisplay = inp.value.trim();
+            affected.add(rowIdx);
+        }
+        affected.forEach((rowIdx) => {
+            const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
+            if (alumno) recomputeAlumno(alumno);
+        });
+    }
+
+    function toggleCeGroup(key) {
+        syncVisibleRecInputsToState();
         if (!collapsedCeSet) collapsedCeSet = new Set();
         if (collapsedCeSet.has(key)) collapsedCeSet.delete(key);
         else collapsedCeSet.add(key);
@@ -405,8 +425,8 @@
         renderTable();
     }
 
-    async function toggleAllCeGroups() {
-        await saveAllRec();
+    function toggleAllCeGroups() {
+        syncVisibleRecInputsToState();
         const groups = getCurrentCeGroups();
         ensureCollapsedCePrefs(groups);
         const allCollapsed = groups.length > 0 && groups.every((group) => collapsedCeSet.has(ceGroupKey(group)));
