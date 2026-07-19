@@ -1335,6 +1335,7 @@
         let busyCount = 0;
         let busyDelayTimer = null;
         let currentQuickFilter = "all";
+        let savingNotas = false;
 
         const messageBox = document.getElementById("message");
         const unidadSelect = document.getElementById("unidadSelect");
@@ -2074,6 +2075,9 @@
             if (!currentState) {
                 return true;
             }
+            if (savingNotas) {
+                return false;
+            }
 
             const validationMessage = validarNotasAntesDeGuardar();
             if (validationMessage) {
@@ -2081,10 +2085,11 @@
                 return false;
             }
 
+            savingNotas = true;
             try {
                 if (!options.silent) {
-                    setDisabled(true);
-                    beginBusy("Guardando notas en Excel...");
+                    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "Guardando..."; }
+                    if (floatingSaveButton) { floatingSaveButton.disabled = true; floatingSaveButton.textContent = "Guardando..."; }
                     showMessage("Guardando notas en el Excel...", "info");
                 }
 
@@ -2139,9 +2144,10 @@
                 showMessage(error.message || "No se pudieron guardar las notas.", "error");
                 return false;
             } finally {
+                savingNotas = false;
                 if (!options.silent) {
-                    setDisabled(false);
-                    endBusy();
+                    if (saveButton) { saveButton.disabled = false; saveButton.textContent = "Guardar notas"; }
+                    if (floatingSaveButton) { floatingSaveButton.disabled = false; floatingSaveButton.textContent = "Guardar notas"; }
                 }
             }
         }
