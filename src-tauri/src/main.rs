@@ -1175,59 +1175,6 @@ fn excel_get_notas_evaluacion(payload: Value) -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn excel_save_eval_rec(payload: Value) -> Result<(), String> {
-    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
-    let path = match get_selected_path() { Some(p) => p, None => return Err("No hay archivo Excel seleccionado.".to_string()) };
-    let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
-    let row_idx = payload["rowIdx"].as_u64().ok_or("rowIdx requerido")? as usize;
-    let col_idx = payload["colIdx"].as_u64().ok_or("colIdx requerido")? as usize;
-    let value_raw = payload["value"].as_str().unwrap_or("").trim().to_string();
-    let names = sheet_names(&path)?;
-    let sheet_name = find_evaluation_sheet_name(&names, &evaluacion)
-        .ok_or_else(|| format!("No se encontró la hoja de la {} evaluación.", evaluacion))?;
-    edit_workbook_sheets_xml(&path, vec![(&sheet_name, Box::new(move |xml: &str| {
-        if value_raw.is_empty() {
-            set_xml_cell(xml, row_idx, col_idx, None, "number")
-        } else {
-            let n: f64 = value_raw.replace(",", ".").parse()
-                .map_err(|_| format!("Valor no válido: {}", value_raw))?;
-            set_xml_cell(xml, row_idx, col_idx, Some(&json!(n)), "number")
-        }
-    }))])
-}
-
-#[tauri::command]
-fn excel_save_eval_recs_batch(payload: Value) -> Result<(), String> {
-    if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
-    let path = match get_selected_path() { Some(p) => p, None => return Err("No hay archivo Excel seleccionado.".to_string()) };
-    let evaluacion = payload["evaluacion"].as_str().unwrap_or("1").to_string();
-    let changes = payload["changes"].as_array().ok_or("changes requerido")?;
-    if changes.is_empty() { return Ok(()); }
-    let names = sheet_names(&path)?;
-    let sheet_name = find_evaluation_sheet_name(&names, &evaluacion)
-        .ok_or_else(|| format!("No se encontró la hoja de la {} evaluación.", evaluacion))?;
-    let cells: Vec<(usize, usize, String)> = changes.iter().filter_map(|c| {
-        let row = c["rowIdx"].as_u64()? as usize;
-        let col = c["colIdx"].as_u64()? as usize;
-        let val = c["value"].as_str().unwrap_or("").trim().to_string();
-        Some((row, col, val))
-    }).collect();
-    edit_workbook_sheets_xml(&path, vec![(&sheet_name, Box::new(move |xml: &str| {
-        let mut result = xml.to_string();
-        for (row_idx, col_idx, value_raw) in &cells {
-            result = if value_raw.is_empty() {
-                set_xml_cell(&result, *row_idx, *col_idx, None, "number")?
-            } else {
-                let n: f64 = value_raw.replace(",", ".").parse()
-                    .map_err(|_| format!("Valor no válido: {}", value_raw))?;
-                set_xml_cell(&result, *row_idx, *col_idx, Some(&json!(n)), "number")?
-            };
-        }
-        Ok(result)
-    }))])
-}
-
-#[tauri::command]
 fn excel_get_notas_evaluacion_alumno(payload: Value) -> Result<Value, String> {
     if get_selected_path().is_none() { set_selected_path(find_default_excel_path()); }
     let path = match get_selected_path() { Some(p) => p, None => return Ok(Value::Null) };
@@ -1341,46 +1288,23 @@ fn load_notas_unidad(path: &str, unidad: &str) -> Result<Value, String> {
     let criterios_json: Vec<Value> = cr_cols.iter()
         .map(|(code, ci)| {
             let ponderacion = ponderaciones_por_cr.get(code).copied().unwrap_or(0.0);
-            json!({ "codigo": code, "colIdx": ci, "ponderacion": ponderacion })
+            json!({ "codigo": code, "colIdx": ci, "recColIdx": ci + 1, "ponderacion": ponderacion })
         })
         .collect();
 
-    // Rec: buscar en la hoja de evaluación (1ª/2ª/3ª) a la que pertenece esta unidad,
-    // ya que la Rec se guarda por evaluación, no por unidad. Mapa (alumno|CR) -> recDisplay.
-    let rec_map: HashMap<(String, String), String> = (|| {
-        let unidades_data = load_unidades(path).ok()?;
-        let eval_raw = unidades_data["unidades"].as_array()?.iter()
-            .find(|u| u["codigo"].as_str().map(|c| c.eq_ignore_ascii_case(unidad)).unwrap_or(false))
-            .and_then(|u| u["evaluacion"].as_str())?.to_string();
-        let eval_digit: String = eval_raw.chars().find(|c| c.is_ascii_digit())?.to_string();
-        let eval_data = load_notas_evaluacion(path, &eval_digit).ok()?;
-        let mut map = HashMap::new();
-        for a in eval_data["alumnos"].as_array().unwrap_or(&vec![]) {
-            let nombre_norm = normalize_plain(a["nombre"].as_str().unwrap_or(""));
-            for c in a["criterios"].as_array().unwrap_or(&vec![]) {
-                let rec = c["recDisplay"].as_str().unwrap_or("").to_string();
-                if rec.is_empty() { continue; }
-                let codigo = normalize_criterion_code(c["codigo"].as_str().unwrap_or(""));
-                map.insert((nombre_norm.clone(), codigo), rec);
-            }
-        }
-        Some(map)
-    })().unwrap_or_default();
-
-    // Iterar filas de alumnos: usar nombre de DATOS por posición
+    // Rec: se guarda en la propia hoja de unidad, en la columna adyacente (ci+1) a cada CR.
     let mut alumnos: Vec<Value> = Vec::new();
     let max_alumnos = nombres_datos.len().max(37);
     for ri in first_row..(first_row + max_alumnos).min(rows.len()) {
         let alumno_idx = ri - first_row;
         let nombre = nombres_datos.get(alumno_idx).cloned().unwrap_or_default();
         if nombre.is_empty() { break; }
-        let nombre_norm = normalize_plain(&nombre);
 
         let cr_notas: Vec<Value> = cr_cols.iter().map(|(code, ci)| {
             let n = cell_f64(&rows, ri, *ci);
             let d = cell_str(&rows, ri, *ci);
-            let rec = rec_map.get(&(nombre_norm.clone(), normalize_criterion_code(code))).cloned().unwrap_or_default();
-            json!({ "codigo": code, "colIdx": ci, "nota": n, "display": d, "recDisplay": rec })
+            let rec_display = cell_str(&rows, ri, *ci + 1);
+            json!({ "codigo": code, "colIdx": ci, "recColIdx": ci + 1, "nota": n, "display": d, "recDisplay": rec_display })
         }).collect();
 
         alumnos.push(json!({ "nombre": nombre, "rowIdx": ri, "crNotas": cr_notas }));
@@ -2165,10 +2089,12 @@ fn find_evaluation_layout_indices(rows: &[Vec<Value>]) -> Option<(usize, usize, 
     None
 }
 
+struct FieldUpdate { nota: Option<Option<f64>>, rec: Option<Option<f64>> }
+
 fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value]) -> Result<(), String> {
     let unit_rows = read_sheet_rows(path, unidad)
         .map_err(|_| format!("El archivo no tiene la hoja \"{unidad}\"."))?;
-    let mut updates: HashMap<(String, String), Option<f64>> = HashMap::new();
+    let mut updates: HashMap<(String, String), FieldUpdate> = HashMap::new();
 
     for nota_item in notas {
         let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) else { continue; };
@@ -2177,8 +2103,13 @@ fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value
         let Some(cr_notas) = nota_item["crNotas"].as_object() else { continue; };
         for (code, val_obj) in cr_notas {
             let code_norm = normalize_plain(code);
-            let value = val_obj.get("nota").and_then(normalize_grade);
-            updates.insert((alumno.clone(), code_norm), value);
+            let entry = updates.entry((alumno.clone(), code_norm)).or_insert(FieldUpdate { nota: None, rec: None });
+            if val_obj.get("nota").is_some() {
+                entry.nota = Some(val_obj.get("nota").and_then(normalize_grade));
+            }
+            if val_obj.get("rec").is_some() {
+                entry.rec = Some(val_obj.get("rec").and_then(normalize_grade));
+            }
         }
     }
 
@@ -2212,8 +2143,13 @@ fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value
             let alumno = normalize_plain(&cell_str(&rows, row_idx, 0));
             if alumno.is_empty() { continue; }
             for (col_idx, code_norm) in &code_cols {
-                if let Some(value) = updates.get(&(alumno.clone(), code_norm.clone())) {
-                    cells.push((row_idx, *col_idx, *value));
+                if let Some(update) = updates.get(&(alumno.clone(), code_norm.clone())) {
+                    if let Some(nota_val) = update.nota {
+                        cells.push((row_idx, *col_idx, nota_val));
+                    }
+                    if let Some(rec_val) = update.rec {
+                        cells.push((row_idx, col_idx + 1, rec_val));
+                    }
                 }
             }
         }
@@ -2250,6 +2186,12 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
                                 match normalize_grade(val) {
                                     Some(n) => { s = set_xml_cell(&s, ri, ci, Some(&json!(n)), "number")?; }
                                     None    => { s = set_xml_cell(&s, ri, ci, None, "number")?; }
+                                }
+                            }
+                            if let Some(val) = val_obj.get("rec") {
+                                match normalize_grade(val) {
+                                    Some(n) => { s = set_xml_cell(&s, ri, ci + 1, Some(&json!(n)), "number")?; }
+                                    None    => { s = set_xml_cell(&s, ri, ci + 1, None, "number")?; }
                                 }
                             }
                         }
@@ -2861,7 +2803,7 @@ fn main() {
             excel_save_unidades, excel_get_rraa_criterios, excel_save_rraa_criterios,
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
-            excel_get_notas_evaluacion, excel_save_eval_rec, excel_save_eval_recs_batch, excel_get_notas_evaluacion_alumno,
+            excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template

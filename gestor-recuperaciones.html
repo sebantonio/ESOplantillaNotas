@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperaciones por Evaluación</title>
+    <title>Recuperaciones por Unidad</title>
     <script src="app-bridge.js"></script>
     <link rel="stylesheet" href="ux-common.css">
     <script src="ux-common.js" defer></script>
@@ -50,12 +50,10 @@
         thead th { position: sticky; top: 0; z-index: 30; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; background-clip: padding-box; box-shadow: 0 1px 0 #c7d2fe; }
         thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 34px); z-index: 29; }
         thead th.th-nombre { text-align: left; width: 210px; padding-left: 12px; }
-        thead th.th-final { width: 92px; min-width: 92px; max-width: 92px; background: #1e1b4b !important; color: white !important; vertical-align: middle; }
         tbody tr:nth-child(even) { background: #fafafa; }
         tbody tr:hover { background: #eef2ff; }
         tbody td { padding: 7px 6px; border-bottom: 1px solid #f0f0f0; text-align: center; }
         tbody td.td-nombre { text-align: left; padding-left: 12px; font-weight: 600; }
-        tbody td.td-final { width: 92px; min-width: 92px; max-width: 92px; font-weight: 800; }
         .grade { display: inline-block; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 0.88rem; min-width: 42px; }
         .grade-ok   { background: #dcfce7; color: #166534; }
         .grade-warn { background: #fef3c7; color: #92400e; }
@@ -150,21 +148,14 @@
     </header>
 
     <div class="toolbar">
-        <label for="evalSelect">Evaluación:</label>
-        <select id="evalSelect">
-            <option value="1" title="Solo datos de la 1ª evaluación">1ª Evaluación</option>
-            <option value="2" title="Incluye lo acumulado hasta 2ª evaluación">2ª Evaluación (acumulada)</option>
-            <option value="2solo" title="Solo criterios de la 2ª evaluación">2ª Evaluación (solo 2ª)</option>
-            <option value="3" title="Incluye lo acumulado hasta 3ª evaluación">3ª Evaluación (acumulada)</option>
-            <option value="3solo" title="Solo criterios de la 3ª evaluación">3ª Evaluación (solo 3ª)</option>
-            <option value="final" title="Vista final global">Final</option>
-        </select>
-        <span style="font-size:0.8rem;color:#6b7280;max-width:340px;line-height:1.3;">Acumulada: incluye evaluaciones anteriores. Solo: muestra únicamente esa evaluación.</span>
+        <label for="unidadSelect">Unidad:</label>
+        <select id="unidadSelect"></select>
+        <span style="font-size:0.8rem;color:#6b7280;max-width:340px;line-height:1.3;">La recuperación se guarda en la hoja de la unidad; la evaluación se recalcula al abrir el Excel.</span>
         <label for="searchInput">Buscar:</label>
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
-        <button class="pag-btn" id="btnRefresh" type="button" title="Recargar evaluación actual">Recargar</button>
+        <button class="pag-btn" id="btnRefresh" type="button" title="Recargar unidad actual">Recargar</button>
         <button id="btnSave" class="btn-save" onclick="saveAllRec()">Guardar</button>
         <span id="saveStatus" class="save-status"></span>
         <span id="lastSync" class="save-status">Sin sincronizar</span>
@@ -218,7 +209,7 @@
 <button class="floating-save-button" id="btnSaveFloating" type="button" onclick="saveAllRec()">Guardar</button>
 
 <script>
-    const evalSelect      = document.getElementById("evalSelect");
+    const unidadSelect    = document.getElementById("unidadSelect");
     const searchInput     = document.getElementById("searchInput");
     const alumnoSelect    = document.getElementById("alumnoSelect");
     const notasHead       = document.getElementById("notasHead");
@@ -317,20 +308,13 @@
         return isNaN(n) ? 0 : n;
     }
 
-    function getIncludedCriteria(criteria) {
-        return (criteria || []).filter((cr) => numberFrom(cr.peso) > 0);
+    function getIncludedCriteria(criterios) {
+        return (criterios || []).filter((cr) => numberFrom(cr.ponderacion) > 0);
     }
 
-    function criterionCeNumber(codigo) {
-        const match = String(codigo || "").match(/^CR(\d+)/i);
-        return match ? Number(match[1]) : 0;
-    }
-
-    function raDisplayNumber(ra, criteria) {
-        const own = Number(ra && ra.numero);
-        if (own > 0) return own;
-        const firstCriterion = (criteria || []).find((cr) => Number(cr.raColIdx) === Number(ra && ra.colIdx));
-        return criterionCeNumber(firstCriterion && firstCriterion.codigo) || Number.MAX_SAFE_INTEGER;
+    function getCeNum(codigo) {
+        const m = /^CR(\d+)\./i.exec(codigo || "");
+        return m ? m[1] : "?";
     }
 
     function applyDensityPreference() {
@@ -356,26 +340,23 @@
     }
 
     function ceGroupKey(group) {
-        return String(group.ra.numero || group.ra.colIdx);
+        return String(group.key);
     }
 
     function getCurrentCeGroups() {
         const data = currentState;
         if (!data) return [];
-        const criteria = getIncludedCriteria(data.criteria || []);
-        const raColumns = (data.raColumns || [])
-            .filter((ra) =>
-                criteria.some((cr) => Number(cr.raColIdx) === Number(ra.colIdx)) || numberFrom(ra.peso) > 0
-            )
-            .sort((a, b) =>
-                raDisplayNumber(a, criteria) - raDisplayNumber(b, criteria) ||
-                Number(a.colIdx) - Number(b.colIdx)
-            );
-        return raColumns.map((ra, i) => ({
-            ra,
-            color: CE_COLORS[i % CE_COLORS.length],
-            criterios: criteria.filter((c) => Number(c.raColIdx) === Number(ra.colIdx))
-        })).filter((group) => group.criterios.length);
+        const criterios = getIncludedCriteria(data.criterios || []);
+        const map = {};
+        const groups = [];
+        criterios.forEach((cr) => {
+            const key = getCeNum(cr.codigo);
+            if (!map[key]) { map[key] = { key, criterios: [] }; groups.push(map[key]); }
+            map[key].criterios.push(cr);
+        });
+        groups.sort((a, b) => (Number(a.key) || 0) - (Number(b.key) || 0));
+        groups.forEach((g, i) => { g.color = CE_COLORS[i % CE_COLORS.length]; });
+        return groups;
     }
 
     function ensureCollapsedCePrefs(groups) {
@@ -406,7 +387,7 @@
             if (isNaN(rowIdx) || isNaN(colIdx)) continue;
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
             if (!alumno) continue;
-            const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === colIdx);
+            const cr = (alumno.crNotas || []).find(c => Number(c.colIdx) === colIdx);
             if (cr) cr.recDisplay = inp.value.trim();
             affected.add(rowIdx);
         }
@@ -447,12 +428,11 @@
 
     function countPendingRecoveries() {
         if (!currentState) return 0;
-        const criteria = getIncludedCriteria(currentState.criteria || [])
-            .filter((cr) => Number(cr.recColIdx) >= 0);
+        const criterios = getIncludedCriteria(currentState.criterios || []);
         let total = 0;
         (currentState.alumnos || []).forEach((alumno) => {
-            criteria.forEach((cr) => {
-                const crVal = (alumno.criterios || []).find((v) => Number(v.colIdx) === Number(cr.colIdx));
+            criterios.forEach((cr) => {
+                const crVal = (alumno.crNotas || []).find((v) => Number(v.colIdx) === Number(cr.colIdx));
                 const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
                 const recRaw = crVal && crVal.recDisplay ? String(crVal.recDisplay).trim() : "";
                 if (crNota > 0 && crNota < 5 && recRaw === "") total++;
@@ -493,47 +473,34 @@
     }
 
     function recomputeAlumno(alumno) {
-        const raColumns = currentState.raColumns || [];
-        const criteria  = getIncludedCriteria(currentState.criteria || []);
-        for (const ra of (alumno.rraa || [])) {
-            const raCrits = criteria.filter(c => Number(c.raColIdx) === Number(ra.colIdx));
-            if (!raCrits.length) continue;
+        const ceGroups = getCurrentCeGroups();
+        alumno.ceNotas = {};
+        for (const g of ceGroups) {
             let wsum = 0, wtotal = 0;
-            for (const cr of raCrits) {
-                const crData = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+            for (const cr of g.criterios) {
+                const crData = (alumno.crNotas || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
                 if (!crData) continue;
                 const rec  = parseNote(crData.recDisplay);
                 const base = parseNote(crData.nota) ?? parseNote(crData.display);
                 const eff  = (rec !== null && rec > 0) ? rec : base;
                 if (eff === null || eff <= 0) continue;
-                const p = parseNote(cr.peso) || 1;
+                const p = parseNote(cr.ponderacion) || 1;
                 wsum += eff * p; wtotal += p;
             }
-            if (wtotal > 0) { ra.nota = wsum / wtotal; ra.display = ra.nota.toFixed(2).replace('.', ','); }
+            if (wtotal > 0) {
+                const nota = wsum / wtotal;
+                alumno.ceNotas[g.key] = { nota, display: nota.toFixed(2).replace('.', ',') };
+            }
         }
-        let wsum = 0, wtotal = 0;
-        for (const ra of (alumno.rraa || [])) {
-            const n = typeof ra.nota === 'number' ? ra.nota : parseNote(ra.display);
-            if (!n || n <= 0) continue;
-            const raMeta = raColumns.find(r => Number(r.colIdx) === Number(ra.colIdx));
-            const p = parseNote(raMeta?.peso) || 1;
-            wsum += n * p; wtotal += p;
-        }
-        if (wtotal > 0) { alumno.final = wsum / wtotal; alumno.finalDisplay = alumno.final.toFixed(2).replace('.', ','); }
     }
 
     function updateAlumnoDOM(alumno) {
-        const finalTd = document.querySelector(`[data-final="${alumno.rowIdx}"]`);
-        if (finalTd) {
-            const fDisp = formatNote(alumno.finalDisplay);
-            const fCls  = gradeClass(alumno.finalDisplay);
-            finalTd.innerHTML = `<span class="grade ${fCls}">${fDisp || "—"}</span>`;
-        }
-        for (const ra of (alumno.rraa || [])) {
-            const ceTd = document.querySelector(`[data-ce="${alumno.rowIdx}-${ra.colIdx}"]`);
+        for (const key of Object.keys(alumno.ceNotas || {})) {
+            const ceTd = document.querySelector(`[data-ce="${alumno.rowIdx}-${key}"]`);
             if (ceTd) {
-                const ceDisp = formatNote(ra.display);
-                const ceCls  = gradeClass(ra.display);
+                const ceInfo = alumno.ceNotas[key];
+                const ceDisp = formatNote(ceInfo.display);
+                const ceCls  = gradeClass(ceInfo.display);
                 const span = ceTd.querySelector('span');
                 if (span) { span.className = `grade ${ceCls}`; span.textContent = ceDisp || "—"; }
             }
@@ -553,14 +520,15 @@
         const colIdx = parseInt(input.dataset.col, 10);
         if (isNaN(rowIdx) || isNaN(colIdx)) return;
         const value = input.value.trim();
-        window.electronExcel.saveEvalRec({
-            evaluacion: evalSelect.value,
-            rowIdx, colIdx, value,
+        const codigo = input.dataset.codigo || String(colIdx);
+        window.electronExcel.saveNotasUnidad({
+            unidad: unidadSelect.value,
+            notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, rec: value } } }],
         }).then(() => {
             markRecSaved(input);
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
             if (alumno) {
-                const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === colIdx);
+                const cr = (alumno.crNotas || []).find(c => Number(c.colIdx) === colIdx);
                 if (cr) cr.recDisplay = value;
                 recomputeAlumno(alumno);
                 updateAlumnoDOM(alumno);
@@ -591,7 +559,7 @@
             const rowIdx = parseInt(inp.dataset.row, 10);
             const colIdx = parseInt(inp.dataset.col, 10);
             if (!isNaN(rowIdx) && !isNaN(colIdx)) {
-                changes.push({ rowIdx, colIdx, value: inp.value.trim() });
+                changes.push({ rowIdx, colIdx, codigo: inp.dataset.codigo || String(colIdx), value: inp.value.trim() });
             }
         }
         if (!changes.length) return;
@@ -601,14 +569,17 @@
         if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
         if (btnSaveFloating) { btnSaveFloating.disabled = true; btnSaveFloating.textContent = 'Guardando...'; }
         try {
-            await window.electronExcel.saveEvalRecsBatch({
-                evaluacion: evalSelect.value,
-                changes,
-            });
+            const notasByRow = new Map();
+            for (const ch of changes) {
+                if (!notasByRow.has(ch.rowIdx)) notasByRow.set(ch.rowIdx, {});
+                notasByRow.get(ch.rowIdx)[ch.codigo] = { colIdx: ch.colIdx, rec: ch.value };
+            }
+            const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
+            await window.electronExcel.saveNotasUnidad({ unidad: unidadSelect.value, notas });
             for (const ch of changes) {
                 const alumno = (currentState.alumnos || []).find(a => a.rowIdx === ch.rowIdx);
                 if (!alumno) continue;
-                const cr = (alumno.criterios || []).find(c => Number(c.recColIdx) === ch.colIdx);
+                const cr = (alumno.crNotas || []).find(c => Number(c.colIdx) === ch.colIdx);
                 if (cr) cr.recDisplay = ch.value;
             }
             const affected = [...new Set(changes.map(ch => ch.rowIdx))];
@@ -640,9 +611,15 @@
         }, 60000);
     }
 
+    function alumnoUnitAverage(alumno) {
+        const vals = Object.values(alumno.ceNotas || {}).map(ce => ce.nota).filter(n => typeof n === "number" && n > 0);
+        if (!vals.length) return null;
+        return vals.reduce((s, n) => s + n, 0) / vals.length;
+    }
+
     function renderStats() {
         const alumnos = (currentState && currentState.alumnos) || [];
-        const nums = alumnos.map(a => a.final).filter(n => typeof n === "number" && n > 0);
+        const nums = alumnos.map(alumnoUnitAverage).filter(n => n !== null);
         const aprobados = nums.filter(n => n >= 5).length;
         const media = nums.length ? nums.reduce((s, n) => s + n, 0) / nums.length : null;
         document.getElementById("statArchivo").textContent   = (currentState && currentState.fileName) || "-";
@@ -688,19 +665,18 @@
         }
 
         if (!ceGroups.length) {
-            notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th><th class="th-final">Nota<br>Final</th></tr>`;
+            notasHead.innerHTML = `<tr><th class="th-nombre">Alumno</th></tr>`;
             refreshStickyHeaderOffset();
-            notasBody.innerHTML = `<tr><td colspan="2" class="empty-msg">No hay CE/CR incluidos para esta evaluación.</td></tr>`;
+            notasBody.innerHTML = `<tr><td colspan="1" class="empty-msg">No hay CE/CR incluidos para esta unidad.</td></tr>`;
             updateStatusBar(allAlumnos.length, ceGroups);
             return;
         }
 
         let head1 = `<tr>`;
         head1 += `<th class="th-nombre" rowspan="2">Alumno</th>`;
-        head1 += `<th rowspan="2" class="th-final">Nota<br>Final</th>`;
-        ceGroups.forEach((g, i) => {
+        ceGroups.forEach((g) => {
             const c = g.color;
-            const label = `CE ${g.ra.numero || (i + 1)}`;
+            const label = `CE ${g.key}`;
             const icon = g.collapsed ? "+" : "-";
             head1 += `<th colspan="${g.colspan}" class="th-ce-group" style="background:${c.bg};color:${c.fg};border-left:3px solid ${c.border};border-bottom:1px solid ${c.border}"><button class="ce-toggle" type="button" data-ce-key="${escapeHtml(g.key)}">${label} ${icon}</button></th>`;
         });
@@ -728,19 +704,16 @@
         alumnos.forEach(alumno => {
             bodyHtml += `<tr>`;
             bodyHtml += `<td class="td-nombre">${escapeHtml(alumno.nombre)}</td>`;
-            const fDisp = formatNote(alumno.finalDisplay);
-            const fCls  = gradeClass(alumno.finalDisplay);
-            bodyHtml += `<td class="td-final" data-final="${alumno.rowIdx}"><span class="grade ${fCls}">${fDisp || "—"}</span></td>`;
             ceGroups.forEach(g => {
                 const c = g.color;
-                const raVal = (alumno.rraa || []).find(r => Number(r.colIdx) === Number(g.ra.colIdx));
-                const ceDisp = formatNote(raVal ? raVal.display : "");
-                const ceCls  = gradeClass(raVal ? raVal.display : "");
-                bodyHtml += `<td data-ce="${alumno.rowIdx}-${g.ra.colIdx}" data-col-key="${escapeHtml(g.key)}-ce" style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
+                const ceInfo = alumno.ceNotas && alumno.ceNotas[g.key];
+                const ceDisp = formatNote(ceInfo ? ceInfo.display : "");
+                const ceCls  = gradeClass(ceInfo ? ceInfo.display : "");
+                bodyHtml += `<td data-ce="${alumno.rowIdx}-${g.key}" data-col-key="${escapeHtml(g.key)}-ce" style="border-left:3px solid ${c.border};border-right:2px solid ${c.border};background:${c.notaBg};"><span class="grade ${ceCls}">${ceDisp || "—"}</span></td>`;
                 if (!g.collapsed) {
                     g.criterios.forEach((cr, crIdx) => {
                         const crBg = crIdx % 2 === 0 ? c.bg : c.notaBg;
-                        const crVal = (alumno.criterios || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
+                        const crVal = (alumno.crNotas || []).find(v => Number(v.colIdx) === Number(cr.colIdx));
                         const disp  = formatNote(crVal ? crVal.display : "");
                         const cls   = gradeClass(crVal ? crVal.display : "");
                         bodyHtml += `<td data-col-key="${cr.colIdx}" style="background:${crBg}"><span class="grade ${cls}">${disp || "—"}</span></td>`;
@@ -751,7 +724,7 @@
                             const crNota = crVal ? (parseFloat(String(crVal.display || crVal.nota || "").replace(",", ".")) || 0) : 0;
                             const pendiente = crNota > 0 && crNota < 5 && recRaw === "";
                             const pendClass = pendiente ? " rec-pending" : "";
-                            bodyHtml += `<td class="td-rec" data-col-key="${cr.colIdx}-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠" : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.recColIdx}" data-col-key="${cr.colIdx}-rec" onblur="saveRecFromInput(this)"></td>`;
+                            bodyHtml += `<td class="td-rec" data-col-key="${cr.colIdx}-rec" style="background:${crBg}"><input class="rec-input${pendClass}" type="text" placeholder="${pendiente ? "⚠" : "—"}" value="${recRaw}" data-row="${alumno.rowIdx}" data-col="${cr.colIdx}" data-codigo="${escapeHtml(cr.codigo)}" data-col-key="${cr.colIdx}-rec" onblur="saveRecFromInput(this)"></td>`;
                         }
                     });
                 }
@@ -787,20 +760,39 @@
         renderTable();
     }
 
-    async function loadEvaluacion(evaluacion) {
+    function fillUnidadSelect(unidades, selected) {
+        unidadSelect.innerHTML = "";
+        if (!unidades.length) {
+            const o = document.createElement("option");
+            o.value = ""; o.textContent = "Sin datos";
+            unidadSelect.appendChild(o);
+            return;
+        }
+        unidades.forEach((u) => {
+            const o = document.createElement("option");
+            o.value = u.codigo;
+            o.textContent = u.label || u.codigo;
+            if (String(o.value) === String(selected)) o.selected = true;
+            unidadSelect.appendChild(o);
+        });
+    }
+
+    async function loadUnidad(unidad) {
         await saveAllRec();
         showMessage("Cargando notas...", "info");
         try {
-            const data = await window.electronExcel.getNotasEvaluacion({ evaluacion });
+            const data = await window.electronExcel.getNotasUnidad({ unidad });
             if (!data) { showMessage("No se encontró el Excel. Selecciona el archivo desde el inicio.", "error"); return; }
             currentState = data;
             currentPage  = 0;
-            headerTitulo.textContent = data.title || data.sheetName || "";
+            headerTitulo.textContent = data.titulo || "";
+            fillUnidadSelect(data.unidades || [], data.unidad);
 
             const nombres = (data.alumnos || []).map(a => a.nombre);
             alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
                 nombres.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
 
+            (currentState.alumnos || []).forEach(recomputeAlumno);
             renderStats();
             renderTable();
             resetAutoSave();
@@ -832,10 +824,10 @@
                 }
             } catch {}
         }
-        evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
+        unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
         searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
         alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
-        btnRefresh?.addEventListener("click", () => loadEvaluacion(evalSelect.value));
+        btnRefresh?.addEventListener("click", () => loadUnidad(unidadSelect.value));
         densityToggleButton?.addEventListener("click", toggleDensityMode);
         ceToggleAllButton?.addEventListener("click", toggleAllCeGroups);
         window.addEventListener("resize", refreshStickyHeaderOffset);
@@ -872,7 +864,7 @@
             if (e.key === "Enter") inp.blur();
             next?.focus();
         });
-        loadEvaluacion("1");
+        loadUnidad("U1");
 
         // Marcar cambios al editar cualquier rec-input
         document.addEventListener('input', (e) => {

@@ -86,7 +86,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - **Fila 18 (0-idx 17)**: sub-etiquetas "Rec"
 - **Fila 19+ (0-idx 18+)**: datos de alumnos
 - **Columna CB (0-idx 79)**: NOTA FINAL — leer via `read_col_values_from_xml` (calamine no alcanza)
-- **Columna Rec**: adyacente al CR (ci+1), guardada via `excel_save_eval_rec`
+- **Columna Rec**: adyacente al CR (ci+1). CR y Rec son FÓRMULAS que agregan desde las hojas de unidad (p.ej. `IF('U1'!$A$4="1ª",'U1'!C5,...)`) — NUNCA escribir aquí directamente, se recalculan solas al abrir el Excel
 - La detección de layout usa 3 estrategias (ESO: misma fila NOTA CE + CR codes)
 
 ## Stack Rust
@@ -113,9 +113,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - `excel_save_ce_notas`, `excel_add_actividad`
 - `excel_get_notas_actividades_tipo`
 - `excel_get_notas_evaluacion`, `excel_get_notas_evaluacion_alumno`
-- `excel_get_notas_unidad`, `excel_save_notas_unidad`
-- `excel_save_eval_rec` — guarda nota de recuperación en celda de hoja de evaluación
-- `excel_save_eval_recs_batch` — guarda TODAS las Rec de una evaluación en una sola escritura ZIP
+- `excel_get_notas_unidad`, `excel_save_notas_unidad` — `notas[].crNotas[codigo]` acepta `{colIdx, nota}` y/o `{colIdx, rec}`; `rec` se guarda en colIdx+1 de la hoja de unidad y se propaga (caché) a la hoja de evaluación
 - `excel_get_alumnos_informes`
 - `excel_get_diario`, `excel_save_diario_entrada`, `excel_delete_diario_entrada`
 - `app_open_external`
@@ -130,7 +128,7 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 | gestor-unidades.html | Gestión de unidades (sin columna Horas) |
 | gestor-instrumentos.html | Instrumentos de evaluación (max 10) |
 | gestor-notas.html | Introducir notas: paginación 15/pág (top+bottom), agrupación CE con colores, columna alumno sticky |
-| gestor-recuperaciones.html | Introducir recuperaciones: Rec editable, batch save, autosave silencioso, CE/Final se recalculan en JS |
+| gestor-recuperaciones.html | Introducir recuperaciones POR UNIDAD (selector de unidad, no de evaluación): Rec editable, batch save, autosave silencioso, Nota CE por grupo se recalcula en JS |
 | visor-notas.html | Ver notas por evaluación — SOLO LECTURA, columna alumno sticky |
 | visor-unidades.html | Ver notas por unidad — solo lectura, columna alumno sticky |
 | informes.html | Informes finales por alumno |
@@ -146,8 +144,8 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - **cell_f64 retorna `Option<f64>`** — siempre hacer `.unwrap_or(0.0)`
 - **prepare-tauri-web.js**: reemplaza versión vX.X.X en todos los HTML al copiar a tauri-web/
 - **Sticky columnas**: usar `overflow: clip` (NO `overflow: hidden`) en `.container` — hidden crea scroll container implícito que anula position:sticky
-- **CE/Final en recuperaciones**: calamine lee caché de fórmulas (stale) — los valores se recalculan en JS con `recomputeAlumno()` usando `criteria[].peso` y `raColumns[].peso` del estado cargado
-- **Batch save recuperaciones**: `saveAllRec` usa `excel_save_eval_recs_batch` (1 escritura ZIP para todas las celdas); autosave es silencioso (no reconstruye DOM). `saveRecFromInput` guarda celda + actualiza DOM sin rebuild.
+- **Recuperaciones trabaja por unidad**: gestor-recuperaciones.html usa `excel_get_notas_unidad`/`excel_save_notas_unidad` (igual que gestor-notas.html), NO `excel_get_notas_evaluacion`. La Nota CE por grupo se recalcula en JS con `recomputeAlumno()` usando `criterios[].ponderacion` de esa unidad (agrupados por prefijo `CR<n>.` vía `getCeNum`), sin concepto de "Final" (eso es de la hoja de evaluación)
+- **Batch save recuperaciones**: `saveAllRec` agrupa los cambios por alumno y llama a `saveNotasUnidad` (1 escritura ZIP); autosave es silencioso (no reconstruye DOM). `saveRecFromInput` guarda celda + actualiza DOM sin rebuild.
 - **Paginación gestor-notas**: `currentPage`/`perPage` globales; `renderTable()` usa `currentNotes.slice(startIdx, startIdx+perPage)`; `data-studentIdx` es índice global (no local de página)
 
 ## Pendientes
