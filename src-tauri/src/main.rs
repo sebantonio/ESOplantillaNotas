@@ -319,7 +319,11 @@ fn load_unidades(path: &str) -> Result<Value, String> {
         let nombre = cell_str(&rows, ri, 9);
         let evaluacion = cell_str(&rows, ri, 10);
         if codigo.is_empty() && nombre.is_empty() { continue; }
-        unidades.push(json!({ "codigo": codigo, "nombre": nombre, "evaluacion": evaluacion }));
+        // "label" es para mostrar (con fallback al título de la hoja Ux si nombre
+        // está vacío); "nombre" se deja tal cual para el editor de gestor-unidades.
+        let label_nombre = resolve_unit_display_name(path, &codigo, &nombre);
+        let label = if label_nombre.is_empty() { codigo.clone() } else { format!("{} - {}", codigo, label_nombre) };
+        unidades.push(json!({ "codigo": codigo, "nombre": nombre, "evaluacion": evaluacion, "label": label }));
     }
     let file_name = Path::new(path).file_name().unwrap_or_default().to_string_lossy().to_string();
     Ok(json!({ "filePath": path, "fileName": file_name, "unidades": unidades }))
@@ -738,6 +742,29 @@ fn extract_activity_notes(rows: &[Vec<Value>], block: &ActivityBlock, max_alumno
     notes
 }
 
+// Nombre a mostrar para una unidad: usa el de DATOS si lo hay; si no, lee el
+// título de la propia hoja Ux (fila 3, col A), que es una fórmula INDEX/MATCH
+// cuyo caché calamine a veces no lee bien -> se lee también por XML directo.
+fn resolve_unit_display_name(path: &str, codigo: &str, raw_nombre: &str) -> String {
+    if !raw_nombre.is_empty() && raw_nombre.to_uppercase() != codigo.to_uppercase() {
+        return raw_nombre.to_string();
+    }
+    let re_code_prefix = Regex::new(r"(?i)^U\d+[\s.\-\u{2013}]+").unwrap();
+    read_row_from_xml(path, codigo, 3).get(&0).cloned()
+        .filter(|t| !t.is_empty())
+        .or_else(|| {
+            read_sheet_rows(path, codigo).ok().and_then(|rows| {
+                let t = cell_str(&rows, 2, 0);
+                if t.is_empty() { None } else { Some(t) }
+            })
+        })
+        .map(|t| {
+            let limpio = re_code_prefix.replace(&t, "").trim().to_string();
+            if limpio.is_empty() { t } else { limpio }
+        })
+        .unwrap_or_else(|| raw_nombre.to_string())
+}
+
 fn list_unit_sheets(path: &str) -> Result<Vec<Value>, String> {
     let names = sheet_names(path)?;
     let datos_rows = read_sheet_rows(path, "DATOS").unwrap_or_default();
@@ -751,32 +778,11 @@ fn list_unit_sheets(path: &str) -> Result<Vec<Value>, String> {
         }
     }
     let re = Regex::new(r"(?i)^U\d+$").unwrap();
-    let re_code_prefix = Regex::new(r"(?i)^U\d+[\s.\-\u{2013}]+").unwrap();
     let mut unit_names: Vec<String> = names.iter().filter(|n| re.is_match(n)).cloned().collect();
     unit_names.sort_by_key(|n| n.chars().filter(|c| c.is_ascii_digit()).collect::<String>().parse::<i64>().unwrap_or(0));
     Ok(unit_names.iter().map(|codigo| {
         let raw = units_from_datos.get(&codigo.to_uppercase()).cloned().unwrap_or_default();
-        // Si el nombre de DATOS está vacío o es igual al código, leer título del sheet de la unidad
-        let nombre = if raw.is_empty() || raw.to_uppercase() == codigo.to_uppercase() {
-            // El título (fila 3, col A) es una fórmula INDEX/MATCH cuyo caché calamine
-            // a veces no lee bien -> leer directo del XML como en load_notas_unidad.
-            read_row_from_xml(path, codigo, 3).get(&0).cloned()
-                .filter(|t| !t.is_empty())
-                .or_else(|| {
-                    read_sheet_rows(path, codigo).ok().and_then(|rows| {
-                        let t = cell_str(&rows, 2, 0);
-                        if t.is_empty() { None } else { Some(t) }
-                    })
-                })
-                .map(|t| {
-                    // Quitar prefijo "U1. " o "U1 - "
-                    let limpio = re_code_prefix.replace(&t, "").trim().to_string();
-                    if limpio.is_empty() { t } else { limpio }
-                })
-                .unwrap_or(raw)
-        } else {
-            raw
-        };
+        let nombre = resolve_unit_display_name(path, codigo, &raw);
         let label = if nombre.is_empty() { codigo.clone() } else { format!("{} - {}", codigo, nombre) };
         json!({ "codigo": codigo, "nombre": nombre, "label": label })
     }).collect())

@@ -17,7 +17,14 @@
       "Bash(pkill -f \"eso-notas-local\")",
       "Bash(pkill -f \"ESO Notas\")",
       "Bash(rm -f \"C:\\\\cargo-target\\\\plantillaNotas\\\\release\\\\eso_notas_local.pdb\")",
-      "Bash(rm -f \"C:\\\\cargo-target\\\\plantillaNotas\\\\release\\\\deps\"/*.pdb)"
+      "Bash(rm -f \"C:\\\\cargo-target\\\\plantillaNotas\\\\release\\\\deps\"/*.pdb)",
+      "Bash(python3 -c ' *)",
+      "Bash(cd \"/c/cargo-target/plantillaNotas/release\" && ls -la \"CCGG PLANTILLA - CE AMPLIADOSv3.xlsx\" 2>&1)",
+      "Read(//c/cargo-target/plantillaNotas/release/**)",
+      "Bash(rm -rf /tmp/xlsxdump)",
+      "Bash(mkdir -p /tmp/xlsxdump)",
+      "Bash(unzip -o \"/c/cargo-target/plantillaNotas/release/CCGG PLANTILLA - CE AMPLIADOSv3.xlsx\" -d /tmp/xlsxdump)",
+      "Bash(node -e ' *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\seban\\.claude\\projects\\c--OneDrive-OneDrive---Consejer-a-de-Educaci-n--Cultura-y-Deportes-Castilla-La-Mancha-Github-ESOplantillaNotas-ESOplantillaNotas\\memory"
