@@ -446,17 +446,18 @@
             filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
         );
         const sortMode = sortSelect.value || "nombre-asc";
+        const nameCompare = (a, b) => normalize(a.nombre).localeCompare(normalize(b.nombre), "es", { numeric: true });
         allAlumnos.sort((a, b) => {
             if (sortMode === "nombre-desc") {
-                return normalize(b.nombre).localeCompare(normalize(a.nombre), "es");
+                return nameCompare(b, a);
             }
             if (sortMode === "final-desc") {
-                return alumnoFinalNumber(b) - alumnoFinalNumber(a) || normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+                return alumnoFinalNumber(b) - alumnoFinalNumber(a) || nameCompare(a, b);
             }
             if (sortMode === "final-asc") {
-                return alumnoFinalNumber(a) - alumnoFinalNumber(b) || normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+                return alumnoFinalNumber(a) - alumnoFinalNumber(b) || nameCompare(a, b);
             }
-            return normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+            return nameCompare(a, b);
         });
         const ceGroups = getCurrentCeGroups();
         ensureCollapsedCePrefs(ceGroups);
