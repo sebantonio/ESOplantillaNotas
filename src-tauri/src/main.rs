@@ -2172,6 +2172,10 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
     let notas = payload["notas"].as_array().ok_or("Falta notas")?.clone();
+    // syncEval=false: guardado ligero (1 celda, sin recalcular caché de evaluación ni
+    // releer la unidad entera) — usado en el guardado inmediato por celda para no
+    // bloquear la escritura mientras el usuario sigue tecleando.
+    let sync_eval = payload["syncEval"].as_bool().unwrap_or(true);
     let notas_for_unit = notas.clone();
     let notas_for_eval = notas.clone();
 
@@ -2201,6 +2205,10 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
         }
         Ok(s)
     }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+
+    if !sync_eval {
+        return Ok(Value::Null);
+    }
 
     sync_unit_notes_to_evaluation_sheets(&path, &unidad, &notas_for_eval)?;
 

@@ -524,6 +524,7 @@
         window.electronExcel.saveNotasUnidad({
             unidad: unidadSelect.value,
             notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, rec: value } } }],
+            syncEval: false,
         }).then(() => {
             markRecSaved(input);
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
@@ -541,7 +542,7 @@
 
     async function saveAllRec() {
         if (savingAll) return;
-        const inputs = document.querySelectorAll('.rec-input');
+        const inputs = document.querySelectorAll('.rec-input.dirty-rec');
         if (!inputs.length) return;
         const invalidInputs = Array.from(inputs).filter(inp => validateRecValue(inp.value).isInvalid);
         if (invalidInputs.length) {
@@ -608,7 +609,7 @@
         if (autoSaveTimer) clearInterval(autoSaveTimer);
         autoSaveTimer = setInterval(() => {
             if (document.querySelectorAll('.rec-input.dirty-rec').length) saveAllRec();
-        }, 60000);
+        }, 120000);
     }
 
     function alumnoUnitAverage(alumno) {
