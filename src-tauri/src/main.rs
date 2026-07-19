@@ -758,14 +758,20 @@ fn list_unit_sheets(path: &str) -> Result<Vec<Value>, String> {
         let raw = units_from_datos.get(&codigo.to_uppercase()).cloned().unwrap_or_default();
         // Si el nombre de DATOS está vacío o es igual al código, leer título del sheet de la unidad
         let nombre = if raw.is_empty() || raw.to_uppercase() == codigo.to_uppercase() {
-            read_sheet_rows(path, codigo)
-                .ok()
-                .and_then(|rows| {
-                    let t = cell_str(&rows, 2, 0);
-                    if t.is_empty() { return None; }
+            // El título (fila 3, col A) es una fórmula INDEX/MATCH cuyo caché calamine
+            // a veces no lee bien -> leer directo del XML como en load_notas_unidad.
+            read_row_from_xml(path, codigo, 3).get(&0).cloned()
+                .filter(|t| !t.is_empty())
+                .or_else(|| {
+                    read_sheet_rows(path, codigo).ok().and_then(|rows| {
+                        let t = cell_str(&rows, 2, 0);
+                        if t.is_empty() { None } else { Some(t) }
+                    })
+                })
+                .map(|t| {
                     // Quitar prefijo "U1. " o "U1 - "
                     let limpio = re_code_prefix.replace(&t, "").trim().to_string();
-                    if limpio.is_empty() { Some(t) } else { Some(limpio) }
+                    if limpio.is_empty() { t } else { limpio }
                 })
                 .unwrap_or(raw)
         } else {
