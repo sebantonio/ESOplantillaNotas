@@ -418,44 +418,6 @@
             font-style: italic;
         }
 
-        .quick-access {
-            padding-top: 14px;
-            border-top: 1px solid rgba(148, 163, 184, 0.28);
-        }
-
-        .quick-access-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        .quick-access-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 8px;
-            min-height: 40px;
-            padding: 8px 10px;
-            color: #312e81;
-            background: #eef2ff;
-            border: 1px solid #c7d2fe;
-            border-radius: 8px;
-            font: inherit;
-            font-size: 0.84rem;
-            font-weight: 850;
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 8px 18px rgba(5, 150, 105, 0.08);
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-        }
-
-        .quick-access-link:hover {
-            background: #d1fae5;
-            border-color: rgba(5, 150, 105, 0.46);
-            box-shadow: 0 10px 22px rgba(5, 150, 105, 0.14);
-            transform: translateY(-1px);
-        }
-
         .side-action {
             display: flex;
             flex-direction: column;
@@ -748,6 +710,13 @@
             color: var(--primary-dark);
         }
 
+        .top-row {
+            display: flex;
+            align-items: stretch;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
         .continue-banner {
             display: none;
             align-items: center;
@@ -756,7 +725,31 @@
             background: rgba(99, 102, 241, 0.06);
             border: 1px solid rgba(99, 102, 241, 0.22);
             border-radius: 8px;
-            margin-top: 12px;
+            flex: 1;
+        }
+
+        .utilidades-quick-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            color: #312e81;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 0.84rem;
+            font-weight: 850;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .utilidades-quick-link:hover {
+            background: #d1fae5;
+            border-color: rgba(5, 150, 105, 0.46);
+            transform: translateY(-1px);
         }
 
         .continue-banner-link {
@@ -1036,7 +1029,7 @@
                     <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
                     <a class="nav-link" href="index.html">⌂ Inicio</a>
                 </nav>
-                <div class="version" id="appVersionBadge">v0.1.174</div>
+                <div class="version" id="appVersionBadge">v0.1.175</div>
             </div>
         </header>
 
@@ -1045,9 +1038,12 @@
                 <div class="section-kicker">En producción</div>
                 <h2 id="daily-title">Trabajo diario de evaluación</h2>
 
-                <div class="continue-banner" id="continueBanner">
-                    <a class="continue-banner-link" href="#" id="continueLink">↩ Continuar</a>
-                    <button class="continue-dismiss" type="button" id="continueDismiss" title="Cerrar" aria-label="Cerrar acceso rapido">✕</button>
+                <div class="top-row">
+                    <div class="continue-banner" id="continueBanner">
+                        <a class="continue-banner-link" href="#" id="continueLink">↩ Continuar</a>
+                        <button class="continue-dismiss" type="button" id="continueDismiss" title="Cerrar" aria-label="Cerrar acceso rapido">✕</button>
+                    </div>
+                    <a class="utilidades-quick-link" href="utilidades.html">⏱ Utilidades</a>
                 </div>
 
                 <!-- ZONA 1: Escritura -->
@@ -1109,16 +1105,6 @@
                         <button class="recent-clear-btn" type="button" id="clearAllRecentBtn" title="Limpiar historial" style="display:none">🗑️</button>
                     </div>
                     <div class="recent-list" id="recentFilesList"></div>
-                </div>
-
-                <div class="quick-access" aria-label="Accesos rápidos">
-                    <div class="section-kicker">Accesos rápidos</div>
-                    <div class="quick-access-grid">
-                        <button class="quick-access-link" type="button" onclick="document.getElementById('modalIntroducirNotas').style.display='flex'">📝 Notas</button>
-                        <a class="quick-access-link" href="visor-notas.html">📊 Ver notas</a>
-                        <a class="quick-access-link" href="diario.html">📓 Diario</a>
-                        <a class="quick-access-link" href="utilidades.html">⏱ Utilidades</a>
-                    </div>
                 </div>
 
             </aside>

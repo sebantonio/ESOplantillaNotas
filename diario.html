@@ -591,6 +591,10 @@
                 <button class="entry-delete" title="Eliminar">✕</button>
             `;
             el.querySelector('.entry-delete').addEventListener('click', async () => {
+                const ok = window.appUx && window.appUx.confirm
+                    ? await window.appUx.confirm('¿Eliminar esta entrada del diario?', { title: 'Eliminar entrada', confirmText: 'Eliminar' })
+                    : confirm('¿Eliminar esta entrada del diario?');
+                if (!ok) return;
                 try {
                     const res = await bridge.deleteDiarioEntrada({ fila: entry.fila });
                     allEntries = res.entradas || allEntries;
