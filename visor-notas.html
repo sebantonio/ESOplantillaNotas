@@ -126,6 +126,13 @@
         <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
+        <label for="sortSelect">Orden:</label>
+        <select id="sortSelect">
+            <option value="nombre-asc">Nombre A-Z</option>
+            <option value="nombre-desc">Nombre Z-A</option>
+            <option value="final-desc">Nota final mayor-menor</option>
+            <option value="final-asc">Nota final menor-mayor</option>
+        </select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar datos de la evaluación actual">Recargar</button>
         <button class="pag-btn" id="btnCopyTable" type="button" onclick="copiarTabla()" title="Copiar tabla completa al portapapeles (pega en Excel)">📋 Copiar</button>
         <button class="pag-btn" id="btnClearFilters" type="button" title="Limpiar filtros">Limpiar filtros</button>
@@ -180,6 +187,7 @@
     const evalSelect      = document.getElementById("evalSelect");
     const searchInput     = document.getElementById("searchInput");
     const alumnoSelect    = document.getElementById("alumnoSelect");
+    const sortSelect      = document.getElementById("sortSelect");
     const notasHead       = document.getElementById("notasHead");
     const notasBody       = document.getElementById("notasBody");
     const messageEl       = document.getElementById("message");
@@ -229,6 +237,7 @@
                 evaluacion: evalSelect.value || "1",
                 search: searchInput.value || "",
                 alumno: alumnoSelect.value || "",
+                sort: sortSelect.value || "nombre-asc",
                 perPage
             };
             localStorage.setItem(VIEW_PREFS_KEY, JSON.stringify(prefs));
@@ -249,6 +258,12 @@
         currentPage = 0;
         saveViewPrefs();
         renderTable();
+    }
+
+    function alumnoFinalNumber(alumno) {
+        const source = alumno && (alumno.finalDisplay ?? alumno.final);
+        const n = parseFloat(String(source ?? "").replace(",", "."));
+        return isNaN(n) ? -1 : n;
     }
 
     function applyDensityPreference() {
@@ -430,6 +445,19 @@
         const allAlumnos = (data.alumnos || []).filter(a =>
             filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
         );
+        const sortMode = sortSelect.value || "nombre-asc";
+        allAlumnos.sort((a, b) => {
+            if (sortMode === "nombre-desc") {
+                return normalize(b.nombre).localeCompare(normalize(a.nombre), "es");
+            }
+            if (sortMode === "final-desc") {
+                return alumnoFinalNumber(b) - alumnoFinalNumber(a) || normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+            }
+            if (sortMode === "final-asc") {
+                return alumnoFinalNumber(a) - alumnoFinalNumber(b) || normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+            }
+            return normalize(a.nombre).localeCompare(normalize(b.nombre), "es");
+        });
         const ceGroups = getCurrentCeGroups();
         ensureCollapsedCePrefs(ceGroups);
         ceGroups.forEach((group) => {
@@ -574,6 +602,9 @@
                     alumnoSelect.value = prefs.alumno;
                     searchInput.value = "";
                 }
+                if (prefs.sort && [...sortSelect.options].some(o => o.value === prefs.sort)) {
+                    sortSelect.value = prefs.sort;
+                }
             }
 
             renderStats();
@@ -656,8 +687,32 @@
             saveViewPrefs();
             renderTable();
         });
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                if (searchInput.value) {
+                    searchInput.value = "";
+                    alumnoSelect.value = "";
+                    currentPage = 0;
+                    saveViewPrefs();
+                    renderTable();
+                }
+                return;
+            }
+            if (e.key === "Enter") {
+                e.preventDefault();
+                currentPage = 0;
+                saveViewPrefs();
+                renderTable();
+            }
+        });
         alumnoSelect.addEventListener("change", () => {
             searchInput.value = "";
+            currentPage = 0;
+            saveViewPrefs();
+            renderTable();
+        });
+        sortSelect.addEventListener("change", () => {
             currentPage = 0;
             saveViewPrefs();
             renderTable();

@@ -1277,6 +1277,7 @@
                 <button class="quick-filter" type="button" data-note-filter="fail">Suspensos <span class="quick-count" id="qfFail">0</span></button>
                 <button class="quick-filter" type="button" data-note-filter="pass">Aprobados <span class="quick-count" id="qfPass">0</span></button>
             </section>
+            <p style="margin: 8px 0 0; color:#6b7280; font-size:0.82rem;">Atajos: Ctrl+S guarda, Alt+C enfoca el primer CE del alumno activo.</p>
 
             <section>
                 <div class="table-container">
@@ -1301,6 +1302,7 @@
                     <div id="paginationBottom" class="pagination-bar"></div>
                     <div class="button-row">
                         <button class="secondary" type="button" id="clearButton">Vaciar notas</button>
+                        <button class="secondary" type="button" id="undoClearButton" disabled title="Deshacer el último vaciado">Deshacer vaciado</button>
                         <button type="button" id="saveButton">Guardar notas</button>
                     </div>
                 </div>
@@ -1333,6 +1335,7 @@
         let busyCount = 0;
         let busyDelayTimer = null;
         let currentQuickFilter = "all";
+        let savingNotas = false;
 
         const messageBox = document.getElementById("message");
         const unidadSelect = document.getElementById("unidadSelect");
@@ -1355,6 +1358,7 @@
         const reloadButton = document.getElementById("reloadButton");
         const clearFiltersButton = document.getElementById("clearFiltersButton");
         const clearButton = document.getElementById("clearButton");
+        const undoClearButton = document.getElementById("undoClearButton");
         const criteriosSection = document.getElementById("criteriosSection");
         const criteriosContent = document.getElementById("criteriosContent");
         const saveCriteriosButton = document.getElementById("saveCriteriosButton");
@@ -1368,6 +1372,8 @@
         const statusSync = document.getElementById("statusSync");
         const DENSITY_PREFS_KEY = "gestorNotasDensity";
         const lastSyncStatus = document.getElementById("lastSyncStatus");
+        let lastFocusedStudentIdx = -1;
+        let lastClearedSnapshot = null;
 
         document.addEventListener("DOMContentLoaded", () => {
             applyDensityPreference();
@@ -1383,6 +1389,7 @@
             densityToggleButton?.addEventListener("click", toggleDensityMode);
             window.addEventListener("resize", refreshStickyHeaderOffset);
             clearButton.addEventListener("click", clearNotas);
+            undoClearButton?.addEventListener("click", undoClearNotas);
             unidadSelect.addEventListener("change", () => {
                 saveViewPrefs();
                 loadNotasConGuardado();
@@ -1410,6 +1417,9 @@
                 if (event.ctrlKey && event.key.toLowerCase() === "s") {
                     event.preventDefault();
                     saveNotas();
+                } else if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "c") {
+                    event.preventDefault();
+                    focusActiveStudentFirstCe();
                 }
             });
 
@@ -1419,6 +1429,7 @@
                 if (input.classList.contains("nota-cr")) {
                     const row = input.closest("tr");
                     const studentIdx = Number(row.dataset.studentIdx);
+                    lastFocusedStudentIdx = studentIdx;
                     const crCodigo = input.dataset.crCodigo;
                     const crColIdx = Number(input.dataset.crColidx);
 
@@ -1446,6 +1457,11 @@
             notasBody.addEventListener("focusin", (event) => {
                 const input = event.target;
                 if (input.classList.contains("nota-cr")) {
+                    const row = input.closest("tr");
+                    const studentIdx = Number(row?.dataset.studentIdx);
+                    if (!Number.isNaN(studentIdx)) {
+                        lastFocusedStudentIdx = studentIdx;
+                    }
                     highlightActiveCell(input);
                 }
             });
@@ -1561,6 +1577,8 @@
                 currentState = data;
                 currentNotes = (data.alumnos || []).map((item) => ({ ...item }));
                 hayCambiosSinGuardar = false;
+                lastFocusedStudentIdx = -1;
+                clearLastSnapshot();
                 document.title = _BASE_TITLE;
                 currentPage = 0;
                 if (autoSaveTimeout) {
@@ -2057,6 +2075,9 @@
             if (!currentState) {
                 return true;
             }
+            if (savingNotas) {
+                return false;
+            }
 
             const validationMessage = validarNotasAntesDeGuardar();
             if (validationMessage) {
@@ -2064,10 +2085,11 @@
                 return false;
             }
 
+            savingNotas = true;
             try {
                 if (!options.silent) {
-                    setDisabled(true);
-                    beginBusy("Guardando notas en Excel...");
+                    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "Guardando..."; }
+                    if (floatingSaveButton) { floatingSaveButton.disabled = true; floatingSaveButton.textContent = "Guardando..."; }
                     showMessage("Guardando notas en el Excel...", "info");
                 }
 
@@ -2102,6 +2124,7 @@
                 }
                 markDirtyInputsAsSaved();
                 hayCambiosSinGuardar = false;
+                clearLastSnapshot();
                 document.title = _BASE_TITLE;
                 if (autoSaveTimeout) {
                     clearTimeout(autoSaveTimeout);
@@ -2121,9 +2144,10 @@
                 showMessage(error.message || "No se pudieron guardar las notas.", "error");
                 return false;
             } finally {
+                savingNotas = false;
                 if (!options.silent) {
-                    setDisabled(false);
-                    endBusy();
+                    if (saveButton) { saveButton.disabled = false; saveButton.textContent = "Guardar notas"; }
+                    if (floatingSaveButton) { floatingSaveButton.disabled = false; floatingSaveButton.textContent = "Guardar notas"; }
                 }
             }
         }
@@ -2461,6 +2485,12 @@
         }
 
         function clearNotas() {
+            lastClearedSnapshot = currentNotes.map((alumno) => ({
+                ...alumno,
+                crNotas: (alumno.crNotas || []).map((cr) => ({ ...cr }))
+            }));
+            updateUndoClearButton();
+
             currentNotes = currentNotes.map((alumno) => {
                 alumno.crNotas = (alumno.crNotas || []).map((cr) => ({
                     ...cr,
@@ -2472,6 +2502,49 @@
             renderSummary(currentState);
             renderTable();
             marcarCambio();
+            showMessage("Notas vaciadas. Puedes usar 'Deshacer vaciado' si fue accidental.", "info");
+        }
+
+        function undoClearNotas() {
+            if (!lastClearedSnapshot || !lastClearedSnapshot.length) {
+                return;
+            }
+            currentNotes = lastClearedSnapshot.map((alumno) => ({
+                ...alumno,
+                crNotas: (alumno.crNotas || []).map((cr) => ({ ...cr }))
+            }));
+            clearLastSnapshot();
+            renderSummary(currentState);
+            renderTable();
+            marcarCambio();
+            showMessage("Vaciado deshecho correctamente.", "success");
+        }
+
+        function clearLastSnapshot() {
+            lastClearedSnapshot = null;
+            updateUndoClearButton();
+        }
+
+        function updateUndoClearButton() {
+            if (!undoClearButton) return;
+            undoClearButton.disabled = !lastClearedSnapshot || !lastClearedSnapshot.length;
+        }
+
+        function focusActiveStudentFirstCe() {
+            const idx = Number(lastFocusedStudentIdx);
+            if (Number.isNaN(idx) || idx < 0) {
+                showMessage("Selecciona primero una celda de un alumno para usar Alt+C.", "info");
+                return;
+            }
+            const row = notasBody.querySelector(`tr[data-student-idx="${idx}"]`);
+            const input = row && row.querySelector(".nota-cr:not([disabled])");
+            if (!input) {
+                showMessage("No se encontró un criterio editable para el alumno activo.", "error");
+                return;
+            }
+            input.focus();
+            input.select();
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
         function parsePastedGrades(text) {
