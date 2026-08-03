@@ -37,4 +37,9 @@ files.forEach((file) => {
   fs.writeFileSync(path.join(outDir, file), content, 'utf8');
 });
 
-console.log(`Preparados ${files.length} archivos para Tauri en ${outDir} (v${version})`);
+const binaryFiles = ['notasESOicon.png'];
+binaryFiles.forEach((file) => {
+  fs.copyFileSync(path.join(root, file), path.join(outDir, file));
+});
+
+console.log(`Preparados ${files.length + binaryFiles.length} archivos para Tauri en ${outDir} (v${version})`);

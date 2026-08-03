@@ -1,8 +1,16 @@
 ---
 name: Estado del proyecto ESOplantillaNotas
-description: Estado actualizado 2026-05-10 — Excel ESO analizado, main.rs adaptado, compilando
+description: Estado actualizado 2026-08-03 — icono ESO propio, plantilla Excel descargable embebida, toolchain Rust instalado en D:\rust
 type: project
 ---
+
+**Estado (2026-08-03, sesión 5):**
+- Añadido branding propio: `notasESOicon.png` (raíz repo) sustituye el icono heredado del proyecto FP original. Regenerados todos los iconos de `src-tauri/icons/` con `npx tauri icon notasESOicon.png`, referenciados en `tauri.conf.json` → `bundle.icon`. Logo de cabecera de `index.html` (`.brand-mark`) ahora usa la imagen en vez de texto "ESO".
+- Nueva función: botón "Descargar plantilla Excel" en `index.html` → comando Rust `excel_download_template` que copia `Plantilla_Notas_ESO.xlsx` (embebida en el binario vía `include_bytes!`) a la ruta que elija el usuario. Requirió excepción en `.gitignore` (`!Plantilla_Notas_ESO.xlsx`) porque el patrón `*.xlsx` lo ignoraba.
+- `scripts/prepare-tauri-web.js` ahora copia también archivos binarios (PNG) a `tauri-web/`, antes solo trataba HTML/JS/CSS como texto UTF-8.
+- Toolchain Rust no estaba instalado en esta máquina; instalado con `rustup-init.exe -y` (el instalador de winget se colgaba sin `-y`, exit code 3221225786 = STATUS_CONTROL_C_EXIT). Disco C: tenía solo ~130MB libres, insuficiente — se reformateó D: (exFAT vacío → NTFS, exFAT no soporta hardlinks que rustup necesita para sus proxies). Toolchain queda en `RUSTUP_HOME=D:\rust\rustup`, `CARGO_HOME=D:\rust\cargo`. **Why:** sin esto no compila nada con cargo en esta máquina — variables de entorno persistidas a nivel de usuario (`setx`/`[Environment]::SetEnvironmentVariable(...,"User")`), deberían sobrevivir a reinicio de sesión.
+
+**How to apply:** en sesiones futuras en esta máquina, verificar `cargo --version` antes de asumir que hace falta reinstalar Rust — ya debería estar en D:\rust\cargo\bin. Si `*.xlsx` se sigue tocando en `.gitignore`, recordar que `Plantilla_Notas_ESO.xlsx` tiene excepción explícita y es necesaria para compilar (`include_bytes!` en main.rs).
 Proyecto creado el 2026-05-10 replicando la estructura completa de plantillaNotas para el Excel ESO `CCGG PLANTILLA - RECUv45.xlsx`. La app compila y funciona.
 
 **Why:** El usuario quiere una app Tauri para gestionar notas ESO sobre su Excel propio.

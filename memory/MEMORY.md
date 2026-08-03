@@ -1,6 +1,6 @@
 # Memory Index — ESOplantillaNotas
 
-- [Estado del proyecto](project_estado.md) — App compilando; Excel ESO analizado; gestores alumnos/unidades/instrumentos/CE funcionando
+- [Estado del proyecto](project_estado.md) — Icono ESO propio, plantilla Excel descargable embebida, toolchain Rust en D:\rust
 - [Arquitectura técnica](project_arquitectura.md) — Stack Tauri v2 + Rust; rangos fijos Excel ESO; comandos IPC registrados
 - [Estructura Excel ESO](project_excel_estructura.md) — Rangos exactos: alumnos A4:B30, unidades I5:K20, instrumentos N4:O13
 - [Perfil del usuario](user_perfil.md) — Sebantonio, Windows 11, prefiere autonomía total

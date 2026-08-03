@@ -2799,6 +2799,24 @@ fn app_open_external(url: String) -> Result<(), String> {
     webbrowser::open(&url).map_err(|e| format!("No se pudo abrir el enlace: {e}"))
 }
 
+static TEMPLATE_XLSX: &[u8] = include_bytes!("../../Plantilla_Notas_ESO.xlsx");
+
+#[tauri::command]
+fn excel_download_template() -> Result<bool, String> {
+    let path = rfd::FileDialog::new()
+        .set_title("Guardar plantilla Excel")
+        .set_file_name("Plantilla_Notas_ESO.xlsx")
+        .add_filter("Excel", &["xlsx"])
+        .save_file();
+    match path {
+        Some(p) => {
+            std::fs::write(&p, TEMPLATE_XLSX).map_err(|e| e.to_string())?;
+            Ok(true)
+        }
+        None => Ok(false),
+    }
+}
+
 #[tauri::command]
 fn save_csv_template(filename: String, content: String) -> Result<bool, String> {
     let path = rfd::FileDialog::new()
@@ -2826,7 +2844,7 @@ fn main() {
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
-            excel_get_instrumentos, excel_save_instrumentos, save_csv_template
+            excel_get_instrumentos, excel_save_instrumentos, save_csv_template, excel_download_template
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicacion Tauri");

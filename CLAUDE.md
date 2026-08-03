@@ -32,7 +32,7 @@ Devuelve solo:
 - Haz commit y push
 
 
-**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.81 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
+**Proyecto**: Gestor de Notas ESO | **Versión**: 0.1.177 | **Stack**: Tauri v2 + Rust + HTML/CSS/Vanilla JS | **Estado**: Funcional
 
 ## Estructura
 
@@ -45,8 +45,10 @@ ESOplantillaNotas/
 ├── Backend: app-bridge.js (puente Tauri), main.js, preload.js
 ├── Scripts: scripts/prepare-tauri-web.js, scripts/bump-version.js
 ├── src-tauri/: main.rs (lógica Rust), Cargo.toml, tauri.conf.json
+├── src-tauri/icons/: iconos app (generados con `npx tauri icon notasESOicon.png`)
 ├── memory/: contexto del proyecto para Claude Code
-└── Excel: CCGG PLANTILLA - RECUv45.xlsx
+├── Excel: CCGG PLANTILLA - RECUv45.xlsx
+└── Plantilla_Notas_ESO.xlsx — plantilla vacía embebida en el binario (botón "Descargar plantilla Excel")
 ```
 
 ## Stack
@@ -117,6 +119,8 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - `excel_get_alumnos_informes`
 - `excel_get_diario`, `excel_save_diario_entrada`, `excel_delete_diario_entrada`
 - `app_open_external`
+- `save_csv_template` — guarda CSV de plantillas (alumnos/ce/instrumentos/unidades) vía dialog
+- `excel_download_template` — copia `Plantilla_Notas_ESO.xlsx` (embebida con `include_bytes!`) a la ruta elegida por el usuario
 
 ## Páginas HTML
 
@@ -147,6 +151,9 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 - **Recuperaciones trabaja por unidad**: gestor-recuperaciones.html usa `excel_get_notas_unidad`/`excel_save_notas_unidad` (igual que gestor-notas.html), NO `excel_get_notas_evaluacion`. La Nota CE por grupo se recalcula en JS con `recomputeAlumno()` usando `criterios[].ponderacion` de esa unidad (agrupados por prefijo `CR<n>.` vía `getCeNum`), sin concepto de "Final" (eso es de la hoja de evaluación)
 - **Batch save recuperaciones**: `saveAllRec` agrupa los cambios por alumno y llama a `saveNotasUnidad` (1 escritura ZIP); autosave es silencioso (no reconstruye DOM). `saveRecFromInput` guarda celda + actualiza DOM sin rebuild.
 - **Paginación gestor-notas**: `currentPage`/`perPage` globales; `renderTable()` usa `currentNotes.slice(startIdx, startIdx+perPage)`; `data-studentIdx` es índice global (no local de página)
+- **Plantilla Excel embebida**: `TEMPLATE_XLSX` en main.rs usa `include_bytes!("../../Plantilla_Notas_ESO.xlsx")` — el archivo está excluido de `*.xlsx` en `.gitignore` con excepción explícita (`!Plantilla_Notas_ESO.xlsx`); si se borra o mueve, el build falla en compilación
+- **Iconos app**: `src-tauri/icons/*` generados desde `notasESOicon.png` (raíz del repo) con `npx tauri icon notasESOicon.png`; `tauri.conf.json` → `bundle.icon` lista los paths. El logo de cabecera de `index.html` (`.brand-mark`) usa la misma imagen — `prepare-tauri-web.js` la copia como binario (`binaryFiles`) a `tauri-web/`, no pasa por el reemplazo de texto UTF-8
+- **Entorno de build en esta máquina**: disco C: casi lleno; toolchain Rust instalado en D:\rust (`RUSTUP_HOME=D:\rust\rustup`, `CARGO_HOME=D:\rust\cargo`). D: es NTFS (reformateado desde exFAT, que no soporta hardlinks — rustup los necesita)
 
 ## Pendientes
 
@@ -156,4 +163,4 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 
 Ver carpeta `memory/` para estado detallado, decisiones de diseño y preferencias de trabajo.
 
-**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-05-11 (sesión 4)
+**Responsable**: Sebantonio | **Creado**: 2026-05-10 | **Actualizado**: 2026-08-03 (sesión 5)

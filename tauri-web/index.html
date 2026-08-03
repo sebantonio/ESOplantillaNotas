@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Notas ESO</title>
+    <link rel="icon" href="notasESOicon.png">
     <link rel="stylesheet" href="ux-common.css">
     <script src="ux-common.js" defer></script>
     <style>
@@ -61,13 +62,16 @@
             display: grid;
             place-items: center;
             border-radius: 8px;
-            color: #ffffff;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            font-size: 1.45rem;
-            font-weight: 800;
+            overflow: hidden;
             box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
             cursor: pointer;
             transition: all 0.3s ease;
+        }
+
+        .brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .brand-mark:hover {
@@ -1018,7 +1022,7 @@
     <main class="shell">
         <header class="topbar">
             <div class="brand">
-                <div class="brand-mark" onclick="window.location.href='asteroides.html'" title="🚀 ¡Easter egg!">ESO</div>
+                <div class="brand-mark" onclick="window.location.href='asteroides.html'" title="🚀 ¡Easter egg!"><img src="notasESOicon.png" alt="ESO"></div>
                 <div>
                     <h1>Gestor de Notas ESO</h1>
                     <p>Panel de trabajo para el curso actual</p>
@@ -1029,7 +1033,7 @@
                     <button class="nav-button" type="button" onclick="window.history.back()">← Atrás</button>
                     <a class="nav-link" href="index.html">⌂ Inicio</a>
                 </nav>
-                <div class="version" id="appVersionBadge">v0.1.175</div>
+                <div class="version" id="appVersionBadge">v0.1.176</div>
             </div>
         </header>
 
@@ -1096,6 +1100,7 @@
                 <div class="file-actions">
                     <button class="small-button" type="button" id="changeFileBtn">Cambiar archivo</button>
                     <button class="small-button" type="button" id="refreshFileBtn" title="Recargar estado del archivo activo">Recargar estado</button>
+                    <button class="small-button" type="button" onclick="descargarPlantillaExcel()" title="Descarga una copia vacía de la plantilla Excel">📥 Descargar plantilla Excel</button>
                 </div>
                 <span class="file-mtime" id="fileVerifyState" style="display:none"></span>
 
@@ -1688,6 +1693,14 @@
                 document.body.appendChild(a); a.click();
                 document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 10000);
+            }
+        }
+
+        function descargarPlantillaExcel() {
+            if (window.__TAURI__) {
+                window.__TAURI__.core.invoke('excel_download_template');
+            } else {
+                alert('Disponible solo en la app de escritorio.');
             }
         }
 
