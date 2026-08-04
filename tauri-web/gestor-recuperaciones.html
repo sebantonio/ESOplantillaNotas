@@ -277,6 +277,16 @@
         return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
     }
 
+    // Serializa todas las escrituras al Excel: si el usuario tabula rapido entre celdas,
+    // varios guardados podrian solaparse y escribir el mismo archivo a la vez.
+    let saveQueue = Promise.resolve();
+    function queuedSaveNotasUnidad(payload) {
+        const run = () => window.electronExcel.saveNotasUnidad(payload);
+        const result = saveQueue.then(run, run);
+        saveQueue = result.then(() => {}, () => {});
+        return result;
+    }
+
     let savingAll = false;
     let autoSaveTimer = null;
     let _hayPendientes = false;
@@ -515,7 +525,7 @@
         if (isNaN(rowIdx) || isNaN(colIdx)) return;
         const value = input.value.trim();
         const codigo = input.dataset.codigo || String(colIdx);
-        window.electronExcel.saveNotasUnidad({
+        queuedSaveNotasUnidad({
             unidad: unidadSelect.value,
             notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, rec: value } } }],
             syncEval: false,
@@ -561,7 +571,7 @@
         });
         const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
         try {
-            await window.electronExcel.saveNotasUnidad({ unidad, notas });
+            await queuedSaveNotasUnidad({ unidad, notas, syncEval: false });
             inputs.forEach((inp) => inp.classList.remove('needs-eval-sync'));
         } catch (e) {
             showMessage("Error al sincronizar evaluaciones: " + (e.message || e), "error");
@@ -604,7 +614,7 @@
                 notasByRow.get(ch.rowIdx)[ch.codigo] = { colIdx: ch.colIdx, rec: ch.value };
             }
             const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
-            await window.electronExcel.saveNotasUnidad({ unidad: unidadSelect.value, notas });
+            await queuedSaveNotasUnidad({ unidad: unidadSelect.value, notas, syncEval: false });
             for (const ch of changes) {
                 const alumno = (currentState.alumnos || []).find(a => a.rowIdx === ch.rowIdx);
                 if (!alumno) continue;

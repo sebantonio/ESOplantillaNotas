@@ -2833,6 +2833,43 @@ fn save_csv_template(filename: String, content: String) -> Result<bool, String> 
     }
 }
 
+#[cfg(test)]
+mod debug_corruption {
+    use super::*;
+
+    #[test]
+    fn repro_repeated_saves_corruption() {
+        let path = r"C:\cargo-target\plantillaNotas\release\TEST_REPRO.xlsx";
+        set_selected_path(Some(path.to_string()));
+        let unidad = "U1";
+        let unit_data = load_notas_unidad(path, unidad).unwrap();
+        let alumnos = unit_data["alumnos"].as_array().unwrap().clone();
+        eprintln!("alumnos en U1: {}", alumnos.len());
+        let first = &alumnos[0];
+        let row_idx = first["rowIdx"].as_u64().unwrap() as usize;
+        let cr_notas = first["crNotas"].as_array().unwrap();
+        eprintln!("crNotas ejemplo: {}", serde_json::to_string_pretty(&cr_notas[0]).unwrap());
+        let codigo = cr_notas[0]["codigo"].as_str().unwrap().to_string();
+        let col_idx = cr_notas[0]["colIdx"].as_u64().unwrap();
+
+        for i in 0..25 {
+            let val = (i % 10) as f64 + 1.0;
+            let payload = json!({
+                "unidad": unidad,
+                "notas": [{
+                    "rowIdx": row_idx,
+                    "crNotas": { codigo.clone(): { "colIdx": col_idx, "rec": val } }
+                }]
+            });
+            let result = excel_save_notas_unidad(payload);
+            if let Err(e) = &result {
+                panic!("save #{i} fallo: {e}");
+            }
+        }
+        eprintln!("25 guardados completados sin error de Rust.");
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
