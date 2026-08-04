@@ -969,12 +969,22 @@
         let lastFocusedStudentIdx = -1;
         let lastClearedSnapshot = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             applyDensityPreference();
             if (!window.electronExcel) {
                 showMessage("Abre esta pantalla desde la aplicacion local de Electron para modificar el Excel.", "error");
                 setDisabled(true);
                 return;
+            }
+
+            const current = await window.electronExcel.getSelectedFile().catch(() => null);
+            if (!current) {
+                try {
+                    const recent = JSON.parse(localStorage.getItem("recentExcelFiles") || "[]");
+                    for (const f of recent) {
+                        try { if (await window.electronExcel.setSelectedFile(f.path)) break; } catch {}
+                    }
+                } catch {}
             }
 
             reloadButton.addEventListener("click", () => loadNotasConGuardado());
