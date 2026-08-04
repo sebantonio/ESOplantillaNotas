@@ -122,8 +122,6 @@
             <option value="final" title="Vista final global">Final</option>
         </select>
         <span style="font-size:0.8rem;color:#6b7280;max-width:340px;line-height:1.3;">Acumulada: incluye evaluaciones anteriores. Solo: muestra únicamente esa evaluación.</span>
-        <label for="searchInput">Buscar:</label>
-        <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <label for="sortSelect">Orden:</label>
@@ -185,7 +183,6 @@
 
 <script>
     const evalSelect      = document.getElementById("evalSelect");
-    const searchInput     = document.getElementById("searchInput");
     const alumnoSelect    = document.getElementById("alumnoSelect");
     const sortSelect      = document.getElementById("sortSelect");
     const notasHead       = document.getElementById("notasHead");
@@ -235,7 +232,6 @@
         try {
             const prefs = {
                 evaluacion: evalSelect.value || "1",
-                search: searchInput.value || "",
                 alumno: alumnoSelect.value || "",
                 sort: sortSelect.value || "nombre-asc",
                 perPage
@@ -253,7 +249,6 @@
     }
 
     function clearFilters() {
-        searchInput.value = "";
         alumnoSelect.value = "";
         currentPage = 0;
         saveViewPrefs();
@@ -441,10 +436,7 @@
         if (!data) return;
 
         const filtroAlumno = alumnoSelect.value;
-        const query = filtroAlumno ? "" : normalize(searchInput.value);
-        const allAlumnos = (data.alumnos || []).filter(a =>
-            filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
-        );
+        const allAlumnos = (data.alumnos || []).filter(a => !filtroAlumno || a.nombre === filtroAlumno);
         const sortMode = sortSelect.value || "nombre-asc";
         const nameCompare = (a, b) => normalize(a.nombre).localeCompare(normalize(b.nombre), "es", { numeric: true });
         allAlumnos.sort((a, b) => {
@@ -598,10 +590,8 @@
 
             const prefs = getSavedPrefs();
             if (prefs.evaluacion === evaluacion) {
-                if (prefs.search) searchInput.value = prefs.search;
                 if (prefs.alumno && nombres.includes(prefs.alumno)) {
                     alumnoSelect.value = prefs.alumno;
-                    searchInput.value = "";
                 }
                 if (prefs.sort && [...sortSelect.options].some(o => o.value === prefs.sort)) {
                     sortSelect.value = prefs.sort;
@@ -682,33 +672,7 @@
         }
         evalSelect.addEventListener("change", () => { currentPage = 0; loadEvaluacion(evalSelect.value); });
         applyDensityPreference();
-        searchInput.addEventListener("input", () => {
-            alumnoSelect.value = "";
-            currentPage = 0;
-            saveViewPrefs();
-            renderTable();
-        });
-        searchInput.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") {
-                e.preventDefault();
-                if (searchInput.value) {
-                    searchInput.value = "";
-                    alumnoSelect.value = "";
-                    currentPage = 0;
-                    saveViewPrefs();
-                    renderTable();
-                }
-                return;
-            }
-            if (e.key === "Enter") {
-                e.preventDefault();
-                currentPage = 0;
-                saveViewPrefs();
-                renderTable();
-            }
-        });
         alumnoSelect.addEventListener("change", () => {
-            searchInput.value = "";
             currentPage = 0;
             saveViewPrefs();
             renderTable();
@@ -735,8 +699,7 @@
         document.addEventListener("keydown", (e) => {
             if (e.ctrlKey && e.key.toLowerCase() === "f") {
                 e.preventDefault();
-                searchInput.focus();
-                searchInput.select();
+                alumnoSelect.focus();
                 return;
             }
             if (e.altKey && e.key === "ArrowRight") {

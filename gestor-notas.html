@@ -820,8 +820,8 @@
                     <select id="unidadSelect"></select>
                 </div>
                 <div class="field">
-                    <label for="studentSearchInput">Buscar alumno</label>
-                    <input type="search" id="studentSearchInput" placeholder="Nombre..." autocomplete="off" />
+                    <label for="alumnoSelect">Alumno</label>
+                    <select id="alumnoSelect"><option value="">— Todos —</option></select>
                 </div>
                 <button class="secondary" type="button" id="reloadButton">Recargar</button>
                 <button class="secondary" type="button" id="clearFiltersButton">Limpiar filtros</button>
@@ -950,7 +950,7 @@
         const gradedCount = document.getElementById("gradedCount");
         const pendingCount = document.getElementById("pendingCount");
         const invalidCount = document.getElementById("invalidCount");
-        const studentSearchInput = document.getElementById("studentSearchInput");
+        const alumnoSelect = document.getElementById("alumnoSelect");
         const saveButton = document.getElementById("saveButton");
         const floatingSaveButton = document.getElementById("floatingSaveButton");
         const densityToggleButton = document.getElementById("densityToggleButton");
@@ -999,8 +999,8 @@
                 loadNotasConGuardado();
             });
             setupQuickFilters();
-            studentSearchInput?.addEventListener('input', () => {
-                studentSearch = studentSearchInput.value.trim().toLowerCase();
+            alumnoSelect?.addEventListener('change', () => {
+                studentSearch = alumnoSelect.value;
                 currentPage = 0;
                 saveViewPrefs();
                 renderTable();
@@ -1009,7 +1009,7 @@
 
             clearFiltersButton?.addEventListener("click", () => {
                 studentSearch = "";
-                studentSearchInput.value = "";
+                alumnoSelect.value = "";
                 currentQuickFilter = "all";
                 currentPage = 0;
                 saveViewPrefs();
@@ -1147,8 +1147,7 @@
             const initialPerPage = Number(prefs.perPage || perPage);
             perPage = [10, 15, 20, 25, 50].includes(initialPerPage) ? initialPerPage : perPage;
             if (prefs.search) {
-                studentSearch = String(prefs.search || "").toLowerCase();
-                studentSearchInput.value = prefs.search;
+                studentSearch = String(prefs.search || "");
             }
             currentQuickFilter = prefs.quickFilter || "all";
             loadNotas({ unidad: prefs.unidad || "U1" });
@@ -1232,6 +1231,12 @@
                 (item) => item.label || item.codigo,
                 data.unidad
             );
+            const nombres = currentNotes.map((a) => a.nombre);
+            alumnoSelect.innerHTML = `<option value="">— Todos —</option>` +
+                nombres.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+            if (studentSearch && nombres.includes(studentSearch)) {
+                alumnoSelect.value = studentSearch;
+            }
         }
 
         function fillSelect(select, items, valueGetter, labelGetter, selectedValue) {
@@ -1345,7 +1350,7 @@
             try {
                 const prefs = {
                     unidad: unidadSelect.value || (currentState && currentState.unidad) || "U1",
-                    search: studentSearchInput.value || "",
+                    search: studentSearch || "",
                     perPage,
                     quickFilter: currentQuickFilter || "all"
                 };

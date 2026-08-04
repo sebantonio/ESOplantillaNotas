@@ -151,8 +151,6 @@
         <label for="unidadSelect">Unidad:</label>
         <select id="unidadSelect"></select>
         <span style="font-size:0.8rem;color:#6b7280;max-width:340px;line-height:1.3;">La recuperación se guarda en la hoja de la unidad; la evaluación se recalcula al abrir el Excel.</span>
-        <label for="searchInput">Buscar:</label>
-        <input id="searchInput" type="search" placeholder="Nombre del alumno...">
         <label for="alumnoSelect">Alumno:</label>
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar unidad actual">Recargar</button>
@@ -210,7 +208,6 @@
 
 <script>
     const unidadSelect    = document.getElementById("unidadSelect");
-    const searchInput     = document.getElementById("searchInput");
     const alumnoSelect    = document.getElementById("alumnoSelect");
     const notasHead       = document.getElementById("notasHead");
     const notasBody       = document.getElementById("notasBody");
@@ -420,10 +417,7 @@
         const data = currentState;
         if (!data) return [];
         const filtroAlumno = alumnoSelect.value;
-        const query = filtroAlumno ? "" : normalize(searchInput.value);
-        return (data.alumnos || []).filter(a =>
-            filtroAlumno ? a.nombre === filtroAlumno : (!query || normalize(a.nombre).includes(query))
-        );
+        return (data.alumnos || []).filter(a => !filtroAlumno || a.nombre === filtroAlumno);
     }
 
     function countPendingRecoveries() {
@@ -826,8 +820,7 @@
             } catch {}
         }
         unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
-        searchInput.addEventListener("input", () => { alumnoSelect.value = ""; currentPage = 0; renderTable(); });
-        alumnoSelect.addEventListener("change", () => { searchInput.value = ""; currentPage = 0; renderTable(); });
+        alumnoSelect.addEventListener("change", () => { currentPage = 0; renderTable(); });
         btnRefresh?.addEventListener("click", () => loadUnidad(unidadSelect.value));
         densityToggleButton?.addEventListener("click", toggleDensityMode);
         ceToggleAllButton?.addEventListener("click", toggleAllCeGroups);
