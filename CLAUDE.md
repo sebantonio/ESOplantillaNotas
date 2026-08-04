@@ -157,7 +157,14 @@ Archivo principal: `CCGG PLANTILLA - RECUv45.xlsx` — hoja **DATOS**
 
 ## Pendientes
 
-*(ninguno)*
+Mejoras identificadas en estudio DAFO (2026-08-04), pendientes de abordar:
+1. Sacar `.git` de sync de Google Drive (`.git/objects/*` contaminado con `desktop.ini`, 257 garbage objects — riesgo de corrupción)
+2. Quitar `ESOplantillaNotas_backup_20260605_004811.zip` (2.1MB) del repo git
+3. CI básica (GitHub Actions) que valide `cargo build --release`
+4. Tests de integración sobre `load_notas_unidad`/`save_notas_unidad` (código más frágil: fórmulas Excel CR/Rec)
+5. Modularizar `main.rs` (2851 líneas, 114 fn en 1 archivo) — separar por dominio (excel_io/alumnos/notas)
+6. Confirmar si `main.js` (2924 líneas, legacy Electron) sigue en uso; borrar si es deuda muerta
+7. Cerrar CSP en `tauri.conf.json` (actualmente `null`)
 
 ## Contexto adicional
 
