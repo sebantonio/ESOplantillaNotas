@@ -505,6 +505,12 @@
             box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.14);
         }
 
+        .ponderaciones-matrix input[type="number"].invalid-pond {
+            background: #fff1f2;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16);
+        }
+
         .ponderaciones-matrix tfoot td {
             background: #f3f4f6;
             color: #374151;
@@ -1115,10 +1121,6 @@
                             </div>
                         </div>
 
-                        <div id="instrSelect" style="display:none; margin-bottom:14px; padding:10px 14px; background:#f8f9ff; border:2px solid #c7d2fe; border-radius:8px; align-items:center; gap:12px;">
-                            <label style="font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap;">📋 Instrumento</label>
-                            <select id="instrPorCeSelect" onchange="cambiarInstrumentoCE(this.value)" style="flex:1; padding:7px 10px; border:1px solid #c7d2fe; border-radius:6px; font-size:0.95em; color:#1e1b4b; background:white; cursor:pointer;"></select>
-                        </div>
 
                         <div class="ponderacion-matrix-toolbar">
                             <div class="ponderacion-matrix-summary" id="ponderacionesMatrixSummary"></div>
@@ -1831,11 +1833,13 @@
                         const isLast = critPos === grupo.criterios.length - 1;
                         return `
                             <td class="matrix-ce-cell ${isLast ? 'matrix-ce-end' : ''}" data-col-key="cr-${crit.colIdx}" style="${style}">
-                                <input type="number" value="${formatearNumeroMatriz(val).replace(',', '.')}" min="0" step="1"
+                                <input type="number" value="${formatearNumeroMatriz(val).replace(',', '.')}" min="0" max="100" step="1"
                                     data-matrix-cell data-row-pos="${rowPos}" data-col-pos="${colPos}"
+                                    data-unidad-row-idx="${unidad.rowIdx}" data-col-idx="${crit.colIdx}"
                                     onfocus="resaltarCeldaMatriz(this)" onkeydown="navegarMatrizPonderaciones(event)"
-                                    oninput="this.classList.add('dirty-pond'); this.classList.remove('saved-pond')"
-                                    onchange="actualizarPonderacionUnidadMatriz(${unidad.rowIdx}, ${crit.colIdx}, this.value)" />
+                                    oninput="marcarInputPonderacionSucio(this)"
+                                    onchange="actualizarPonderacionUnidadMatriz(${unidad.rowIdx}, ${crit.colIdx}, this.value)"
+                                    title="Ctrl+D: rellena toda la columna con este valor" />
                             </td>`;
                     }).join('');
                     return instCell + crCells;
@@ -1920,6 +1924,24 @@
             if (ceResumenActivo) mostrarTablaResumen();
         }
 
+        function validarValorPonderacion(value) {
+            const raw = String(value ?? '').trim();
+            if (!raw) return { isInvalid: false, message: '' };
+            const numeric = Number(raw.replace(',', '.'));
+            if (Number.isNaN(numeric) || numeric < 0 || numeric > 100) {
+                return { isInvalid: true, message: 'El peso debe estar entre 0 y 100.' };
+            }
+            return { isInvalid: false, message: '' };
+        }
+
+        function marcarInputPonderacionSucio(input) {
+            input.classList.add('dirty-pond');
+            input.classList.remove('saved-pond');
+            const validacion = validarValorPonderacion(input.value);
+            input.classList.toggle('invalid-pond', validacion.isInvalid);
+            input.title = validacion.message || '';
+        }
+
         function marcarInputsMatrizComoGuardados() {
             const dirtyInputs = document.querySelectorAll('#ponderacionesTable input[type="number"].dirty-pond');
             dirtyInputs.forEach((input) => {
@@ -1933,6 +1955,22 @@
                     });
                 }, 1200);
             }
+        }
+
+        function rellenarColumnaPonderacion(inputOrigen) {
+            const colPos = inputOrigen.dataset.colPos;
+            const colIdx = Number(inputOrigen.dataset.colIdx);
+            if (colPos === undefined || Number.isNaN(colIdx)) return;
+            const valor = inputOrigen.value;
+            const inputs = document.querySelectorAll(`#ponderacionesTable input[type="number"][data-col-pos="${colPos}"]`);
+            if (inputs.length <= 1) return;
+            if (!confirm(`Rellenar las ${inputs.length} unidades de esta columna con el valor "${valor || 0}"?`)) return;
+            inputs.forEach((input) => {
+                input.value = valor;
+                marcarInputPonderacionSucio(input);
+                actualizarPonderacionUnidadMatriz(Number(input.dataset.unidadRowIdx), colIdx, valor);
+            });
+            inputOrigen.focus();
         }
 
         function actualizarInstrumentoPonderacion(rowIdx, ceNumero, instrColIdx, codigo) {
@@ -1979,6 +2017,11 @@
         }
 
         function navegarMatrizPonderaciones(event) {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
+                event.preventDefault();
+                rellenarColumnaPonderacion(event.target);
+                return;
+            }
             const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter'];
             if (!keys.includes(event.key)) return;
             const cursor = typeof event.target.selectionStart === 'number' ? event.target.selectionStart : null;
@@ -2634,6 +2677,12 @@
         }
 
         function validarRraaAntesDeGuardar() {
+            const inputsInvalidos = document.querySelectorAll('#ponderacionesTable input[type="number"].invalid-pond');
+            if (inputsInvalidos.length) {
+                inputsInvalidos[0].focus();
+                return `No se puede guardar: hay ${inputsInvalidos.length} peso(s) fuera de rango (0-100).`;
+            }
+
             const grupos = gruposCePonderacion();
             const ceSinPeso = grupos
                 .filter((grupo) => totalCePonderacion(grupo) <= 0)
