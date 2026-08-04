@@ -518,8 +518,11 @@
         window.electronExcel.saveNotasUnidad({
             unidad: unidadSelect.value,
             notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, rec: value } } }],
+            syncEval: false,
         }).then(() => {
             markRecSaved(input);
+            input.classList.add('needs-eval-sync');
+            scheduleEvalSync(unidadSelect.value);
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
             if (alumno) {
                 const cr = (alumno.crNotas || []).find(c => Number(c.colIdx) === colIdx);
@@ -531,6 +534,38 @@
             refreshPendingState();
             updateStatusBar();
         }).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
+    }
+
+    let evalSyncTimeout = null;
+    let evalSyncUnidad = null;
+
+    function scheduleEvalSync(unidad) {
+        evalSyncUnidad = unidad;
+        if (evalSyncTimeout) clearTimeout(evalSyncTimeout);
+        evalSyncTimeout = setTimeout(flushEvalSync, 1500);
+    }
+
+    async function flushEvalSync() {
+        evalSyncTimeout = null;
+        const unidad = evalSyncUnidad;
+        const inputs = document.querySelectorAll('.rec-input.needs-eval-sync');
+        if (!inputs.length || !unidad) return;
+        const notasByRow = new Map();
+        inputs.forEach((inp) => {
+            const rowIdx = parseInt(inp.dataset.row, 10);
+            const colIdx = parseInt(inp.dataset.col, 10);
+            if (isNaN(rowIdx) || isNaN(colIdx)) return;
+            const codigo = inp.dataset.codigo || String(colIdx);
+            if (!notasByRow.has(rowIdx)) notasByRow.set(rowIdx, {});
+            notasByRow.get(rowIdx)[codigo] = { colIdx, rec: inp.value.trim() };
+        });
+        const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
+        try {
+            await window.electronExcel.saveNotasUnidad({ unidad, notas });
+            inputs.forEach((inp) => inp.classList.remove('needs-eval-sync'));
+        } catch (e) {
+            showMessage("Error al sincronizar evaluaciones: " + (e.message || e), "error");
+        }
     }
 
     async function saveAllRec() {
@@ -602,6 +637,7 @@
         if (autoSaveTimer) clearInterval(autoSaveTimer);
         autoSaveTimer = setInterval(() => {
             if (document.querySelectorAll('.rec-input.dirty-rec').length) saveAllRec();
+            if (document.querySelectorAll('.rec-input.needs-eval-sync').length) flushEvalSync();
         }, 60000);
     }
 
@@ -818,7 +854,11 @@
                 }
             } catch {}
         }
-        unidadSelect.addEventListener("change", () => { currentPage = 0; loadUnidad(unidadSelect.value); });
+        unidadSelect.addEventListener("change", () => {
+            if (evalSyncTimeout) { clearTimeout(evalSyncTimeout); flushEvalSync(); }
+            currentPage = 0;
+            loadUnidad(unidadSelect.value);
+        });
         alumnoSelect.addEventListener("change", () => { currentPage = 0; renderTable(); });
         btnRefresh?.addEventListener("click", () => loadUnidad(unidadSelect.value));
         densityToggleButton?.addEventListener("click", toggleDensityMode);
