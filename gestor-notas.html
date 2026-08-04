@@ -579,6 +579,18 @@
             box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
         }
 
+        .nota-cr.dirty-note {
+            background: #fff7ed !important;
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+        }
+
+        .nota-cr.saved-note {
+            background: #ecfdf5 !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.14);
+        }
+
         tr.pending-note td {
             background: #fffbeb;
         }
@@ -913,7 +925,7 @@
         let studentSearch = '';
         let currentPage = 0;
         let perPage = 15;
-        const AUTO_SAVE_DELAY_MS = 120000;
+        const AUTO_SAVE_DELAY_MS = 60000;
         const VIEW_PREFS_KEY = "gestorNotasViewPrefs";
         const _notasCache = new Map();
         let busyCount = 0;

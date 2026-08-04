@@ -609,7 +609,7 @@
         if (autoSaveTimer) clearInterval(autoSaveTimer);
         autoSaveTimer = setInterval(() => {
             if (document.querySelectorAll('.rec-input.dirty-rec').length) saveAllRec();
-        }, 120000);
+        }, 60000);
     }
 
     function alumnoUnitAverage(alumno) {

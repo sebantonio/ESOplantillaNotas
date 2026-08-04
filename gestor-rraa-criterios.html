@@ -298,7 +298,7 @@
         }
 
         .ponderaciones-matrix col.matrix-col-cr {
-            width: 48px;
+            width: 54px;
         }
 
         .ponderaciones-matrix th,
@@ -470,6 +470,16 @@
             text-align: center;
         }
 
+        .ponderaciones-matrix input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .ponderaciones-matrix input[type="number"]::-webkit-outer-spin-button,
+        .ponderaciones-matrix input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
         .ponderaciones-matrix select {
             padding-left: 4px;
             padding-right: 2px;
@@ -481,6 +491,18 @@
         .ponderaciones-matrix select:focus {
             border-color: #4f46e5;
             box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.16);
+        }
+
+        .ponderaciones-matrix input[type="number"].dirty-pond {
+            background: #fff7ed;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.15);
+        }
+
+        .ponderaciones-matrix input[type="number"].saved-pond {
+            background: #ecfdf5;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.14);
         }
 
         .ponderaciones-matrix tfoot td {
@@ -1746,9 +1768,12 @@
             }
 
             if (!unidades.length || !grupos.length) {
+                const mensaje = !unidades.length
+                    ? 'No hay unidades creadas. Ve a <strong>Gestor de Unidades</strong> y crea al menos una.'
+                    : 'No hay criterios con ponderación asignada. Ve a la pestaña <strong>Criterios</strong> y ponles un peso mayor que 0.';
                 colgroup.innerHTML = '<col class="matrix-col-unit">';
                 thead.innerHTML = '<tr><th class="matrix-unit-sticky">Unidad</th></tr>';
-                tbody.innerHTML = '<tr><td class="matrix-unit-sticky">No hay unidades o criterios incluidos.</td></tr>';
+                tbody.innerHTML = `<tr><td class="matrix-unit-sticky" style="text-align:left; color:#64748b; padding:14px;">${mensaje}</td></tr>`;
                 tfoot.innerHTML = '';
                 return;
             }
@@ -1809,6 +1834,7 @@
                                 <input type="number" value="${formatearNumeroMatriz(val).replace(',', '.')}" min="0" step="1"
                                     data-matrix-cell data-row-pos="${rowPos}" data-col-pos="${colPos}"
                                     onfocus="resaltarCeldaMatriz(this)" onkeydown="navegarMatrizPonderaciones(event)"
+                                    oninput="this.classList.add('dirty-pond'); this.classList.remove('saved-pond')"
                                     onchange="actualizarPonderacionUnidadMatriz(${unidad.rowIdx}, ${crit.colIdx}, this.value)" />
                             </td>`;
                     }).join('');
@@ -1854,10 +1880,13 @@
                 }).join('');
             }).join('');
 
+            let granTotalCe = 0;
             const filaCe = grupos.map((grupo, grupoIdx) => {
                 const ceTotal = Number(grupo.ce.ponderacionTotal) || grupo.criterios.reduce((sum, crit) => sum + (Number(crit.ponderacionCR) || 0), 0);
-                return `<td class="matrix-ce-total matrix-ce-start matrix-ce-end" colspan="${grupo.criterios.length + 1}" style="${estiloCeMatriz(grupoIdx)}">${formatearPorcentajeMatriz(ceTotal)}</td>`;
+                granTotalCe += ceTotal;
+                return `<td class="matrix-ce-total matrix-ce-start matrix-ce-end" colspan="${grupo.criterios.length + 1}" style="${estiloCeMatriz(grupoIdx)};text-align:left;padding-left:10px;">${formatearPorcentajeMatriz(ceTotal)}</td>`;
             }).join('');
+            const granTotalClase = Math.abs(granTotalCe - 1) <= 0.005 ? '' : 'warn';
 
             return `
                 <tr>
@@ -1869,7 +1898,12 @@
                     ${filaPctCr}
                 </tr>
                 <tr>
-                    <td class="matrix-unit-sticky">Ponderacion final CE</td>
+                    <td class="matrix-unit-sticky">
+                        <div class="matrix-unit-cell-content">
+                            <span>Ponderacion final CE</span>
+                            <span class="matrix-unit-total ${granTotalClase}" title="Suma de todos los CE (debe ser 100%)">Σ ${formatearPorcentajeMatriz(granTotalCe)}</span>
+                        </div>
+                    </td>
                     ${filaCe}
                 </tr>
             `;
@@ -1884,6 +1918,21 @@
             marcarCambio();
             actualizarTotalesMatrizPonderaciones();
             if (ceResumenActivo) mostrarTablaResumen();
+        }
+
+        function marcarInputsMatrizComoGuardados() {
+            const dirtyInputs = document.querySelectorAll('#ponderacionesTable input[type="number"].dirty-pond');
+            dirtyInputs.forEach((input) => {
+                input.classList.remove('dirty-pond');
+                input.classList.add('saved-pond');
+            });
+            if (dirtyInputs.length) {
+                setTimeout(() => {
+                    document.querySelectorAll('#ponderacionesTable input[type="number"].saved-pond').forEach((input) => {
+                        input.classList.remove('saved-pond');
+                    });
+                }, 1200);
+            }
         }
 
         function actualizarInstrumentoPonderacion(rowIdx, ceNumero, instrColIdx, codigo) {
@@ -2648,6 +2697,7 @@
                     autoSaveTimeout = null;
                 }
                 mostrarEstadoGuardado('saved', '✅ Guardado');
+                marcarInputsMatrizComoGuardados();
                 console.log('✅ Cambios guardados automáticamente');
                 return true;
             } catch (error) {
