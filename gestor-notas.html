@@ -966,8 +966,10 @@
         const statusSync = document.getElementById("statusSync");
         const DENSITY_PREFS_KEY = "gestorNotasDensity";
         const lastSyncStatus = document.getElementById("lastSyncStatus");
+        const FILE_VERSION_KEY = "fileActiveVersion";
         let lastFocusedStudentIdx = -1;
         let lastClearedSnapshot = null;
+        let lastSeenFileVersion = localStorage.getItem(FILE_VERSION_KEY) || "";
 
         document.addEventListener("DOMContentLoaded", async () => {
             applyDensityPreference();
@@ -987,7 +989,7 @@
                 } catch {}
             }
 
-            reloadButton.addEventListener("click", () => loadNotasConGuardado());
+            reloadButton.addEventListener("click", () => loadNotasConGuardado({ fromCache: false }));
             saveButton.addEventListener("click", saveNotas);
             floatingSaveButton?.addEventListener("click", saveNotas);
             densityToggleButton?.addEventListener("click", toggleDensityMode);
@@ -1150,7 +1152,15 @@
                 studentSearch = String(prefs.search || "");
             }
             currentQuickFilter = prefs.quickFilter || "all";
-            loadNotas({ unidad: prefs.unidad || "U1" });
+            loadNotas({ unidad: prefs.unidad || "U1", fromCache: false });
+
+            window.addEventListener("storage", (event) => {
+                if (event.key !== FILE_VERSION_KEY) return;
+                if ((event.newValue || "") === lastSeenFileVersion) return;
+                lastSeenFileVersion = event.newValue || "";
+                _notasCache.clear();
+                loadNotasConGuardado({ fromCache: false });
+            });
         });
 
         async function loadNotasConGuardado(options = {}) {

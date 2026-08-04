@@ -532,7 +532,6 @@
         }).then(() => {
             markRecSaved(input);
             input.classList.add('needs-eval-sync');
-            scheduleEvalSync(unidadSelect.value);
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
             if (alumno) {
                 const cr = (alumno.crNotas || []).find(c => Number(c.colIdx) === colIdx);
@@ -543,6 +542,7 @@
             }
             refreshPendingState();
             updateStatusBar();
+            flushEvalSync();
         }).catch(e => showMessage("Error al guardar Rec: " + (e.message || e), "error"));
     }
 

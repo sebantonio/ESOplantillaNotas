@@ -1309,6 +1309,7 @@
         const LAST_VISIT_KEY = "lastQuickAccess";
         const FILE_TS_KEY = "fileActiveTs";
         const FILE_PATH_KEY = "fileActivePath";
+        const FILE_VERSION_KEY = "fileActiveVersion";
         const MAX_RECENT = 6;
 
         function getRecentFiles() {
@@ -1447,6 +1448,7 @@
             document.getElementById("activeFileName").textContent = fileName;
             localStorage.setItem(FILE_TS_KEY, Date.now().toString());
             localStorage.setItem(FILE_PATH_KEY, filePath || "");
+            localStorage.setItem(FILE_VERSION_KEY, Date.now().toString());
             refreshActiveSince();
             renderRecentFiles(filePath);
             loadFileStats();
@@ -1464,6 +1466,7 @@
             const alertPanel = document.getElementById("alertasPanel");
             if (alertPanel) alertPanel.style.display = "none";
             localStorage.removeItem(FILE_PATH_KEY);
+            localStorage.setItem(FILE_VERSION_KEY, Date.now().toString());
             renderRecentFiles(null);
         }
 
