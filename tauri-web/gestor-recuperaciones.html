@@ -518,7 +518,6 @@
         window.electronExcel.saveNotasUnidad({
             unidad: unidadSelect.value,
             notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, rec: value } } }],
-            syncEval: false,
         }).then(() => {
             markRecSaved(input);
             const alumno = (currentState.alumnos || []).find(a => a.rowIdx === rowIdx);
