@@ -107,6 +107,14 @@ fn cell_data_to_value(cell: &Data) -> Value {
 
 fn read_sheet_rows(path: &str, sheet: &str) -> Result<Vec<Vec<Value>>, String> {
     let mut wb = open_workbook_auto(path).map_err(|e| e.to_string())?;
+    read_sheet_rows_from_wb(&mut wb, sheet)
+}
+
+// open_workbook_auto vuelve a leer y parsear TODO el zip (shared strings, styles...)
+// cada vez que se llama. Cuando hay que leer varias hojas seguidas (p.ej. sincronizar
+// varias hojas de evaluacion), abrir el libro una sola vez y reutilizarlo evita ese
+// coste repetido (era el cuello de botella real del guardado de recuperaciones).
+fn read_sheet_rows_from_wb(wb: &mut calamine::Sheets<std::io::BufReader<std::fs::File>>, sheet: &str) -> Result<Vec<Vec<Value>>, String> {
     let range = wb
         .worksheet_range(sheet)
         .map_err(|e| format!("Hoja '{sheet}' no encontrada: {e}"))?;
@@ -143,6 +151,10 @@ fn read_sheet_rows(path: &str, sheet: &str) -> Result<Vec<Vec<Value>>, String> {
 fn sheet_names(path: &str) -> Result<Vec<String>, String> {
     let wb = open_workbook_auto(path).map_err(|e| e.to_string())?;
     Ok(wb.sheet_names().to_vec())
+}
+
+fn sheet_names_from_wb(wb: &calamine::Sheets<std::io::BufReader<std::fs::File>>) -> Vec<String> {
+    wb.sheet_names().to_vec()
 }
 
 fn cell_val_str(v: &Value) -> String {
@@ -2103,8 +2115,9 @@ fn find_evaluation_layout_indices(rows: &[Vec<Value>]) -> Option<(usize, usize, 
 
 struct FieldUpdate { nota: Option<Option<f64>>, rec: Option<Option<f64>> }
 
-fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value]) -> Result<(), String> {
-    let unit_rows = read_sheet_rows(path, unidad)
+fn build_eval_sheet_edits(path: &str, unidad: &str, notas: &[Value]) -> Result<Vec<(String, Box<dyn Fn(&str) -> Result<String, String>>)>, String> {
+    let mut wb = open_workbook_auto(path).map_err(|e| e.to_string())?;
+    let unit_rows = read_sheet_rows_from_wb(&mut wb, unidad)
         .map_err(|_| format!("El archivo no tiene la hoja \"{unidad}\"."))?;
     let mut updates: HashMap<(String, String), FieldUpdate> = HashMap::new();
 
@@ -2125,16 +2138,18 @@ fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value
         }
     }
 
-    if updates.is_empty() { return Ok(()); }
+    if updates.is_empty() { return Ok(Vec::new()); }
 
-    let names = sheet_names(path)?;
+    let names = sheet_names_from_wb(&wb);
     let eval_sheets: Vec<String> = names.into_iter().filter(|name| {
         let norm = normalize_plain(name);
         (norm.contains("EVA") || norm == "FINAL") && !norm.contains("MAX")
     }).collect();
 
+    let mut edits: Vec<(String, Box<dyn Fn(&str) -> Result<String, String>>)> = Vec::new();
+
     for sheet_name in eval_sheets {
-        let rows = match read_sheet_rows(path, &sheet_name) {
+        let rows = match read_sheet_rows_from_wb(&mut wb, &sheet_name) {
             Ok(rows) => rows,
             Err(_) => continue,
         };
@@ -2167,16 +2182,16 @@ fn sync_unit_notes_to_evaluation_sheets(path: &str, unidad: &str, notas: &[Value
         }
         if cells.is_empty() { continue; }
 
-        edit_workbook_sheets_xml(path, vec![(&sheet_name, Box::new(move |xml: &str| {
+        edits.push((sheet_name, Box::new(move |xml: &str| {
             let mut s = xml.to_string();
             for (row_idx, col_idx, value) in &cells {
                 s = set_xml_formula_cache_number(&s, *row_idx, *col_idx, *value)?;
             }
             Ok(s)
-        }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+        }) as Box<dyn Fn(&str) -> Result<String, String>>));
     }
 
-    Ok(())
+    Ok(edits)
 }
 
 #[tauri::command]
@@ -2191,7 +2206,7 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
     let notas_for_unit = notas.clone();
     let notas_for_eval = notas.clone();
 
-    edit_workbook_sheets_xml(&path, vec![(&unidad, Box::new(move |xml: &str| {
+    let unit_edit_fn: Box<dyn Fn(&str) -> Result<String, String>> = Box::new(move |xml: &str| {
         let mut s = xml.to_string();
         for nota_item in &notas_for_unit {
             if let Some(ri) = nota_item["rowIdx"].as_u64().map(|n| n as usize) {
@@ -2216,13 +2231,29 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
             }
         }
         Ok(s)
-    }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+    });
+
+    // Todas las hojas afectadas (unidad + evaluaciones) se editan y se escriben en
+    // UNA sola pasada de zip (leer/descomprimir/recomprimir/escribir es caro y antes
+    // se repetia una vez por hoja de evaluacion, bloqueando el autoguardado).
+    let eval_edits: Vec<(String, Box<dyn Fn(&str) -> Result<String, String>>)> = if sync_eval {
+        build_eval_sheet_edits(&path, &unidad, &notas_for_eval)?
+    } else {
+        Vec::new()
+    };
+    let (eval_names, eval_fns): (Vec<String>, Vec<Box<dyn Fn(&str) -> Result<String, String>>>) = eval_edits.into_iter().unzip();
+
+    let mut all_edits: Vec<(&str, Box<dyn Fn(&str) -> Result<String, String>>)> = Vec::new();
+    all_edits.push((unidad.as_str(), unit_edit_fn));
+    for (name, f) in eval_names.iter().zip(eval_fns.into_iter()) {
+        all_edits.push((name.as_str(), f));
+    }
+
+    edit_workbook_sheets_xml(&path, all_edits)?;
 
     if !sync_eval {
         return Ok(Value::Null);
     }
-
-    sync_unit_notes_to_evaluation_sheets(&path, &unidad, &notas_for_eval)?;
 
     load_notas_unidad(&path, &unidad)
 }
