@@ -2233,29 +2233,74 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
         Ok(s)
     });
 
-    // Todas las hojas afectadas (unidad + evaluaciones) se editan y se escriben en
-    // UNA sola pasada de zip (leer/descomprimir/recomprimir/escribir es caro y antes
-    // se repetia una vez por hoja de evaluacion, bloqueando el autoguardado).
-    let eval_edits: Vec<(String, Box<dyn Fn(&str) -> Result<String, String>>)> = if sync_eval {
-        build_eval_sheet_edits(&path, &unidad, &notas_for_eval)?
-    } else {
-        Vec::new()
-    };
-    let (eval_names, eval_fns): (Vec<String>, Vec<Box<dyn Fn(&str) -> Result<String, String>>>) = eval_edits.into_iter().unzip();
-
-    let mut all_edits: Vec<(&str, Box<dyn Fn(&str) -> Result<String, String>>)> = Vec::new();
-    all_edits.push((unidad.as_str(), unit_edit_fn));
-    for (name, f) in eval_names.iter().zip(eval_fns.into_iter()) {
-        all_edits.push((name.as_str(), f));
-    }
-
-    edit_workbook_sheets_xml(&path, all_edits)?;
+    // El guardado del propio Rec/nota en la hoja de unidad va SIEMPRE primero y por
+    // separado: debe quedar en disco aunque la sincronizacion con las hojas de
+    // evaluacion (mas fragil: varias hojas, layouts variables) falle.
+    edit_workbook_sheets_xml(&path, vec![(unidad.as_str(), unit_edit_fn)])?;
 
     if !sync_eval {
         return Ok(Value::Null);
     }
 
+    // Hojas de evaluacion afectadas: se editan y se escriben en UNA sola pasada de
+    // zip (antes se repetia una vez por hoja, bloqueando el autoguardado). Un fallo
+    // aqui no debe perder el guardado de la unidad, que ya esta en disco.
+    let eval_edits = build_eval_sheet_edits(&path, &unidad, &notas_for_eval)?;
+    if !eval_edits.is_empty() {
+        let (eval_names, eval_fns): (Vec<String>, Vec<Box<dyn Fn(&str) -> Result<String, String>>>) = eval_edits.into_iter().unzip();
+        let all_eval_edits: Vec<(&str, Box<dyn Fn(&str) -> Result<String, String>>)> = eval_names.iter()
+            .zip(eval_fns.into_iter())
+            .map(|(name, f)| (name.as_str(), f))
+            .collect();
+        edit_workbook_sheets_xml(&path, all_eval_edits)?;
+    }
+
     load_notas_unidad(&path, &unidad)
+}
+
+// Vuelve a propagar TODAS las notas/Rec ya guardados en una hoja de unidad hacia
+// las hojas de evaluacion. Existe porque, durante un tiempo, el autoguardado de
+// recuperaciones no disparaba esa sincronizacion (bug ya corregido): los datos
+// quedaron bien guardados en la hoja de unidad pero nunca llegaron a la hoja de
+// evaluacion. Este comando repara ese historial sin que el usuario tenga que
+// re-teclear cada nota.
+#[tauri::command]
+fn excel_resync_unidad_eval(payload: Value) -> Result<Value, String> {
+    let path = require_selected_path()?;
+    let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
+
+    let unit_data = load_notas_unidad(&path, &unidad)?;
+    let alumnos = unit_data["alumnos"].as_array().cloned().unwrap_or_default();
+
+    let notas: Vec<Value> = alumnos.iter().filter_map(|a| {
+        let row_idx = a["rowIdx"].as_u64()?;
+        let cr_notas = a["crNotas"].as_array()?;
+        let mut cr_obj = serde_json::Map::new();
+        for cr in cr_notas {
+            let codigo = cr["codigo"].as_str()?.to_string();
+            let col_idx = cr["colIdx"].as_u64()?;
+            let mut entry = serde_json::Map::new();
+            entry.insert("colIdx".to_string(), json!(col_idx));
+            if let Some(n) = cr["nota"].as_f64() { entry.insert("nota".to_string(), json!(n)); }
+            let rec_str = cr["recDisplay"].as_str().unwrap_or("").trim().replace(',', ".");
+            if let Ok(v) = rec_str.parse::<f64>() { entry.insert("rec".to_string(), json!(v)); }
+            cr_obj.insert(codigo, Value::Object(entry));
+        }
+        Some(json!({ "rowIdx": row_idx, "crNotas": Value::Object(cr_obj) }))
+    }).collect();
+
+    let eval_edits = build_eval_sheet_edits(&path, &unidad, &notas)?;
+    let hojas_afectadas = eval_edits.len();
+    if !eval_edits.is_empty() {
+        let (eval_names, eval_fns): (Vec<String>, Vec<Box<dyn Fn(&str) -> Result<String, String>>>) = eval_edits.into_iter().unzip();
+        let all_eval_edits: Vec<(&str, Box<dyn Fn(&str) -> Result<String, String>>)> = eval_names.iter()
+            .zip(eval_fns.into_iter())
+            .map(|(name, f)| (name.as_str(), f))
+            .collect();
+        edit_workbook_sheets_xml(&path, all_eval_edits)?;
+    }
+
+    Ok(json!({ "unidad": unidad, "alumnos": notas.len(), "hojasAfectadas": hojas_afectadas }))
 }
 
 // ---------------------------------------------------------------------------
@@ -2910,7 +2955,7 @@ fn main() {
             excel_get_notas_actividad, excel_get_notas_actividades_tipo,
             excel_save_notas_actividad, excel_save_ce_notas, excel_add_actividad,
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
-            excel_get_notas_unidad, excel_save_notas_unidad, excel_get_alumnos_informes, app_open_external,
+            excel_get_notas_unidad, excel_save_notas_unidad, excel_resync_unidad_eval, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template, excel_download_template
         ])

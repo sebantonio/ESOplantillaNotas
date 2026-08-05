@@ -155,6 +155,7 @@
         <select id="alumnoSelect"><option value="">— Todos —</option></select>
         <button class="pag-btn" id="btnRefresh" type="button" title="Recargar unidad actual">Recargar</button>
         <button id="btnSave" class="btn-save" onclick="saveAllRec()">Guardar</button>
+        <button class="pag-btn" id="btnResyncEval" type="button" onclick="resyncEvalActual()" title="Reenvía todas las notas/Rec ya guardados de esta unidad a las hojas de evaluación (por si quedaron desincronizadas)">🔄 Resincronizar evaluación</button>
         <span id="saveStatus" class="save-status"></span>
         <span id="lastSync" class="save-status">Sin sincronizar</span>
         <span id="pendientesBadge" style="padding:4px 10px;border-radius:6px;font-size:0.82rem;font-weight:700;display:inline-block;background:#f3f4f6;color:#9ca3af;transition:all 0.3s"></span>
@@ -640,6 +641,21 @@
             savingAll = false;
             if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
             if (btnSaveFloating) { btnSaveFloating.disabled = false; btnSaveFloating.textContent = 'Guardar'; }
+        }
+    }
+
+    async function resyncEvalActual() {
+        const btn = document.getElementById('btnResyncEval');
+        const unidad = unidadSelect.value;
+        if (!unidad) return;
+        if (btn) { btn.disabled = true; btn.textContent = '🔄 Sincronizando…'; }
+        try {
+            const result = await window.electronExcel.resyncUnidadEval({ unidad });
+            showMessage(`Evaluación resincronizada (${result.alumnos} alumnos, ${result.hojasAfectadas} hoja(s) de evaluación).`, 'success');
+        } catch (e) {
+            showMessage('Error al resincronizar: ' + (e.message || e), 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🔄 Resincronizar evaluación'; }
         }
     }
 
