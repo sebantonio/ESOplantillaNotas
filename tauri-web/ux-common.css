@@ -1,28 +1,85 @@
+/* Hallmark · genre: modern-minimal · macrostructure: adapted-app-workbench (ver design.md) · design-system: design.md · designed-as-app */
 /* Capa comun de usabilidad. Mantiene la logica de cada pantalla intacta. */
 :root {
-    --ux-primary: #4f46e5;
-    --ux-primary-strong: #3730a3;
-    --ux-primary-soft: #eef2ff;
-    --ux-accent: #0f766e;
-    --ux-border: #dbe3ef;
-    --ux-border-strong: #c7d2fe;
-    --ux-surface: #ffffff;
-    --ux-surface-muted: #f8f9ff;
-    --ux-page-bg: #f3f6fb;
-    --ux-text: #1f2937;
-    --ux-muted: #64748b;
-    --ux-danger: #b91c1c;
-    --ux-warning: #b45309;
-    --ux-success: #166534;
+    /* Paleta OKLCH — ver design.md. Ancla en el indigo/teal que la app ya usaba. */
+    --color-paper: oklch(97% 0.01 260);
+    --color-paper-2: oklch(98% 0.007 275);
+    --color-surface: oklch(100% 0 0);
+    --color-ink: oklch(28% 0.03 262);
+    --color-ink-2: oklch(55% 0.03 258);
+    --color-rule: oklch(89% 0.014 253);
+    --color-rule-strong: oklch(84% 0.06 274);
+    --color-accent: oklch(51% 0.22 277);
+    --color-accent-strong: oklch(36% 0.15 278);
+    --color-accent-soft: oklch(96% 0.02 279);
+    --color-teal: oklch(48% 0.09 180);
+    --color-focus: oklch(60% 0.19 277);
+    --color-danger: oklch(44% 0.18 27);
+    --color-warning: oklch(47% 0.14 46);
+    --color-success: oklch(39% 0.10 152);
+
+    /* Tipografia — solo fuentes de sistema (app offline, sin CDN de fuentes) */
+    --font-display: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    /* Espaciado 4pt */
+    --space-3xs: 0.25rem; --space-2xs: 0.5rem; --space-xs: 0.75rem;
+    --space-sm: 1rem; --space-md: 1.5rem; --space-lg: 2rem;
+    --space-xl: 3rem; --space-2xl: 4.5rem; --space-3xl: 7rem;
+
+    /* Escala tipografica */
+    --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem;
+    --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem;
+    --text-display: 2.25rem;
+
+    /* Movimiento */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --dur-short: 150ms;
+    --dur-med: 220ms;
+
+    --radius-card: 10px;
+    --radius-pill: 999px;
+    --radius-input: 7px;
+
+    /* Alias --ux-* -> tokens nuevos, para no romper paginas aun no migradas */
+    --ux-primary: var(--color-accent);
+    --ux-primary-strong: var(--color-accent-strong);
+    --ux-primary-soft: var(--color-accent-soft);
+    --ux-accent: var(--color-teal);
+    --ux-border: var(--color-rule);
+    --ux-border-strong: var(--color-rule-strong);
+    --ux-surface: var(--color-surface);
+    --ux-surface-muted: var(--color-paper-2);
+    --ux-page-bg: var(--color-paper);
+    --ux-text: var(--color-ink);
+    --ux-muted: var(--color-ink-2);
+    --ux-danger: var(--color-danger);
+    --ux-warning: var(--color-warning);
+    --ux-success: var(--color-success);
     --ux-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
-    --ux-radius: 8px;
-    --ux-radius-shell: 10px;
+    --ux-radius: var(--radius-input);
+    --ux-radius-shell: var(--radius-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --dur-short: 0ms;
+        --dur-med: 0ms;
+    }
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 body.ux-app-shell {
     min-height: 100vh;
     padding: 20px;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-body);
     color: var(--ux-text);
     background: var(--ux-page-bg);
 }
@@ -69,24 +126,33 @@ body.ux-app-shell .ux-shell.narrow {
     min-height: 38px;
     padding: 8px 14px;
     border: 1px solid var(--ux-border-strong);
-    border-radius: 7px;
+    border-radius: var(--radius-input);
     color: var(--ux-primary);
-    background: #ffffff;
+    background: var(--color-surface);
     font: inherit;
+    font-family: var(--font-body);
     font-size: 0.9rem;
     font-weight: 750;
     text-decoration: none;
     cursor: pointer;
+    transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
 }
 
 .ux-button:hover,
 .ux-link-button:hover,
 .nav-button.ux-button:hover,
 .nav-link.ux-link-button:hover {
-    background: #f5f3ff;
+    background: var(--color-accent-soft);
     border-color: var(--ux-primary);
     box-shadow: none;
-    transform: none;
+    transform: translateY(-1px);
+}
+
+.ux-button:active,
+.ux-link-button:active,
+.nav-button.ux-button:active,
+.nav-link.ux-link-button:active {
+    transform: translateY(0);
 }
 
 .ux-button.primary,
@@ -104,9 +170,9 @@ a.nav-button.ux-button {
 .nav-button.ux-button.primary:hover,
 .nav-link.ux-link-button.primary:hover,
 a.nav-button.ux-button:hover {
-    background: #4338ca;
+    background: var(--color-accent-strong);
     box-shadow: none;
-    transform: none;
+    transform: translateY(-1px);
 }
 
 .ux-page-header,
@@ -340,7 +406,7 @@ table.ux-table tr:hover td {
 }
 
 body.ux-enhanced :is(a, button, input, select, textarea):focus-visible {
-    outline: 3px solid rgba(15, 118, 110, 0.35);
+    outline: 3px solid var(--color-focus);
     outline-offset: 2px;
 }
 

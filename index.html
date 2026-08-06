@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="ux-common.css">
     <script src="ux-common.js" defer></script>
     <style>
+        /* Hallmark · genre: modern-minimal · macrostructure: adapted-app-workbench (portada) · design-system: design.md · designed-as-app */
         * {
             margin: 0;
             padding: 0;
@@ -15,25 +16,27 @@
         }
 
         :root {
-            --bg: #f4f7fb;
-            --panel: #ffffff;
-            --panel-soft: #eef4ff;
-            --text: #1f2937;
-            --muted: #5f6f89;
-            --line: #d8e1ee;
-            --primary: #6366f1;
-            --primary-dark: #4338ca;
-            --accent: #4338ca;
-            --warning: #b45309;
+            /* Remapea las variables locales de esta pagina a los tokens globales
+               de design.md/ux-common.css: el resto de este bloque no cambia. */
+            --bg: var(--color-paper);
+            --panel: var(--color-surface);
+            --panel-soft: var(--color-accent-soft);
+            --text: var(--color-ink);
+            --muted: var(--color-ink-2);
+            --line: var(--color-rule);
+            --primary: var(--color-accent);
+            --primary-dark: var(--color-accent-strong);
+            --accent: var(--color-accent-strong);
+            --warning: var(--color-warning);
             --shadow: 0 16px 40px rgba(31, 41, 55, 0.12);
             --section-shadow: 0 18px 44px rgba(31, 41, 55, 0.13), 0 1px 0 rgba(255, 255, 255, 0.78) inset;
         }
 
         body {
             min-height: 100vh;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-body);
             color: var(--text);
-            background: #f3f6fb;
+            background: var(--bg);
             padding: 28px;
         }
 
@@ -61,11 +64,11 @@
             height: 80px;
             display: grid;
             place-items: center;
-            border-radius: 16px;
+            border-radius: var(--radius-card);
             overflow: hidden;
             box-shadow: 0 16px 38px rgba(37, 99, 235, 0.24);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .brand-mark img {
@@ -75,12 +78,14 @@
         }
 
         .brand-mark:hover {
-            transform: scale(1.1);
+            transform: scale(1.06);
             box-shadow: 0 16px 36px rgba(37, 99, 235, 0.35);
         }
 
         .brand h1 {
-            font-size: clamp(1.55rem, 3vw, 2.35rem);
+            font-family: var(--font-display);
+            font-size: clamp(1.55rem, 3vw, var(--text-display));
+            font-weight: 700;
             line-height: 1.05;
             letter-spacing: 0;
         }
@@ -122,9 +127,9 @@
             justify-content: center;
             min-height: 38px;
             padding: 8px 13px;
-            color: #065f46;
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
+            color: var(--color-accent-strong);
+            background: var(--color-accent-soft);
+            border: 1px solid var(--color-rule-strong);
             border-radius: 8px;
             font: inherit;
             font-size: 0.9rem;
@@ -132,7 +137,7 @@
             text-decoration: none;
             cursor: pointer;
             box-shadow: 0 8px 18px rgba(79, 70, 229, 0.10);
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+            transition: background var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .nav-button:hover,
@@ -180,6 +185,8 @@
 
         .daily-panel h2 {
             max-width: 760px;
+            font-family: var(--font-display);
+            font-weight: 700;
             font-size: clamp(2rem, 5vw, 4rem);
             line-height: 1;
             letter-spacing: 0;
@@ -212,7 +219,7 @@
             background: #ffffff;
             border: 1px solid var(--line);
             border-radius: 8px;
-            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+            transition: transform var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .action-card:hover {
@@ -230,7 +237,7 @@
             border-radius: 10px;
             font-size: 1.75rem;
             font-weight: 800;
-            transition: transform 0.18s ease, background 0.18s ease;
+            transition: transform var(--dur-med) var(--ease-out), background var(--dur-med) var(--ease-out);
         }
 
         .action-card:hover .action-icon {
@@ -316,7 +323,7 @@
             background: rgba(37, 99, 235, 0.04);
             border: 1px solid transparent;
             cursor: pointer;
-            transition: background 0.15s ease, border-color 0.15s ease;
+            transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
             group: 'recent-item';
         }
 
@@ -360,7 +367,7 @@
             gap: 6px;
             flex-shrink: 0;
             opacity: 0;
-            transition: opacity 0.15s ease;
+            transition: opacity var(--dur-short) var(--ease-out);
         }
 
         .recent-item:hover .recent-item-actions {
@@ -386,7 +393,7 @@
             border-radius: 4px;
             font-size: 0.75rem;
             cursor: pointer;
-            transition: background 0.15s ease, color 0.15s ease;
+            transition: background var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out);
             font-weight: bold;
         }
 
@@ -408,7 +415,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: background 0.15s ease;
+            transition: background var(--dur-short) var(--ease-out);
             vertical-align: middle;
         }
 
@@ -441,7 +448,7 @@
             background: #ffffff;
             border: 1px solid var(--line);
             border-radius: 8px;
-            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+            transition: transform var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .side-action-card:hover {
@@ -492,7 +499,7 @@
             text-decoration: none;
             font-size: 0.87rem;
             font-weight: 700;
-            transition: background 0.15s ease;
+            transition: background var(--dur-short) var(--ease-out);
         }
 
         .online-link:hover {
@@ -526,7 +533,7 @@
             gap: 8px;
             min-height: 38px;
             padding: 8px 13px;
-            color: #312e81;
+            color: var(--color-accent-strong);
             background: #eef2ff;
             border: 1px solid #c7d2fe;
             border-radius: 8px;
@@ -534,7 +541,7 @@
             font-size: 0.92rem;
             font-weight: 800;
             box-shadow: 0 8px 18px rgba(79, 70, 229, 0.10);
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+            transition: background var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .small-button:hover {
@@ -546,13 +553,13 @@
 
         .file-actions .small-button:first-child {
             color: #ffffff;
-            background: #4f46e5;
-            border-color: #4f46e5;
+            background: var(--color-accent);
+            border-color: var(--color-accent);
         }
 
         .file-actions .small-button:first-child:hover {
-            background: #4338ca;
-            border-color: #4338ca;
+            background: var(--color-accent-strong);
+            border-color: var(--color-accent-strong);
         }
 
         .workflow {
@@ -738,7 +745,7 @@
             justify-content: center;
             gap: 6px;
             padding: 8px 14px;
-            color: #312e81;
+            color: var(--color-accent-strong);
             background: #eef2ff;
             border: 1px solid #c7d2fe;
             border-radius: 8px;
@@ -747,7 +754,7 @@
             font-weight: 850;
             text-decoration: none;
             white-space: nowrap;
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+            transition: background var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
         }
 
         .utilidades-quick-link:hover {
@@ -990,7 +997,7 @@
             border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 8px 18px rgba(5, 150, 105, 0.07);
-            transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+            transition: background var(--dur-med) var(--ease-out), border-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out), box-shadow var(--dur-med) var(--ease-out);
         }
 
         .lcard:hover {
@@ -1009,7 +1016,7 @@
             font-size: 1.05rem;
             font-weight: 900;
             color: white;
-            transition: transform 0.18s ease;
+            transition: transform var(--dur-med) var(--ease-out);
         }
 
         .lcard:hover .lcard-badge { transform: scale(1.08); }
@@ -1127,7 +1134,7 @@
             </div>
             <div class="lcard-grid">
                 <a class="lcard" href="visor-notas.html" style="--ar:99;--ag:102;--ab:241">
-                    <div class="lcard-badge" style="background:#6366f1">E</div>
+                    <div class="lcard-badge" style="background:var(--color-accent)">E</div>
                     <strong>Evaluaciones</strong>
                     <span>1ª, 2ª, 3ª EVA y nota final por alumno y CE.</span>
                 </a>
@@ -1220,28 +1227,28 @@
     <!-- MODAL IMPORTAR -->
     <div id="modalImportar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:2000; align-items:center; justify-content:center;" onclick="cerrarModalImportar(event)">
         <div style="background:white; border-radius:12px; padding:32px; max-width:720px; width:95%; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-height:92vh; overflow-y:auto;" onclick="event.stopPropagation()">
-            <h2 style="font-size:1.4em; color:#3730a3; margin-bottom:6px;">📥 Importar datos externos</h2>
+            <h2 style="font-size:1.4em; color:var(--color-accent-strong); margin-bottom:6px;">📥 Importar datos externos</h2>
             <p style="color:#5f6f89; font-size:0.93em; margin-bottom:20px;">Coge datos de un CSV u otro Excel y los copia al libro activo. Selecciona el archivo fuente y qué secciones importar.</p>
 
             <!-- Selector de archivo fuente -->
             <div style="border:2px dashed #c7d2fe; border-radius:8px; padding:14px 16px; margin-bottom:18px; display:flex; align-items:center; gap:12px; background:#f8f9ff;">
                 <span style="font-size:1.5em;">📂</span>
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:0.93em; color:#3730a3; margin-bottom:3px;">Archivo fuente</div>
+                    <div style="font-weight:600; font-size:0.93em; color:var(--color-accent-strong); margin-bottom:3px;">Archivo fuente</div>
                     <div id="importSrcName" style="font-size:0.87em; color:#5f6f89; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Ningún archivo seleccionado</div>
                 </div>
-                <button type="button" onclick="seleccionarArchivoFuente()" style="background:#6366f1; color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.88em; flex-shrink:0;">Elegir…</button>
+                <button type="button" onclick="seleccionarArchivoFuente()" style="background:var(--color-accent); color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.88em; flex-shrink:0;">Elegir…</button>
             </div>
 
             <!-- Qué importar -->
-            <div style="font-weight:700; font-size:0.88em; color:#6366f1; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">¿Qué importar?</div>
+            <div style="font-weight:700; font-size:0.88em; color:var(--color-accent); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">¿Qué importar?</div>
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
                 <label id="lblAlumnos" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
-                    <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:#6366f1;" checked />
+                    <input type="checkbox" id="importAlumnos" style="width:17px;height:17px;accent-color:var(--color-accent);" checked />
                     <div style="flex:1;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                             <strong style="font-size:0.95em;">👥 Alumnos</strong>
-                            <button type="button" onclick="descargarPlantilla('alumnos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                            <button type="button" onclick="descargarPlantilla('alumnos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:var(--color-accent-strong);border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
                         </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel. Sin cabecera (o con "Nombre"/"Alumno", se omite). Max 37 alumnos.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
@@ -1251,11 +1258,11 @@
                     </div>
                 </label>
                 <label id="lblCE" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
-                    <input type="checkbox" id="importCE" style="width:17px;height:17px;accent-color:#6366f1;" />
+                    <input type="checkbox" id="importCE" style="width:17px;height:17px;accent-color:var(--color-accent);" />
                     <div style="flex:1;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                             <strong style="font-size:0.95em;">⚖️ CE y Criterios</strong>
-                            <button type="button" onclick="descargarPlantilla('ce',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                            <button type="button" onclick="descargarPlantilla('ce',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:var(--color-accent-strong);border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
                         </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel con hoja PESOS. Sin cabecera (o con "CE"/"Codigo", se omite).</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
@@ -1265,11 +1272,11 @@
                     </div>
                 </label>
                 <label id="lblInst" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
-                    <input type="checkbox" id="importInstrumentos" style="width:17px;height:17px;accent-color:#6366f1;" />
+                    <input type="checkbox" id="importInstrumentos" style="width:17px;height:17px;accent-color:var(--color-accent);" />
                     <div style="flex:1;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                             <strong style="font-size:0.95em;">📊 Instrumentos de evaluación</strong>
-                            <button type="button" onclick="descargarPlantilla('instrumentos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                            <button type="button" onclick="descargarPlantilla('instrumentos',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:var(--color-accent-strong);border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
                         </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja). Sin cabecera (o con "Codigo"/"Abreviatura", se omite). Max 10.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
@@ -1279,11 +1286,11 @@
                     </div>
                 </label>
                 <label id="lblUnidades" style="display:flex; align-items:center; gap:10px; padding:12px 14px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer;">
-                    <input type="checkbox" id="importUnidades" style="width:17px;height:17px;accent-color:#6366f1;" />
+                    <input type="checkbox" id="importUnidades" style="width:17px;height:17px;accent-color:var(--color-accent);" />
                     <div style="flex:1;">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                             <strong style="font-size:0.95em;">📚 Unidades didácticas</strong>
-                            <button type="button" onclick="descargarPlantilla('unidades',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:#4338ca;border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
+                            <button type="button" onclick="descargarPlantilla('unidades',event)" style="font-size:0.78em;padding:3px 8px;background:#f0f4ff;color:var(--color-accent-strong);border:1px solid #c7d2fe;border-radius:4px;cursor:pointer;white-space:nowrap;">📥 Plantilla</button>
                         </div>
                         <span style="font-size:0.85em;color:#5f6f89;">CSV o Excel (primera hoja o hoja DATOS). Sin cabecera (o con "Codigo"/"Unidad", se omite). Max 15.</span>
                         <div style="font-size:0.78em;color:#374151;background:#f5f5f5;border-radius:4px;padding:4px 8px;margin-top:5px;font-family:monospace;line-height:1.6;">
@@ -1298,7 +1305,7 @@
 
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" onclick="cerrarModalImportar()" style="background:#f0f0f0; color:#333; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:600;">Cancelar</button>
-                <button type="button" id="btnImportar" onclick="ejecutarImportacion()" style="background:#6366f1; color:white; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:600;" disabled>Importar</button>
+                <button type="button" id="btnImportar" onclick="ejecutarImportacion()" style="background:var(--color-accent); color:white; border:none; padding:10px 22px; border-radius:6px; cursor:pointer; font-weight:600;" disabled>Importar</button>
             </div>
         </div>
     </div>
@@ -1970,15 +1977,15 @@
 
 <div id="modalIntroducirNotas" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:1000;align-items:center;justify-content:center">
     <div style="background:white;border-radius:14px;padding:32px 28px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
-        <h2 style="margin:0 0 22px;font-size:1.1rem;color:#312e81;font-weight:800">Introducir notas</h2>
+        <h2 style="margin:0 0 22px;font-size:1.1rem;color:var(--color-accent-strong);font-weight:800">Introducir notas</h2>
         <div style="display:flex;flex-direction:column;gap:12px">
             <a href="gestor-notas.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
                 <span style="font-size:1.8rem;flex-shrink:0">📝</span>
-                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Notas por unidad</strong><span style="font-size:0.82rem;color:#6b7280">Registra las notas de actividades por criterio y unidad</span></div>
+                <div><strong style="display:block;color:var(--color-accent-strong);font-size:0.95rem;margin-bottom:3px">Notas por unidad</strong><span style="font-size:0.82rem;color:#6b7280">Registra las notas de actividades por criterio y unidad</span></div>
             </a>
             <a href="gestor-recuperaciones.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #d1fae5;border-radius:10px;text-decoration:none;color:inherit">
                 <span style="font-size:1.8rem;flex-shrink:0">🔄</span>
-                <div><strong style="display:block;color:#065f46;font-size:0.95rem;margin-bottom:3px">Recuperaciones</strong><span style="font-size:0.82rem;color:#6b7280">Introduce notas de recuperación por evaluación y criterio</span></div>
+                <div><strong style="display:block;color:var(--color-success);font-size:0.95rem;margin-bottom:3px">Recuperaciones</strong><span style="font-size:0.82rem;color:#6b7280">Introduce notas de recuperación por evaluación y criterio</span></div>
             </a>
         </div>
         <button onclick="document.getElementById('modalIntroducirNotas').style.display='none'" style="display:block;margin-top:18px;width:100%;padding:10px;background:white;border:1px solid #d1d5db;border-radius:8px;color:#6b7280;font:inherit;font-size:0.88rem;cursor:pointer">Cerrar</button>
@@ -1987,19 +1994,19 @@
 
 <div id="modalVerNotas" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(17,24,39,0.5);z-index:1000;align-items:center;justify-content:center">
     <div style="background:white;border-radius:14px;padding:32px 28px;max-width:500px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
-        <h2 style="margin:0 0 22px;font-size:1.1rem;color:#312e81;font-weight:800">Visualizar notas</h2>
+        <h2 style="margin:0 0 22px;font-size:1.1rem;color:var(--color-accent-strong);font-weight:800">Visualizar notas</h2>
         <div style="display:flex;flex-direction:column;gap:12px">
             <a href="visor-unidades.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
                 <span style="font-size:1.8rem;flex-shrink:0">📊</span>
-                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Notas de cada alumno organizadas por unidad didáctica</span></div>
+                <div><strong style="display:block;color:var(--color-accent-strong);font-size:0.95rem;margin-bottom:3px">Ver por Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Notas de cada alumno organizadas por unidad didáctica</span></div>
             </a>
             <a href="visor-notas.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
                 <span style="font-size:1.8rem;flex-shrink:0">📋</span>
-                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por Evaluación</strong><span style="font-size:0.82rem;color:#6b7280">Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span></div>
+                <div><strong style="display:block;color:var(--color-accent-strong);font-size:0.95rem;margin-bottom:3px">Ver por Evaluación</strong><span style="font-size:0.82rem;color:#6b7280">Resumen de notas por evaluación (1ª, 2ª, 3ª) y nota final</span></div>
             </a>
             <a href="informes.html" style="display:flex;align-items:center;gap:16px;padding:16px 18px;border:1.5px solid #e0e7ff;border-radius:10px;text-decoration:none;color:inherit">
                 <span style="font-size:1.8rem;flex-shrink:0">📁</span>
-                <div><strong style="display:block;color:#312e81;font-size:0.95rem;margin-bottom:3px">Ver por CE y Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Competencias específicas y criterios desglosados por unidad</span></div>
+                <div><strong style="display:block;color:var(--color-accent-strong);font-size:0.95rem;margin-bottom:3px">Ver por CE y Unidad</strong><span style="font-size:0.82rem;color:#6b7280">Competencias específicas y criterios desglosados por unidad</span></div>
             </a>
         </div>
         <button onclick="document.getElementById('modalVerNotas').style.display='none'" style="display:block;margin-top:18px;width:100%;padding:10px;background:white;border:1px solid #d1d5db;border-radius:8px;color:#6b7280;font:inherit;font-size:0.88rem;cursor:pointer">Cerrar</button>

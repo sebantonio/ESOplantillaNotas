@@ -17,8 +17,8 @@
         body {
             min-height: 100vh;
             padding: 10px 12px 16px;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f6fb;
+            font-family: var(--font-body);
+            background: var(--color-paper);
             color: #1f2937;
         }
 
@@ -46,7 +46,7 @@
         }
 
         .nav-title h1 {
-            color: #312e81;
+            color: var(--color-accent-strong);
             font-size: 1.02rem;
             font-weight: 800;
             line-height: 1.1;
@@ -89,7 +89,7 @@
             cursor: pointer;
             transition: border-color 0.15s, background 0.15s;
         }
-        .nav-button:hover, .nav-link:hover { border-color: #6366f1; background: #f5f3ff; }
+        .nav-button:hover, .nav-link:hover { border-color: var(--color-accent); background: #f5f3ff; }
 
         .header {
             display: none;
@@ -101,7 +101,7 @@
         .header h1 {
             font-size: 1.1rem;
             font-weight: 800;
-            color: #312e81;
+            color: var(--color-accent-strong);
             margin-bottom: 2px;
         }
 
@@ -187,7 +187,7 @@
         input[type="text"]:focus,
         input[type="search"]:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.13);
         }
 
@@ -213,7 +213,7 @@
         .check-field input {
             width: 18px;
             height: 18px;
-            accent-color: #6366f1;
+            accent-color: var(--color-accent);
         }
 
         .button-row {
@@ -231,20 +231,20 @@
             font: inherit;
             font-size: 0.88rem;
             font-weight: 700;
-            background: #6366f1;
-            border: 1px solid #4f46e5;
+            background: var(--color-accent);
+            border: 1px solid var(--color-accent);
             border-radius: 7px;
             cursor: pointer;
             transition: background 0.15s;
         }
-        button:hover { background: #4f46e5; }
+        button:hover { background: var(--color-accent); }
 
         button.secondary {
             color: #374151;
             background: white;
             border: 1px solid #d1d5db;
         }
-        button.secondary:hover { border-color: #6366f1; background: #f5f3ff; color: #4338ca; }
+        button.secondary:hover { border-color: var(--color-accent); background: #f5f3ff; color: var(--color-accent-strong); }
 
         button:disabled {
             cursor: not-allowed;
@@ -300,7 +300,7 @@
         }
 
         .summary-pill .pill-value {
-            color: #3730a3;
+            color: var(--color-accent-strong);
             font-weight: 800;
         }
 
@@ -341,7 +341,7 @@
         }
 
         .progress-bar-labels strong {
-            color: #3730a3;
+            color: var(--color-accent-strong);
             font-weight: 700;
         }
 
@@ -395,7 +395,7 @@
             top: 0;
             z-index: 30;
             padding: 8px 6px;
-            color: #3730a3;
+            color: var(--color-accent-strong);
             text-align: center;
             background: #eef2ff;
             font-weight: 800;
@@ -510,7 +510,7 @@
         }
 
         .status-chip strong {
-            color: #3730a3;
+            color: var(--color-accent-strong);
             font-weight: 850;
         }
 
@@ -540,7 +540,7 @@
         }
 
         .numero {
-            color: #6366f1;
+            color: var(--color-accent);
             font-weight: 800;
             text-align: center;
         }
@@ -555,7 +555,7 @@
         }
 
         .nota-input.nota-alta {
-            color: #065f46;
+            color: var(--color-success);
             background: #d1fae5;
             border-color: #059669;
         }
@@ -647,7 +647,7 @@
         .modal-box h2 {
             margin: 0 0 22px;
             font-size: 1.1rem;
-            color: #312e81;
+            color: var(--color-accent-strong);
             font-weight: 800;
         }
         .visor-cards {
@@ -668,14 +668,14 @@
             cursor: pointer;
         }
         .visor-card:hover {
-            border-color: #6366f1;
+            border-color: var(--color-accent);
             background: #f5f3ff;
         }
         .visor-card-icon {
             font-size: 1.8rem;
             flex-shrink: 0;
         }
-        .visor-card strong { display: block; color: #312e81; font-size: 0.95rem; margin-bottom: 3px; }
+        .visor-card strong { display: block; color: var(--color-accent-strong); font-size: 0.95rem; margin-bottom: 3px; }
         .visor-card span { font-size: 0.82rem; color: #6b7280; }
         .modal-close {
             display: block;
@@ -690,7 +690,7 @@
             font-size: 0.88rem;
             cursor: pointer;
         }
-        .modal-close:hover { border-color: #6366f1; color: #4338ca; }
+        .modal-close:hover { border-color: var(--color-accent); color: var(--color-accent-strong); }
 
         .col-sticky-n    { position: sticky; left: 0;    z-index: 7; background: white; }
         .col-sticky-name { position: sticky; left: 40px; z-index: 7; background: white; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
@@ -717,7 +717,7 @@
             cursor: pointer;
         }
         .pag-btn:disabled { opacity: 0.4; cursor: default; }
-        .pag-btn:not(:disabled):hover { border-color: #6366f1; background: #f5f3ff; color: #4338ca; }
+        .pag-btn:not(:disabled):hover { border-color: var(--color-accent); background: #f5f3ff; color: var(--color-accent-strong); }
         .pag-info { font-size: 0.88rem; color: #374151; white-space: nowrap; }
         .per-page-sel { min-height: 32px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; font-size: 0.88rem; background: white; cursor: pointer; width: auto; min-width: unset; }
         .pagination-bottom-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -756,7 +756,7 @@
             height: 16px;
             border-radius: 999px;
             border: 2px solid #c7d2fe;
-            border-top-color: #4f46e5;
+            border-top-color: var(--color-accent);
             animation: busy-spin 0.9s linear infinite;
         }
 
@@ -1448,7 +1448,7 @@
             const extras = [
                 stats.pending > 0 ? `<span style="color:#b45309;font-weight:700">${stats.pending} pend.</span>` : '',
                 stats.invalid > 0 ? `<span style="color:#b91c1c;font-weight:700">${stats.invalid} err.</span>` : '',
-                studentSearch ? `<span style="color:#6366f1;font-weight:700">filtrado</span>` : ''
+                studentSearch ? `<span style="color:var(--color-accent);font-weight:700">filtrado</span>` : ''
             ].filter(Boolean).join(' · ');
             const info = `Pagina ${currentPage + 1} de ${totalPages} &middot; ${total} alumnos${extras ? ' &middot; ' + extras : ''}`;
             const opts = [10, 15, 20, 25, 50].map(n =>
@@ -1474,7 +1474,7 @@
         }
 
         const CE_COLORS = [
-            { bg: '#eef2ff', border: '#818cf8', header: '#dde3fb', fg: '#3730a3' },
+            { bg: '#eef2ff', border: '#818cf8', header: '#dde3fb', fg: 'var(--color-accent-strong)' },
             { bg: '#f0fdf4', border: '#4ade80', header: '#bbf7d0', fg: '#166534' },
             { bg: '#fff7ed', border: '#fb923c', header: '#fed7aa', fg: '#9a3412' },
             { bg: '#fdf4ff', border: '#c084fc', header: '#f5d0fe', fg: '#7e22ce' },

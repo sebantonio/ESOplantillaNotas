@@ -11,8 +11,8 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f6fb;
+            font-family: var(--font-body);
+            background: var(--color-paper);
             min-height: 100vh;
             padding: 20px;
         }
@@ -26,7 +26,7 @@
             overflow: hidden;
         }
 
-        .header { background: #3730a3; color: white; padding: 28px 30px; }
+        .header { background: var(--color-accent-strong); color: white; padding: 28px 30px; }
         .header h1 { font-size: 2em; margin-bottom: 8px; }
         .header p { opacity: 0.9; font-size: 1em; }
 
@@ -34,9 +34,9 @@
 
         .section { margin-bottom: 30px; }
         .section h2 {
-            color: #6366f1; font-size: 1.3em;
+            color: var(--color-accent); font-size: 1.3em;
             margin-bottom: 15px; padding-bottom: 8px;
-            border-bottom: 2px solid #6366f1;
+            border-bottom: 2px solid var(--color-accent);
         }
 
         .message { padding: 14px 18px; border-radius: 6px; margin-bottom: 15px; display: none; }
@@ -48,7 +48,7 @@
         .table-container { overflow-x: auto; border: 1px solid #e0e0e0; border-radius: 8px; }
 
         table { width: 100%; border-collapse: collapse; background: white; }
-        table th { background: #6366f1; color: white; padding: 12px 15px; text-align: left; font-weight: 600; }
+        table th { background: var(--color-accent); color: white; padding: 12px 15px; text-align: left; font-weight: 600; }
         table td { padding: 12px 10px; border-bottom: 1px solid #e0e0e0; }
         table tr:hover { background: #f8f9ff; }
         table tr:last-child td { border-bottom: none; }
@@ -57,29 +57,29 @@
             width: 100%; padding: 8px; border: 1px solid #ddd;
             border-radius: 4px; font-size: 0.95em; font-family: inherit;
         }
-        table input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.1); }
+        table input:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(99,102,241,0.1); }
 
         .codigo-cell { width: 100px; }
-        .num-cell { width: 50px; text-align: center; font-weight: 600; color: #6366f1; }
+        .num-cell { width: 50px; text-align: center; font-weight: 600; color: var(--color-accent); }
 
         .info-box {
             background: #f0f4ff; border: 1px solid #c7d2fe;
             border-radius: 8px; padding: 16px 20px; margin-bottom: 20px;
-            font-size: 0.95em; color: #3730a3; line-height: 1.6;
+            font-size: 0.95em; color: var(--color-accent-strong); line-height: 1.6;
         }
         .info-box strong { display: block; margin-bottom: 6px; font-size: 1em; }
 
         .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
 
         button {
-            padding: 12px 24px; background: #6366f1; color: white;
+            padding: 12px 24px; background: var(--color-accent); color: white;
             border: none; border-radius: 6px; cursor: pointer;
             font-size: 1em; font-weight: 600; transition: all 0.2s;
         }
         button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99,102,241,0.4); }
         button:active { transform: translateY(0); }
         button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-        button.secondary { background: #f0f0f0; color: #6366f1; border: 2px solid #6366f1; }
+        button.secondary { background: #f0f0f0; color: var(--color-accent); border: 2px solid var(--color-accent); }
         button.secondary:hover { background: #f8f9ff; }
 
         .save-status {
@@ -91,9 +91,9 @@
         .save-status.saved  { background: #28a745; color: white; }
         .save-status.error  { background: #dc3545; color: white; }
 
-        .loading { display: none; text-align: center; padding: 20px; color: #6366f1; }
+        .loading { display: none; text-align: center; padding: 20px; color: var(--color-accent); }
         .spinner {
-            border: 3px solid #f3f3f3; border-top: 3px solid #6366f1;
+            border: 3px solid #f3f3f3; border-top: 3px solid var(--color-accent);
             border-radius: 50%; width: 30px; height: 30px;
             animation: spin 1s linear infinite; margin: 0 auto 10px;
         }
@@ -109,10 +109,10 @@
             min-height: 38px; padding: 8px 14px; border-radius: 8px;
             font-size: 0.92em; font-weight: 700; text-decoration: none;
         }
-        .nav-button { background: white; color: #6366f1; border: 2px solid #6366f1; cursor: pointer; }
+        .nav-button { background: white; color: var(--color-accent); border: 2px solid var(--color-accent); cursor: pointer; }
         .nav-button:hover { background: #f0f2ff; transform: translateY(-1px); }
-        .nav-link { background: #6366f1; color: white; border: 2px solid #6366f1; }
-        .nav-link:hover { background: #4f46e5; transform: translateY(-1px); }
+        .nav-link { background: var(--color-accent); color: white; border: 2px solid var(--color-accent); }
+        .nav-link:hover { background: var(--color-accent); transform: translateY(-1px); }
     </style>
 </head>
 <body class="ux-app-shell ux-page-gestor-instrumentos">

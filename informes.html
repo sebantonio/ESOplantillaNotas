@@ -15,26 +15,26 @@
         }
 
         :root {
-            --bg: #f4f7fb;
-            --panel: #ffffff;
-            --panel-soft: #eef4ff;
-            --text: #172033;
-            --muted: #61708a;
-            --line: #d8e1ee;
-            --primary: #6366f1;
-            --primary-dark: #4338ca;
-            --accent: #4338ca;
-            --danger: #dc2626;
-            --ok: #16a34a;
-            --warning: #b45309;
+            --bg: var(--color-paper);
+            --panel: var(--color-surface);
+            --panel-soft: var(--color-accent-soft);
+            --text: var(--color-ink);
+            --muted: var(--color-ink-2);
+            --line: var(--color-rule);
+            --primary: var(--color-accent);
+            --primary-dark: var(--color-accent-strong);
+            --accent: var(--color-accent-strong);
+            --danger: var(--color-danger);
+            --ok: var(--color-success);
+            --warning: var(--color-warning);
             --shadow: 0 16px 40px rgba(31, 41, 55, 0.12);
         }
 
         body {
             min-height: 100vh;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-body);
             color: var(--text);
-            background: #f3f6fb;
+            background: var(--bg);
             padding: 26px;
         }
 
@@ -206,7 +206,7 @@
 
         .stat strong {
             display: block;
-            color: #4f46e5;
+            color: var(--color-accent);
             font-size: 1.55rem;
         }
 
@@ -1090,8 +1090,8 @@
             }).join("");
 
             // Polígonos
-            const avgPoly = `<polygon points="${ptsStr(classAvg)}" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="2.5" stroke-linejoin="round"/>`;
-            const avgDots = classAvg.map((v, i) => { const p = polar(i, v); return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#6366f1"/><title>${(v||0).toFixed(2).replace('.',',')}</title>`; }).join("");
+            const avgPoly = `<polygon points="${ptsStr(classAvg)}" fill="rgba(99,102,241,0.15)" stroke="var(--color-accent)" stroke-width="2.5" stroke-linejoin="round"/>`;
+            const avgDots = classAvg.map((v, i) => { const p = polar(i, v); return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="var(--color-accent)"/><title>${(v||0).toFixed(2).replace('.',',')}</title>`; }).join("");
             const stuPoly = stuNotes ? `<polygon points="${ptsStr(stuNotes)}" fill="rgba(220,38,38,0.12)" stroke="#dc2626" stroke-width="2" stroke-linejoin="round"/>` : "";
             const stuDots = stuNotes ? stuNotes.map((v, i) => { const p = polar(i, v); return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#dc2626"/>` ; }).join("") : "";
 
@@ -1136,7 +1136,7 @@
                 ${grid}
                 <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#cbd5e1" />
                 <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#cbd5e1" />
-                <polyline points="${line}" fill="none" stroke="#6366f1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                <polyline points="${line}" fill="none" stroke="var(--color-accent)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
                 ${circles}
                 ${labels}
             `;

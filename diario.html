@@ -11,21 +11,21 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --bg: #f3f6fb;
-            --panel: #ffffff;
-            --text: #172033;
-            --muted: #61708a;
-            --line: #d8e1ee;
-            --primary: #6366f1;
-            --primary-dark: #4338ca;
-            --danger: #dc2626;
-            --ok: #16a34a;
-            --warning: #b45309;
+            --bg: var(--color-paper);
+            --panel: var(--color-surface);
+            --text: var(--color-ink);
+            --muted: var(--color-ink-2);
+            --line: var(--color-rule);
+            --primary: var(--color-accent);
+            --primary-dark: var(--color-accent-strong);
+            --danger: var(--color-danger);
+            --ok: var(--color-success);
+            --warning: var(--color-warning);
         }
 
         body {
             min-height: 100vh;
-            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: var(--font-body);
             color: var(--text);
             background: var(--bg);
             padding: 22px;
@@ -150,7 +150,7 @@
         .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
             outline: none; border-color: var(--primary); background: #fff;
         }
-        .form-group input[readonly] { background: #f3f6fb; color: var(--muted); cursor: default; }
+        .form-group input[readonly] { background: var(--color-paper); color: var(--muted); cursor: default; }
 
         /* Estado del grupo: botones pill */
         .estado-buttons { display: flex; gap: 6px; }

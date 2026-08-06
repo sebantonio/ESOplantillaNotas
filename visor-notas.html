@@ -9,7 +9,7 @@
     <script src="ux-common.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { min-height: 100vh; padding: 20px; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #f3f6fb; color: #1f2937; }
+        body { min-height: 100vh; padding: 20px; font-family: var(--font-body); background: var(--color-paper); color: #1f2937; }
         .container { max-width: 1440px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 14px 42px rgba(31,41,55,0.16); overflow: clip; }
         thead th.th-nombre { position: sticky; left: 0; z-index: 35; background: #eef2ff; }
         tbody td.td-nombre { position: sticky; left: 0; z-index: 7; background: #ffffff; box-shadow: 2px 0 4px rgba(0,0,0,0.08); }
@@ -17,9 +17,9 @@
         .page-nav { display: flex; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; }
         .nav-group { display: flex; flex-wrap: wrap; gap: 10px; }
         .nav-button, .nav-link { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 14px; border-radius: 8px; font-size: 0.92em; font-weight: 700; text-decoration: none; cursor: pointer; }
-        .nav-button { color: #6366f1; background: white; border: 2px solid #6366f1; }
-        .nav-link { color: white; background: #6366f1; border: 2px solid #6366f1; }
-        .header { padding: 28px 30px; color: white; background: #3730a3; }
+        .nav-button { color: var(--color-accent); background: white; border: 2px solid var(--color-accent); }
+        .nav-link { color: white; background: var(--color-accent); border: 2px solid var(--color-accent); }
+        .header { padding: 28px 30px; color: white; background: var(--color-accent-strong); }
         .header h1 { margin-bottom: 4px; font-size: 1.5rem; }
         #headerTitulo { font-size: 0.92rem; color: #d1d5db; font-weight: 400; margin-top: 2px; }
         .toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid #e5e7eb; background: #fafbff; }
@@ -27,11 +27,11 @@
         select, input[type=search] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 7px; font: inherit; font-size: 0.92rem; background: #fff; }
         select { min-width: 210px; cursor: pointer; }
         input[type=search] { min-width: 200px; }
-        select:focus, input[type=search]:focus { outline: 2px solid #6366f1; outline-offset: 1px; }
+        select:focus, input[type=search]:focus { outline: 2px solid var(--color-accent); outline-offset: 1px; }
         .stats { display: flex; gap: 12px; padding: 12px 20px; background: #f8f9ff; border-bottom: 1px solid #e5e7eb; flex-wrap: wrap; }
-        .stat { padding: 8px 16px; background: white; border: 1px solid #e5e7eb; border-left: 4px solid #6366f1; border-radius: 8px; }
+        .stat { padding: 8px 16px; background: white; border: 1px solid #e5e7eb; border-left: 4px solid var(--color-accent); border-radius: 8px; }
         .stat span { display: block; font-size: 0.76rem; color: #6b7280; font-weight: 600; margin-bottom: 1px; }
-        .stat strong { font-size: 1.1rem; color: #4f46e5; }
+        .stat strong { font-size: 1.1rem; color: var(--color-accent); }
         .message { padding: 10px 16px; border-radius: 7px; font-size: 0.9rem; margin: 12px 20px; display: none; }
         .message.show { display: block; }
         .message.info { background: #eff6ff; color: #1d4ed8; }
@@ -39,7 +39,7 @@
         .message.error { background: #fef2f2; color: #991b1b; }
         .table-container { position: relative; overflow: auto; max-height: calc(100vh - 285px); margin: 0 20px 20px; padding: 0; background: #fff; }
         table { table-layout: auto; width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
-        thead th { position: sticky; top: 0; z-index: 30; background: #eef2ff; color: #3730a3; font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; background-clip: padding-box; box-shadow: 0 1px 0 #c7d2fe; }
+        thead th { position: sticky; top: 0; z-index: 30; background: #eef2ff; color: var(--color-accent-strong); font-weight: 800; padding: 8px 6px; text-align: center; border-bottom: 2px solid #c7d2fe; white-space: nowrap; vertical-align: bottom; background-clip: padding-box; box-shadow: 0 1px 0 #c7d2fe; }
         thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 36px); z-index: 29; }
         thead th.th-nombre { text-align: left; width: 210px; min-width: 210px; max-width: 210px; padding-left: 12px; }
         thead th.th-final { position: sticky; left: 210px; top: 0; z-index: 36; width: 86px; min-width: 86px; background: #1e1b4b !important; color: white !important; vertical-align: middle; box-shadow: 3px 0 7px rgba(31,41,55,0.18); }
@@ -67,7 +67,7 @@
         .td-ce-nota  { background: #ffffff; font-weight: 800; }
         .density-toggle, .ce-toggle-all { min-height: 32px; padding: 5px 10px; font-size: 0.82rem; }
         .ce-toggle { min-height: 24px; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 999px; background: #fff; color: #334155; font-size: 0.74rem; font-weight: 850; cursor: pointer; }
-        .ce-toggle:hover { border-color: #6366f1; color: #3730a3; background: #eef2ff; }
+        .ce-toggle:hover { border-color: var(--color-accent); color: var(--color-accent-strong); background: #eef2ff; }
         body.compact-mode .table-container { max-height: calc(100vh - 245px); }
         body.compact-mode thead th { padding: 5px 4px !important; font-size: 0.72rem !important; }
         body.compact-mode thead tr:nth-child(2) th { top: var(--sticky-head-row-1, 28px); }
@@ -79,15 +79,15 @@
         .table-status-bar { position: fixed; left: 16px; right: 16px; bottom: 12px; z-index: 920; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid #dbe4f0; border-radius: 8px; background: rgba(255,255,255,0.96); box-shadow: 0 14px 34px rgba(31,41,55,0.16); backdrop-filter: blur(8px); }
         .status-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
         .status-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 4px 9px; border: 1px solid #e0e7ff; border-radius: 999px; background: #f8fafc; color: #475569; font-size: 0.8rem; font-weight: 650; white-space: nowrap; }
-        .status-chip strong { color: #3730a3; font-weight: 850; }
+        .status-chip strong { color: var(--color-accent-strong); font-weight: 850; }
         .pag-btn { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; }
         .pag-btn:disabled { opacity: 0.4; cursor: default; }
-        .pag-btn:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+        .pag-btn:not(:disabled):hover { background: #eef2ff; border-color: var(--color-accent); color: var(--color-accent-strong); }
         .empty-msg { padding: 40px; text-align: center; color: #9ca3af; font-style: italic; }
         .pagination { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #e5e7eb; background: #fafbff; }
         .pagination button { padding: 6px 14px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 0.88rem; font-weight: 600; }
         .pagination button:disabled { opacity: 0.4; cursor: default; }
-        .pagination button:not(:disabled):hover { background: #eef2ff; border-color: #6366f1; color: #4338ca; }
+        .pagination button:not(:disabled):hover { background: #eef2ff; border-color: var(--color-accent); color: var(--color-accent-strong); }
         .pagination .page-info { font-size: 0.88rem; color: #374151; }
         .per-page { min-width: auto !important; padding: 6px 10px; font-size: 0.88rem; }
     </style>
@@ -212,7 +212,7 @@
     let perPage      = 15;
 
     const CE_COLORS = [
-        { fg: "#334155", border: "#6366f1" },
+        { fg: "#334155", border: "var(--color-accent)" },
         { fg: "#334155", border: "#0891b2" },
         { fg: "#334155", border: "#16a34a" },
         { fg: "#334155", border: "#b45309" },

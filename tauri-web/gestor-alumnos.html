@@ -19,8 +19,8 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f6fb;
+            font-family: var(--font-body);
+            background: var(--color-paper);
             min-height: 100vh;
             padding: 20px;
         }
@@ -35,7 +35,7 @@
         }
 
         .header {
-            background: #3730a3;
+            background: var(--color-accent-strong);
             color: white;
             padding: 28px 30px;
             text-align: left;
@@ -60,16 +60,16 @@
         }
 
         .section h2 {
-            color: #6366f1;
+            color: var(--color-accent);
             font-size: 1.4em;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #6366f1;
+            border-bottom: 2px solid var(--color-accent);
         }
 
         /* ÁREA DE CARGA */
         .upload-area {
-            border: 3px dashed #6366f1;
+            border: 3px dashed var(--color-accent);
             border-radius: 8px;
             padding: 30px;
             text-align: center;
@@ -79,12 +79,12 @@
         }
 
         .upload-area:hover {
-            border-color: #4338ca;
+            border-color: var(--color-accent-strong);
             background: #f0f2ff;
         }
 
         .upload-area.dragging {
-            border-color: #4338ca;
+            border-color: var(--color-accent-strong);
             background: #e8ecff;
             transform: scale(1.02);
         }
@@ -163,7 +163,7 @@
         }
 
         table th {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             padding: 15px;
             text-align: left;
@@ -198,7 +198,7 @@
 
         .alumno-numero {
             font-weight: 600;
-            color: #6366f1;
+            color: var(--color-accent);
             width: 50px;
         }
 
@@ -223,13 +223,13 @@
         input[type="text"]:focus,
         input[type="date"]:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         button {
             padding: 12px 25px;
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             border: none;
             border-radius: 6px;
@@ -256,8 +256,8 @@
 
         button.secondary {
             background: #f0f0f0;
-            color: #6366f1;
-            border: 2px solid #6366f1;
+            color: var(--color-accent);
+            border: 2px solid var(--color-accent);
         }
 
         button.secondary:hover {
@@ -303,7 +303,7 @@
         }
 
         .stat-card {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             padding: 20px;
             border-radius: 8px;
@@ -326,12 +326,12 @@
             display: none;
             text-align: center;
             padding: 20px;
-            color: #6366f1;
+            color: var(--color-accent);
         }
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #6366f1;
+            border-top: 3px solid var(--color-accent);
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -438,8 +438,8 @@
 
         .nav-button {
             background: white;
-            color: #6366f1;
-            border: 2px solid #6366f1;
+            color: var(--color-accent);
+            border: 2px solid var(--color-accent);
         }
 
         .nav-button:hover {
@@ -448,13 +448,13 @@
         }
 
         .nav-link {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
-            border: 2px solid #6366f1;
+            border: 2px solid var(--color-accent);
         }
 
         .nav-link:hover {
-            background: #4f46e5;
+            background: var(--color-accent);
             transform: translateY(-1px);
         }
 

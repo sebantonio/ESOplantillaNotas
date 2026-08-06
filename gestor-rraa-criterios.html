@@ -19,8 +19,8 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f6fb;
+            font-family: var(--font-body);
+            background: var(--color-paper);
             min-height: 100vh;
             padding: 20px;
         }
@@ -35,7 +35,7 @@
         }
 
         .header {
-            background: #3730a3;
+            background: var(--color-accent-strong);
             color: white;
             padding: 28px 30px;
             text-align: left;
@@ -60,22 +60,22 @@
         }
 
         .section h2 {
-            color: #6366f1;
+            color: var(--color-accent);
             font-size: 1.4em;
             margin-bottom: 15px;
             padding-bottom: 10px;
-            border-bottom: 2px solid #6366f1;
+            border-bottom: 2px solid var(--color-accent);
         }
 
         .section h3 {
-            color: #4338ca;
+            color: var(--color-accent-strong);
             font-size: 1.1em;
             margin: 20px 0 15px 0;
         }
 
         /* ÁREA DE CARGA */
         .upload-area {
-            border: 3px dashed #6366f1;
+            border: 3px dashed var(--color-accent);
             border-radius: 8px;
             padding: 30px;
             text-align: center;
@@ -85,12 +85,12 @@
         }
 
         .upload-area:hover {
-            border-color: #4338ca;
+            border-color: var(--color-accent-strong);
             background: #f0f2ff;
         }
 
         .upload-area.dragging {
-            border-color: #4338ca;
+            border-color: var(--color-accent-strong);
             background: #e8ecff;
             transform: scale(1.02);
         }
@@ -172,7 +172,7 @@
         }
 
         table th {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             padding: 12px 15px;
             text-align: left;
@@ -260,7 +260,7 @@
             border: 1px solid #c7d2fe;
             border-radius: 999px;
             background: #f8f9ff;
-            color: #3730a3;
+            color: var(--color-accent-strong);
             font-size: 0.82em;
             font-weight: 800;
             white-space: nowrap;
@@ -328,16 +328,16 @@
 
         .ponderaciones-matrix .matrix-ce-header {
             background: var(--ce-bg, #eef2ff);
-            border-top: 4px solid var(--ce-color, #6366f1);
-            border-left: 4px solid var(--ce-color, #6366f1);
-            border-right: 4px solid var(--ce-color, #6366f1);
+            border-top: 4px solid var(--ce-color, var(--color-accent));
+            border-left: 4px solid var(--ce-color, var(--color-accent));
+            border-right: 4px solid var(--ce-color, var(--color-accent));
             color: #111827;
         }
 
         .ponderaciones-matrix .matrix-cr-header,
         .ponderaciones-matrix .matrix-inst-header {
             background: var(--ce-soft-bg, #f8f9ff);
-            border-top: 2px solid var(--ce-color, #6366f1);
+            border-top: 2px solid var(--ce-color, var(--color-accent));
             color: #374151;
             line-height: 1.25;
         }
@@ -349,11 +349,11 @@
         }
 
         .ponderaciones-matrix .matrix-ce-start {
-            border-left: 4px solid var(--ce-color, #6366f1) !important;
+            border-left: 4px solid var(--ce-color, var(--color-accent)) !important;
         }
 
         .ponderaciones-matrix .matrix-ce-end {
-            border-right: 4px solid var(--ce-color, #6366f1) !important;
+            border-right: 4px solid var(--ce-color, var(--color-accent)) !important;
         }
 
         .ponderaciones-matrix tbody td.matrix-ce-cell {
@@ -489,7 +489,7 @@
 
         .ponderaciones-matrix input[type="number"]:focus,
         .ponderaciones-matrix select:focus {
-            border-color: #4f46e5;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.16);
         }
 
@@ -524,20 +524,20 @@
 
         .ponderaciones-matrix .matrix-ce-total {
             background: var(--ce-bg, #eef2ff);
-            border-top: 2px solid var(--ce-color, #6366f1);
+            border-top: 2px solid var(--ce-color, var(--color-accent));
             color: #111827;
         }
 
         table input:focus,
         table textarea:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
 
         .row-numero {
             font-weight: 600;
-            color: #6366f1;
+            color: var(--color-accent);
             width: 50px;
             text-align: center;
         }
@@ -581,13 +581,13 @@
         input:focus,
         textarea:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         button {
             padding: 12px 25px;
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             border: none;
             border-radius: 6px;
@@ -614,8 +614,8 @@
 
         button.secondary {
             background: #f0f0f0;
-            color: #6366f1;
-            border: 2px solid #6366f1;
+            color: var(--color-accent);
+            border: 2px solid var(--color-accent);
         }
 
         button.secondary:hover {
@@ -661,7 +661,7 @@
         }
 
         .stat-card {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             padding: 20px;
             border-radius: 8px;
@@ -684,12 +684,12 @@
             display: none;
             text-align: center;
             padding: 20px;
-            color: #6366f1;
+            color: var(--color-accent);
         }
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #6366f1;
+            border-top: 3px solid var(--color-accent);
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -715,7 +715,7 @@
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
-            color: #6366f1;
+            color: var(--color-accent);
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
@@ -723,12 +723,12 @@
         }
 
         .tab-btn:hover {
-            color: #4338ca;
+            color: var(--color-accent-strong);
         }
 
         .tab-btn.active {
-            border-bottom-color: #6366f1;
-            color: #6366f1;
+            border-bottom-color: var(--color-accent);
+            color: var(--color-accent);
         }
 
         .tab-content {
@@ -875,8 +875,8 @@
 
         .nav-button {
             background: white;
-            color: #6366f1;
-            border: 2px solid #6366f1;
+            color: var(--color-accent);
+            border: 2px solid var(--color-accent);
         }
 
         .nav-button:hover {
@@ -885,13 +885,13 @@
         }
 
         .nav-link {
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
-            border: 2px solid #6366f1;
+            border: 2px solid var(--color-accent);
         }
 
         .nav-link:hover {
-            background: #4f46e5;
+            background: var(--color-accent);
             transform: translateY(-1px);
         }
 
@@ -918,7 +918,7 @@
             justify-content: center;
             min-width: 28px;
             padding: 2px 9px;
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             border-radius: 999px;
             font-size: 0.6em;
@@ -963,7 +963,7 @@
             z-index: 200;
             display: none;
             padding: 12px 22px;
-            background: #6366f1;
+            background: var(--color-accent);
             color: white;
             border: none;
             border-radius: 10px;
@@ -975,7 +975,7 @@
             transition: background 0.15s, box-shadow 0.15s;
         }
 
-        .btn-guardar-flotante:hover { background: #4f46e5; box-shadow: 0 6px 22px rgba(99,102,241,0.55); }
+        .btn-guardar-flotante:hover { background: var(--color-accent); box-shadow: 0 6px 22px rgba(99,102,241,0.55); }
         .btn-guardar-flotante.visible { display: block; }
     </style>
 </head>
@@ -1112,11 +1112,11 @@
                         <h2>3️⃣ Ponderación de CCEE por Unidad</h2>
                         <div style="display:none; gap:14px; margin-bottom:18px; align-items:flex-end;">
                             <div style="flex:1;">
-                                <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">📚 Unidad didáctica</label>
+                                <label style="display:block; font-size:0.78em; font-weight:700; color:var(--color-accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">📚 Unidad didáctica</label>
                                 <select id="unidadPonderacionSelect" onchange="seleccionarUnidadPonderacion(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
                             </div>
                             <div style="flex:1;">
-                                <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
+                                <label style="display:block; font-size:0.78em; font-weight:700; color:var(--color-accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
                                 <select id="ponderacionRaFiltro" onchange="seleccionarRAPonderacion(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
                             </div>
                         </div>
@@ -1150,7 +1150,7 @@
                     <div class="section">
                         <h2>📊 Resumen por CE</h2>
                         <div style="margin-bottom:14px;">
-                            <label style="display:block; font-size:0.78em; font-weight:700; color:#6366f1; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
+                            <label style="display:block; font-size:0.78em; font-weight:700; color:var(--color-accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
                             <select id="ceResumenSelect" onchange="seleccionarCeResumen(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
                         </div>
                         <div class="table-container" style="overflow-x:auto;">
@@ -1570,7 +1570,7 @@
 
             tbody.innerHTML = raaaActuales.map((rraa, idx) => {
                 const pond = rraa.ponderacionTotal;
-                const pctStr = (pond && pond > 0) ? `<span style="margin-left:10px;font-size:0.85em;font-weight:700;color:#6366f1;background:#ede9fe;padding:2px 8px;border-radius:12px;">${(pond * 100).toFixed(1)}%</span>` : '';
+                const pctStr = (pond && pond > 0) ? `<span style="margin-left:10px;font-size:0.85em;font-weight:700;color:var(--color-accent);background:#ede9fe;padding:2px 8px;border-radius:12px;">${(pond * 100).toFixed(1)}%</span>` : '';
                 return `
                 <tr>
                     <td class="row-numero">${rraa.numero}</td>
@@ -1607,11 +1607,11 @@
             tbody.innerHTML = criteriosVisibles.map((crit) => {
                 const idx = criteriosActuales.indexOf(crit);
                 const pct = crit.ponderacionCR;
-                const pctBadge = (pct && pct > 0) ? `<span style="font-size:0.8em;font-weight:700;color:#6366f1;background:#ede9fe;padding:2px 7px;border-radius:10px;white-space:nowrap;">${(pct*100).toFixed(1)}%</span>` : '';
+                const pctBadge = (pct && pct > 0) ? `<span style="font-size:0.8em;font-weight:700;color:var(--color-accent);background:#ede9fe;padding:2px 7px;border-radius:10px;white-space:nowrap;">${(pct*100).toFixed(1)}%</span>` : '';
                 return `
                 <tr>
                     <td class="row-numero">${crit.numero}</td>
-                    <td style="font-weight:600;color:#4338ca;">${escaparHtml(crit.codigo || crit.nombre)} ${pctBadge}</td>
+                    <td style="font-weight:600;color:var(--color-accent-strong);">${escaparHtml(crit.codigo || crit.nombre)} ${pctBadge}</td>
                     <td><textarea onchange="actualizarCriterioCampo(${idx}, 'texto', this.value)">${escaparHtml(crit.texto || '')}</textarea></td>
                     <td>
                         <button class="delete" onclick="eliminarCriterio(${idx})">🗑️</button>
@@ -1679,7 +1679,7 @@
         }
 
         const MATRIX_CE_COLORS = [
-            { color: '#4f46e5', bg: '#e0e7ff', soft: '#eef2ff' },
+            { color: 'var(--color-accent)', bg: '#e0e7ff', soft: '#eef2ff' },
             { color: '#059669', bg: '#d1fae5', soft: '#ecfdf5' },
             { color: '#d97706', bg: '#ffedd5', soft: '#fff7ed' },
             { color: '#be185d', bg: '#fce7f3', soft: '#fdf2f8' },
@@ -2447,8 +2447,8 @@
             );
             const unidades = ponderacionesUnidad.filter(u => String(u.nombre || '').trim() !== '' && u.nombre !== '0');
 
-            const thStyle = 'background:#6366f1;color:white;padding:8px 10px;text-align:center;font-size:0.88em;white-space:nowrap;';
-            const thLStyle = 'background:#6366f1;color:white;padding:8px 12px;text-align:left;font-size:0.88em;';
+            const thStyle = 'background:var(--color-accent);color:white;padding:8px 10px;text-align:center;font-size:0.88em;white-space:nowrap;';
+            const thLStyle = 'background:var(--color-accent);color:white;padding:8px 12px;text-align:left;font-size:0.88em;';
 
             // Fila 1: CE header
             thead.innerHTML = `
@@ -2457,11 +2457,11 @@
                     ${crs.map(cr => `<th style="${thStyle}" title="${escaparHtml(cr.texto)}">${escaparHtml(cr.codigo)}</th>`).join('')}
                 </tr>
                 <tr style="background:#ede9fe;">
-                    <th style="padding:5px 12px;text-align:left;font-size:0.8em;color:#4338ca;font-weight:600;">Unidad</th>
-                    <th style="padding:5px 10px;text-align:center;font-size:0.8em;color:#4338ca;font-weight:600;">Inst. ev.</th>
+                    <th style="padding:5px 12px;text-align:left;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">Unidad</th>
+                    <th style="padding:5px 10px;text-align:center;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">Inst. ev.</th>
                     ${crs.map(cr => {
                         const pct = cr.ponderacionCR > 0 ? `<div style="font-size:0.75em;color:#7c3aed;">${(cr.ponderacionCR*100).toFixed(1)}%</div>` : '';
-                        return `<th style="padding:5px 10px;text-align:center;font-size:0.8em;color:#4338ca;font-weight:600;">${pct}</th>`;
+                        return `<th style="padding:5px 10px;text-align:center;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">${pct}</th>`;
                     }).join('')}
                 </tr>`;
 
@@ -2472,7 +2472,7 @@
                 const instrCodigo = typeof instrActual === 'object' ? instrActual.codigo : instrActual;
                 return `<tr>
                     <td style="${tdStyle} text-align:left;font-weight:500;">${escaparHtml(u.nombre)}</td>
-                    <td style="${tdStyle} color:#4338ca;font-weight:600;">${escaparHtml(instrCodigo || '—')}</td>
+                    <td style="${tdStyle} color:var(--color-accent-strong);font-weight:600;">${escaparHtml(instrCodigo || '—')}</td>
                     ${crs.map(cr => {
                         const val = (u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0;
                         const color = val > 0 ? 'color:#1e1b4b;font-weight:700;' : 'color:#9ca3af;';
@@ -2503,14 +2503,14 @@
                     }).join('')}
                 </tr>
                 <tr>
-                    <td colspan="2" style="${footTdStyle} text-align:left;color:#6366f1;">% peso del criterio</td>
+                    <td colspan="2" style="${footTdStyle} text-align:left;color:var(--color-accent);">% peso del criterio</td>
                     ${crs.map(cr => {
                         const pct = Number(cr.ponderacionCR) > 0 ? (cr.ponderacionCR * 100).toFixed(1) + '%' : '—';
-                        return `<td style="${footTdStyle} color:#6366f1;">${pct}</td>`;
+                        return `<td style="${footTdStyle} color:var(--color-accent);">${pct}</td>`;
                     }).join('')}
                 </tr>
                 <tr>
-                    <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:#4338ca;font-size:0.95em;">
+                    <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:var(--color-accent-strong);font-size:0.95em;">
                         Peso total CE ${ce.numero}: <strong>${Number(ce.ponderacionTotal) > 0 ? (ce.ponderacionTotal * 100).toFixed(1) + '%' : pesoCeTotal > 0 ? pesoCeTotal : '—'}</strong>
                     </td>
                 </tr>`;
