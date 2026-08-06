@@ -559,8 +559,13 @@
     async function flushEvalSync() {
         evalSyncTimeout = null;
         const unidad = evalSyncUnidad;
-        const inputs = document.querySelectorAll('.rec-input.needs-eval-sync');
-        if (!inputs.length || !unidad) return;
+        const allInputs = Array.from(document.querySelectorAll('.rec-input.needs-eval-sync'));
+        if (!allInputs.length || !unidad) return;
+        // Si el valor actual ya no es valido (el usuario lo cambio a algo fuera de
+        // rango tras el guardado que marco needs-eval-sync), no se manda al backend:
+        // se reintentara cuando vuelva a quedar valido y disparar un guardado.
+        const inputs = allInputs.filter((inp) => !validateRecValue(inp.value).isInvalid);
+        if (!inputs.length) return;
         const notasByRow = new Map();
         inputs.forEach((inp) => {
             const rowIdx = parseInt(inp.dataset.row, 10);

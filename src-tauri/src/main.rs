@@ -311,7 +311,13 @@ fn excel_get_alumnos() -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn excel_save_alumnos(alumnos: Value) -> Result<Value, String> {
+async fn excel_save_alumnos(alumnos: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_alumnos_impl(alumnos))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_alumnos_impl(alumnos: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = alumnos.as_array().ok_or("La lista de alumnos no es valida.")?.clone();
     save_alumnos_to_file(&path, &arr)?;
@@ -348,7 +354,13 @@ fn excel_get_unidades() -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn excel_save_unidades(unidades: Value) -> Result<Value, String> {
+async fn excel_save_unidades(unidades: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_unidades_impl(unidades))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_unidades_impl(unidades: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let arr = unidades.as_array().ok_or("La lista de unidades no es valida.")?.clone();
     save_unidades_to_file(&path, &arr)?;
@@ -414,7 +426,13 @@ fn excel_get_rraa_criterios() -> Result<Value, String> {
 }
 
 #[tauri::command]
-fn excel_save_rraa_criterios(payload: Value) -> Result<Value, String> {
+async fn excel_save_rraa_criterios(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_rraa_criterios_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_rraa_criterios_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let rraa = payload["rraa"].as_array().cloned().unwrap_or_default();
     let criterios = payload["criterios"].as_array().cloned().unwrap_or_default();
@@ -1539,7 +1557,11 @@ fn set_xml_formula_cache_number(sheet_xml: &str, row_idx: usize, col_idx: usize,
         };
     }
 
-    let v_re = Regex::new(r#"<v>[\s\S]*?</v>"#).unwrap();
+    // Debe matchear tanto <v>valor</v> como <v/> (autocierre, valor vacio de
+    // IFERROR(...,"")): si no matchea el self-closing, la rama "sin <v>" añade
+    // un <v> nuevo sin quitar el existente -> celda con dos <v>, XML invalido,
+    // Excel repara vaciando la hoja entera.
+    let v_re = Regex::new(r#"<v\b[^>]*?(?:/>|>[\s\S]*?</v>)"#).unwrap();
     let updated_cell = match value {
         Some(n) => {
             let v = format!("<v>{}</v>", n);
@@ -1770,6 +1792,7 @@ fn force_workbook_recalc(xml: &str) -> String {
 
 fn edit_workbook_sheets_xml(path: &str, sheet_edits: Vec<(&str, Box<dyn Fn(&str) -> Result<String, String>>)>) -> Result<(), String> {
     let input = std::fs::read(path).map_err(|e| e.to_string())?;
+    let backup_bytes = input.clone();
     let cursor = std::io::Cursor::new(input);
     let mut zip = zip::ZipArchive::new(cursor).map_err(|e| e.to_string())?;
 
@@ -1829,6 +1852,10 @@ fn edit_workbook_sheets_xml(path: &str, sheet_edits: Vec<(&str, Box<dyn Fn(&str)
         }
     }
     let out_cursor = zw.finish().map_err(|e| e.to_string())?;
+    // Backup best-effort del estado previo a esta escritura: si la escritura nueva
+    // sale corrupta (como el bug del <v/> duplicado), el usuario tiene un ".bak"
+    // del que recuperar. No aborta el guardado si falla (p.ej. disco lleno).
+    let _ = std::fs::write(format!("{path}.bak"), &backup_bytes);
     std::fs::write(path, out_cursor.into_inner()).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -2030,7 +2057,13 @@ fn normalize_grade(value: &Value) -> Option<f64> {
 }
 
 #[tauri::command]
-fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
+async fn excel_save_notas_actividad(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_notas_actividad_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_notas_actividad_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
     let tipo = payload["tipo"].as_str().ok_or("Falta tipo")?.to_string();
@@ -2194,8 +2227,17 @@ fn build_eval_sheet_edits(path: &str, unidad: &str, notas: &[Value]) -> Result<V
     Ok(edits)
 }
 
+// Comando async: el guardado reescribe el zip completo del xlsx (varios MB, varias
+// hojas de evaluacion) y puede tardar; si el comando no es async, Tauri lo ejecuta
+// en el hilo principal y congela toda la ventana mientras dura el guardado.
 #[tauri::command]
-fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
+async fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_notas_unidad_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_notas_unidad_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
     let notas = payload["notas"].as_array().ok_or("Falta notas")?.clone();
@@ -2265,7 +2307,13 @@ fn excel_save_notas_unidad(payload: Value) -> Result<Value, String> {
 // evaluacion. Este comando repara ese historial sin que el usuario tenga que
 // re-teclear cada nota.
 #[tauri::command]
-fn excel_resync_unidad_eval(payload: Value) -> Result<Value, String> {
+async fn excel_resync_unidad_eval(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_resync_unidad_eval_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_resync_unidad_eval_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
 
@@ -2531,7 +2579,13 @@ fn copy_activity_block_xml(sheet_xml: &str, source_start: usize, source_end: usi
 }
 
 #[tauri::command]
-fn excel_add_actividad(payload: Value) -> Result<Value, String> {
+async fn excel_add_actividad(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_add_actividad_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_add_actividad_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().unwrap_or("U1").to_string();
     let tipo = payload["tipo"].as_str().unwrap_or("practicas").to_string();
@@ -2567,7 +2621,13 @@ fn excel_add_actividad(payload: Value) -> Result<Value, String> {
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-fn excel_save_ce_notas(payload: Value) -> Result<Value, String> {
+async fn excel_save_ce_notas(payload: Value) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || excel_save_ce_notas_impl(payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn excel_save_ce_notas_impl(payload: Value) -> Result<Value, String> {
     let path = require_selected_path()?;
     let unidad = payload["unidad"].as_str().ok_or("Falta unidad")?.to_string();
     let tipo = payload["tipo"].as_str().ok_or("Falta tipo")?.to_string();
@@ -2628,6 +2688,7 @@ fn ensure_diario_sheet(path: &str) -> Result<(), String> {
 </worksheet>"#;
 
     let input = std::fs::read(path).map_err(|e| e.to_string())?;
+    let backup_bytes = input.clone();
     let cursor = std::io::Cursor::new(input);
     let mut zip = zip::ZipArchive::new(cursor).map_err(|e| e.to_string())?;
 
@@ -2699,6 +2760,7 @@ fn ensure_diario_sheet(path: &str) -> Result<(), String> {
         }
     }
     let out_cursor = zw.finish().map_err(|e| e.to_string())?;
+    let _ = std::fs::write(format!("{path}.bak"), &backup_bytes);
     std::fs::write(path, out_cursor.into_inner()).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -2910,40 +2972,122 @@ fn save_csv_template(filename: String, content: String) -> Result<bool, String> 
 }
 
 #[cfg(test)]
-mod debug_corruption {
+mod formula_cache_tests {
     use super::*;
 
+    // Repro real: 'CCGG PLANTILLA - CE AMPLIADOSv3.xlsx' sheet4.xml (2ª EVA) fila 22,
+    // celda E22 tenia <f ...>...</f><v/></c> (IFERROR(...,"") -> cache vacio,
+    // self-closing). set_xml_formula_cache_number no reconocia el <v/> existente y
+    // añadia un <v> nuevo sin quitar el viejo -> <v/><v>10</v></c>, dos <v> en la
+    // misma celda -> Excel rechaza el XML y vacia la hoja entera al reparar.
     #[test]
-    fn repro_repeated_saves_corruption() {
-        let path = r"C:\cargo-target\plantillaNotas\release\TEST_REPRO.xlsx";
-        set_selected_path(Some(path.to_string()));
-        let unidad = "U1";
-        let unit_data = load_notas_unidad(path, unidad).unwrap();
-        let alumnos = unit_data["alumnos"].as_array().unwrap().clone();
-        eprintln!("alumnos en U1: {}", alumnos.len());
-        let first = &alumnos[0];
-        let row_idx = first["rowIdx"].as_u64().unwrap() as usize;
-        let cr_notas = first["crNotas"].as_array().unwrap();
-        eprintln!("crNotas ejemplo: {}", serde_json::to_string_pretty(&cr_notas[0]).unwrap());
-        let codigo = cr_notas[0]["codigo"].as_str().unwrap().to_string();
-        let col_idx = cr_notas[0]["colIdx"].as_u64().unwrap();
-
-        for i in 0..25 {
-            let val = (i % 10) as f64 + 1.0;
-            let payload = json!({
-                "unidad": unidad,
-                "notas": [{
-                    "rowIdx": row_idx,
-                    "crNotas": { codigo.clone(): { "colIdx": col_idx, "rec": val } }
-                }]
-            });
-            let result = excel_save_notas_unidad(payload);
-            if let Err(e) = &result {
-                panic!("save #{i} fallo: {e}");
-            }
-        }
-        eprintln!("25 guardados completados sin error de Rust.");
+    fn replaces_self_closing_v_instead_of_duplicating() {
+        let xml = r#"<worksheet><sheetData><row r="22"><c r="E22" s="241" t="str"><f ca="1">IFERROR(1,"")</f><v/></c></row></sheetData></worksheet>"#;
+        let updated = set_xml_formula_cache_number(xml, 21, 4, Some(10.0)).unwrap();
+        assert_eq!(updated.matches("<v").count(), 1, "debe quedar un solo <v> en la celda: {updated}");
+        assert!(updated.contains("<v>10</v>"), "debe contener el valor nuevo: {updated}");
+        assert!(!updated.contains("<v/>"), "no debe quedar el <v/> viejo: {updated}");
     }
+
+    #[test]
+    fn clears_self_closing_v_without_error() {
+        let xml = r#"<worksheet><sheetData><row r="22"><c r="E22" s="241" t="str"><f ca="1">IFERROR(1,"")</f><v/></c></row></sheetData></worksheet>"#;
+        let updated = set_xml_formula_cache_number(xml, 21, 4, None).unwrap();
+        assert_eq!(updated.matches("<v").count(), 0, "debe quedar sin <v>: {updated}");
+        assert!(updated.contains("<f ca=\"1\">IFERROR(1,\"\")</f>"), "la formula debe seguir intacta: {updated}");
+    }
+
+    #[test]
+    fn replaces_existing_paired_v() {
+        let xml = r#"<worksheet><sheetData><row r="22"><c r="E22" s="241"><f ca="1">1+1</f><v>2</v></c></row></sheetData></worksheet>"#;
+        let updated = set_xml_formula_cache_number(xml, 21, 4, Some(5.0)).unwrap();
+        assert_eq!(updated.matches("<v").count(), 1, "debe quedar un solo <v>: {updated}");
+        assert!(updated.contains("<v>5</v>"), "{updated}");
+    }
+
+    // Formulas compartidas (t="shared"): la celda "esclava" solo referencia el
+    // indice (si="N"), el texto de la formula vive en la celda "maestra". Escribir
+    // el cache no debe tocar ese tag <f>, solo el <v>.
+    #[test]
+    fn preserves_shared_formula_slave_tag() {
+        let xml = r#"<worksheet><sheetData><row r="22"><c r="B22" s="238"><f t="shared" si="191"/><v>1.9999999999999998</v></c></row></sheetData></worksheet>"#;
+        let updated = set_xml_formula_cache_number(xml, 21, 1, Some(3.0)).unwrap();
+        assert!(updated.contains(r#"<f t="shared" si="191"/>"#), "el tag de formula compartida debe seguir intacto: {updated}");
+        assert_eq!(updated.matches("<v").count(), 1, "{updated}");
+        assert!(updated.contains("<v>3</v>"), "{updated}");
+    }
+
+    // Combinacion peor caso: formula compartida (self-closing <f>) Y cache vacio
+    // (self-closing <v/>) a la vez, el patron real que corrompio sheet4/5 EVA.
+    #[test]
+    fn preserves_shared_formula_slave_tag_with_empty_cache() {
+        let xml = r#"<worksheet><sheetData><row r="22"><c r="E22" s="241" t="str"><f t="shared" si="7"/><v/></c></row></sheetData></worksheet>"#;
+        let updated = set_xml_formula_cache_number(xml, 21, 4, Some(10.0)).unwrap();
+        assert!(updated.contains(r#"<f t="shared" si="7"/>"#), "{updated}");
+        assert_eq!(updated.matches("<v").count(), 1, "{updated}");
+        assert!(updated.contains("<v>10</v>"), "{updated}");
+    }
+}
+
+#[cfg(test)]
+mod eval_layout_tests {
+    use super::*;
+
+    fn row(cells: &[&str]) -> Vec<Value> {
+        cells.iter().map(|c| json!(*c)).collect()
+    }
+
+    // Estrategia 1: "NOTA CE" y >=2 codigos CR en la MISMA fila (layout ESO tipico,
+    // documentado en CLAUDE.md: fila 17 0-idx16 = cabecera).
+    #[test]
+    fn detects_layout_same_row_strategy() {
+        let rows = vec![
+            row(&["Alumno"]),
+            row(&["NOTA CE", "CR1.1", "Rec", "CR1.2", "Rec"]),
+            row(&[""]),
+            row(&["Juan", "7", "", "8", ""]),
+        ];
+        let result = find_evaluation_layout_indices(&rows);
+        assert_eq!(result, Some((1, 1, 3)));
+    }
+
+    // Estrategia 2: "NOTA CE" en una fila, los codigos CR aparecen 1-3 filas despues.
+    #[test]
+    fn detects_layout_offset_row_strategy() {
+        let rows = vec![
+            row(&["Alumno"]),
+            row(&["NOTA CE"]),
+            row(&["", "Rec"]),
+            row(&["CR2.1", "CR2.2"]),
+            row(&["Juan", "7", "8"]),
+        ];
+        let result = find_evaluation_layout_indices(&rows);
+        assert_eq!(result, Some((1, 3, 4)));
+    }
+
+    // Estrategia 3 (fallback debil): sin "NOTA CE" en ningun sitio, solo una fila
+    // con >=2 codigos CR — usa la fila anterior como cabecera.
+    #[test]
+    fn detects_layout_fallback_strategy() {
+        let rows = vec![
+            row(&["Cabecera generica"]),
+            row(&["CR3.1", "CR3.2"]),
+            row(&["Juan", "7", "8"]),
+        ];
+        let result = find_evaluation_layout_indices(&rows);
+        assert_eq!(result, Some((0, 1, 2)));
+    }
+
+    // Layout no reconocible: ni "NOTA CE" ni >=2 codigos CR en ninguna fila.
+    #[test]
+    fn returns_none_when_no_layout_detected() {
+        let rows = vec![
+            row(&["Alumno"]),
+            row(&["Solo texto", "sin codigos"]),
+        ];
+        assert_eq!(find_evaluation_layout_indices(&rows), None);
+    }
+
 }
 
 fn main() {
