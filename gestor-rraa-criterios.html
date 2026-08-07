@@ -281,7 +281,8 @@
             background: white;
         }
 
-        #ponderacionesTable.ponderaciones-matrix {
+        #ponderacionesTable.ponderaciones-matrix,
+        #resumenTable.ponderaciones-matrix {
             width: max-content;
             border-collapse: separate;
             border-spacing: 0;
@@ -1148,12 +1149,9 @@
                 <div id="tab-resumen" class="tab-content">
                     <div class="section">
                         <h2>📊 Resumen por CE</h2>
-                        <div style="margin-bottom:14px;">
-                            <label style="display:block; font-size:0.78em; font-weight:700; color:var(--color-accent); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">⚖️ Competencia Específica</label>
-                            <select id="ceResumenSelect" onchange="seleccionarCeResumen(this.value)" style="width:100%; padding:9px 12px; border:2px solid #c7d2fe; border-radius:8px; font-size:0.95em; color:#1e1b4b; background:#f8f9ff; cursor:pointer;"></select>
-                        </div>
-                        <div class="table-container" style="overflow-x:auto;">
-                            <table id="resumenTable" style="min-width:600px; border-collapse:collapse; width:100%;">
+                        <div class="ponderaciones-matrix-wrap">
+                            <table id="resumenTable" class="ux-table ponderaciones-matrix">
+                                <colgroup id="resumenTableCols"></colgroup>
                                 <thead id="resumenTableHead"></thead>
                                 <tbody id="resumenTableBody"></tbody>
                                 <tfoot id="resumenTableFoot"></tfoot>
@@ -1783,6 +1781,14 @@
                 return '<col class="matrix-col-inst">' + grupo.criterios.map(() => '<col class="matrix-col-cr">').join('');
             }).join('');
 
+            // table-layout:fixed + width:max-content no siempre respeta el ancho de
+            // columna declarado (algunos motores reparten el sobrante del contenedor
+            // igualmente): fijamos el ancho total en px explicitamente para que las
+            // columnas nunca se estiren mas alla de lo declarado en el <colgroup>.
+            const MATRIX_COL_UNIT_PX = 260, MATRIX_COL_INST_PX = 72, MATRIX_COL_CR_PX = 40;
+            const totalWidthPx = MATRIX_COL_UNIT_PX + grupos.reduce((sum, grupo) => sum + MATRIX_COL_INST_PX + grupo.criterios.length * MATRIX_COL_CR_PX, 0);
+            table.style.width = `${totalWidthPx}px`;
+
             thead.innerHTML = `
                 <tr>
                     <th class="matrix-unit-sticky" rowspan="2">Unidad</th>
@@ -1920,7 +1926,7 @@
             unidad.ponderaciones[colIdx].ponderacion = parseFloat(String(value || '').replace(',', '.')) || 0;
             marcarCambio();
             actualizarTotalesMatrizPonderaciones();
-            if (ceResumenActivo) mostrarTablaResumen();
+            mostrarTablaResumen();
         }
 
         function validarValorPonderacion(value) {
@@ -1978,7 +1984,7 @@
             if (!unidad.instrPorCe) unidad.instrPorCe = {};
             unidad.instrPorCe[String(ceNumero)] = { codigo: String(codigo || ''), colIdx: Number(instrColIdx) || 0 };
             marcarCambio();
-            if (ceResumenActivo) mostrarTablaResumen();
+            mostrarTablaResumen();
         }
 
         function actualizarTotalesMatrizPonderaciones() {
@@ -2216,7 +2222,7 @@
             }
             marcarCambio();
             mostrarTablaPonderacionesUnidad();
-            if (ceResumenActivo) mostrarTablaResumen();
+            mostrarTablaResumen();
         }
 
         function actualizarFiltroRA() {
@@ -2414,113 +2420,108 @@
         }
 
         // ===== CAMBIAR TAB =====
-        // ===== TAB RESUMEN POR CE =====
-        let ceResumenActivo = null;
-
-        function actualizarSelectCeResumen() {
-            const sel = document.getElementById('ceResumenSelect');
-            if (!sel) return;
-            sel.innerHTML = raaaActuales.map(ce =>
-                `<option value="${ce.numero}" ${Number(ce.numero) === Number(ceResumenActivo) ? 'selected' : ''}>CE ${ce.numero} - ${escaparHtml(ce.descripcion)}</option>`
-            ).join('');
-            if (!ceResumenActivo && raaaActuales.length > 0) ceResumenActivo = raaaActuales[0].numero;
-        }
-
-        function seleccionarCeResumen(val) {
-            ceResumenActivo = Number(val);
-            mostrarTablaResumen();
-        }
-
+        // ===== TAB RESUMEN POR CE — una sola tabla con todas las CE, mismo formato que Ponderacion por unidad =====
         function mostrarTablaResumen() {
+            const table = document.getElementById('resumenTable');
+            const colgroup = document.getElementById('resumenTableCols');
             const thead = document.getElementById('resumenTableHead');
             const tbody = document.getElementById('resumenTableBody');
             const tfoot = document.getElementById('resumenTableFoot');
-            if (!thead || !tbody || !tfoot) return;
+            if (!table || !colgroup || !thead || !tbody || !tfoot) return;
 
-            const ce = raaaActuales.find(r => Number(r.numero) === Number(ceResumenActivo));
-            if (!ce) { thead.innerHTML = tbody.innerHTML = tfoot.innerHTML = ''; return; }
-
-            const crs = criteriosActuales.filter(c =>
-                Number(c.raNumero) === Number(ceResumenActivo) &&
-                c.ponderacionCR > 0
-            );
+            const grupos = gruposCePonderacion();
             const unidades = ponderacionesUnidad.filter(u => String(u.nombre || '').trim() !== '' && u.nombre !== '0');
 
-            const thStyle = 'background:var(--color-accent);color:white;padding:8px 10px;text-align:center;font-size:0.88em;white-space:nowrap;';
-            const thLStyle = 'background:var(--color-accent);color:white;padding:8px 12px;text-align:left;font-size:0.88em;';
+            if (!unidades.length || !grupos.length) {
+                const mensaje = !unidades.length
+                    ? 'No hay unidades creadas. Ve a <strong>Gestor de Unidades</strong> y crea al menos una.'
+                    : 'No hay criterios con ponderación asignada. Ve a la pestaña <strong>Criterios</strong> y ponles un peso mayor que 0.';
+                colgroup.innerHTML = '<col class="matrix-col-unit">';
+                thead.innerHTML = '<tr><th class="matrix-unit-sticky">Unidad</th></tr>';
+                tbody.innerHTML = `<tr><td class="matrix-unit-sticky" style="text-align:left; color:#64748b; padding:14px;">${mensaje}</td></tr>`;
+                tfoot.innerHTML = '';
+                return;
+            }
 
-            // Fila 1: CE header
-            thead.innerHTML = `
-                <tr>
-                    <th colspan="2" style="${thLStyle}">CE ${ce.numero} — ${escaparHtml(ce.descripcion)}</th>
-                    ${crs.map(cr => `<th style="${thStyle}" title="${escaparHtml(cr.texto)}">${escaparHtml(cr.codigo)}</th>`).join('')}
-                </tr>
-                <tr style="background:#ede9fe;">
-                    <th style="padding:5px 12px;text-align:left;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">Unidad</th>
-                    <th style="padding:5px 10px;text-align:center;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">Inst. ev.</th>
-                    ${crs.map(cr => {
-                        const pct = cr.ponderacionCR > 0 ? `<div style="font-size:0.75em;color:#7c3aed;">${(cr.ponderacionCR*100).toFixed(1)}%</div>` : '';
-                        return `<th style="padding:5px 10px;text-align:center;font-size:0.8em;color:var(--color-accent-strong);font-weight:600;">${pct}</th>`;
-                    }).join('')}
-                </tr>`;
-
-            // Filas de unidades (solo lectura)
-            const tdStyle = 'border-bottom:1px solid #e5e7eb;padding:6px 8px;text-align:center;';
-            tbody.innerHTML = unidades.map(u => {
-                const instrActual = (u.instrPorCe && u.instrPorCe[String(ceResumenActivo)]) || '';
-                const instrCodigo = typeof instrActual === 'object' ? instrActual.codigo : instrActual;
-                return `<tr>
-                    <td style="${tdStyle} text-align:left;font-weight:500;">${escaparHtml(u.nombre)}</td>
-                    <td style="${tdStyle} color:var(--color-accent-strong);font-weight:600;">${escaparHtml(instrCodigo || '—')}</td>
-                    ${crs.map(cr => {
-                        const val = (u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0;
-                        const color = val > 0 ? 'color:#1e1b4b;font-weight:700;' : 'color:#9ca3af;';
-                        return `<td style="${tdStyle} ${color}">${val > 0 ? val : '—'}</td>`;
-                    }).join('')}
-                </tr>`;
+            colgroup.innerHTML = '<col class="matrix-col-unit">' + grupos.map((grupo) => {
+                return '<col class="matrix-col-inst">' + grupo.criterios.map(() => '<col class="matrix-col-cr">').join('');
             }).join('');
 
-            // Pie: totales
-            const footTdStyle = 'padding:6px 8px;text-align:center;font-weight:600;font-size:0.88em;background:#f3f4f6;';
+            const MATRIX_COL_UNIT_PX = 260, MATRIX_COL_INST_PX = 72, MATRIX_COL_CR_PX = 40;
+            table.style.width = `${MATRIX_COL_UNIT_PX + grupos.reduce((sum, grupo) => sum + MATRIX_COL_INST_PX + grupo.criterios.length * MATRIX_COL_CR_PX, 0)}px`;
 
-            // Calcular suma total de todas las ponderaciones
-            const sumaTotal = unidades.reduce((sum, u) => {
-                return sum + crs.reduce((s, cr) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
-            }, 0);
+            thead.innerHTML = `
+                <tr>
+                    <th class="matrix-unit-sticky" rowspan="2">Unidad</th>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const titulo = grupo.ce.descripcion ? ` title="${escaparHtml(grupo.ce.descripcion)}"` : '';
+                        return `<th class="matrix-ce-header" colspan="${grupo.criterios.length + 1}" style="${estiloCeMatriz(grupoIdx)}"${titulo}>CE ${grupo.ce.numero}</th>`;
+                    }).join('')}
+                </tr>
+                <tr>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const style = estiloCeMatriz(grupoIdx);
+                        const instCol = `<th class="matrix-inst-header matrix-ce-start" style="${style}">Inst.</th>`;
+                        const crCols = grupo.criterios.map((cr, critIdx) => {
+                            const pct = Number(cr.ponderacionCR) > 0 ? `<span class="matrix-criteria-pct">${formatearPorcentajeMatriz(cr.ponderacionCR)}</span>` : '';
+                            const isLast = critIdx === grupo.criterios.length - 1;
+                            const title = [cr.codigo || '', cr.texto || ''].filter(Boolean).join(' - ');
+                            return `<th class="matrix-cr-header ${isLast ? 'matrix-ce-end' : ''}" style="${style}" title="${escaparHtml(title)}"><span class="matrix-cr-code">${escaparHtml(cr.codigo)}</span>${pct}</th>`;
+                        }).join('');
+                        return instCol + crCols;
+                    }).join('')}
+                </tr>`;
 
-            // Calcular peso total del CE (suma de todos sus CRs en todas las unidades)
-            const pesoCeTotal = unidades.reduce((sum, u) => {
-                return sum + crs.reduce((s, cr) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
-            }, 0);
+            tbody.innerHTML = unidades.map((unidad) => {
+                const cells = grupos.map((grupo, grupoIdx) => {
+                    const style = estiloCeMatriz(grupoIdx);
+                    const instrCodigo = codigoInstrumentoUnidad(unidad, grupo.ce.numero);
+                    const instCell = `<td class="matrix-ce-cell matrix-ce-start" style="${style}">${escaparHtml(instrCodigo || '-')}</td>`;
+                    const crCells = grupo.criterios.map((cr, critIdx) => {
+                        const val = valorPonderacionUnidad(unidad, cr.colIdx);
+                        const isLast = critIdx === grupo.criterios.length - 1;
+                        return `<td class="matrix-ce-cell ${isLast ? 'matrix-ce-end' : ''}" style="${style}">${formatearResumenNumero(val)}</td>`;
+                    }).join('');
+                    return instCell + crCells;
+                }).join('');
+                return `<tr><td class="matrix-unit-sticky">${escaparHtml(unidad.nombre)}</td>${cells}</tr>`;
+            }).join('');
 
             tfoot.innerHTML = `
                 <tr>
-                    <td colspan="2" style="${footTdStyle} text-align:left;color:#374151;">Ponderación total del criterio</td>
-                    ${crs.map(cr => {
-                        const total = unidades.reduce((s,u) => s + ((u.ponderaciones[cr.colIdx] && u.ponderaciones[cr.colIdx].ponderacion) || 0), 0);
-                        return `<td style="${footTdStyle}">${total}</td>`;
+                    <td class="matrix-unit-sticky">Ponderación total del criterio</td>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const style = estiloCeMatriz(grupoIdx);
+                        const instCell = `<td class="matrix-ce-cell matrix-ce-start" style="${style}"></td>`;
+                        const crCells = grupo.criterios.map((cr, critIdx) => {
+                            const total = unidades.reduce((s, u) => s + valorPonderacionUnidad(u, cr.colIdx), 0);
+                            const isLast = critIdx === grupo.criterios.length - 1;
+                            return `<td class="matrix-ce-cell ${isLast ? 'matrix-ce-end' : ''}" style="${style}">${formatearResumenNumero(total)}</td>`;
+                        }).join('');
+                        return instCell + crCells;
                     }).join('')}
                 </tr>
                 <tr>
-                    <td colspan="2" style="${footTdStyle} text-align:left;color:var(--color-accent);">% peso del criterio</td>
-                    ${crs.map(cr => {
-                        const pct = Number(cr.ponderacionCR) > 0 ? (cr.ponderacionCR * 100).toFixed(1) + '%' : '—';
-                        return `<td style="${footTdStyle} color:var(--color-accent);">${pct}</td>`;
+                    <td class="matrix-unit-sticky">% peso del criterio</td>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const style = estiloCeMatriz(grupoIdx);
+                        const instCell = `<td class="matrix-ce-cell matrix-ce-start" style="${style}"></td>`;
+                        const crCells = grupo.criterios.map((cr, critIdx) => {
+                            const isLast = critIdx === grupo.criterios.length - 1;
+                            return `<td class="matrix-ce-cell ${isLast ? 'matrix-ce-end' : ''}" style="${style}">${formatearPorcentajeMatriz(cr.ponderacionCR)}</td>`;
+                        }).join('');
+                        return instCell + crCells;
                     }).join('')}
                 </tr>
                 <tr>
-                    <td colspan="${2 + crs.length}" style="${footTdStyle} text-align:center;background:#ede9fe;color:var(--color-accent-strong);font-size:0.95em;">
-                        Peso total CE ${ce.numero}: <strong>${Number(ce.ponderacionTotal) > 0 ? (ce.ponderacionTotal * 100).toFixed(1) + '%' : pesoCeTotal > 0 ? pesoCeTotal : '—'}</strong>
-                    </td>
+                    <td class="matrix-unit-sticky">Peso total CE</td>
+                    ${grupos.map((grupo, grupoIdx) => {
+                        const style = estiloCeMatriz(grupoIdx);
+                        const pesoCeTotal = grupo.criterios.reduce((sum, cr) => sum + unidades.reduce((s, u) => s + valorPonderacionUnidad(u, cr.colIdx), 0), 0);
+                        const pct = Number(grupo.ce.ponderacionTotal) > 0 ? formatearPorcentajeMatriz(grupo.ce.ponderacionTotal) : formatearResumenNumero(pesoCeTotal);
+                        return `<td class="matrix-ce-cell matrix-ce-start matrix-ce-end" style="${style}" colspan="${grupo.criterios.length + 1}"><strong>${pct}</strong></td>`;
+                    }).join('')}
                 </tr>`;
-        }
-
-        function cambiarInstrumentoResumen(rowIdx, instrColIdx, codigo) {
-            const unidad = ponderacionesUnidad.find(u => Number(u.rowIdx) === Number(rowIdx));
-            if (!unidad) return;
-            if (!unidad.instrPorCe) unidad.instrPorCe = {};
-            unidad.instrPorCe[String(ceResumenActivo)] = { codigo, colIdx: instrColIdx };
-            marcarCambio();
         }
 
         function cambiarTab(tab) {
@@ -2546,7 +2547,6 @@
                 actualizarOpcionesPonderacion();
                 mostrarTablaPonderacionesUnidad();
             } else if (tab === 'resumen') {
-                actualizarSelectCeResumen();
                 mostrarTablaResumen();
             }
         }
