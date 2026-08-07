@@ -1564,7 +1564,7 @@
                     const borderL = ci === 0 ? `border-left:3px solid ${c.border};` : '';
                     const bg = tieneP ? c.bg : '#f3f4f6';
                     const fg = tieneP ? c.fg : '#9ca3af';
-                    head2 += `<th data-col-key="${cr.colIdx}" style="width:80px;text-align:center;font-size:0.72em;padding:6px 4px;background:${bg};color:${fg};${borderL}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
+                    head2 += `<th data-col-key="${cr.colIdx}" style="width:46px;text-align:center;font-size:0.68em;padding:4px 2px;background:${bg};color:${fg};${borderL}">${escapeHtml(cr.codigo)}${pctTxt}</th>`;
                 });
             });
             head2 += '</tr>';
@@ -1602,20 +1602,20 @@
                     const cellBg = tieneP ? (cc.c ? cc.c.bg : '') : '#f3f4f6';
                     const borderL = cc.firstInGroup ? `border-left:3px solid ${cc.c ? cc.c.border : '#ccc'};` : '';
                     if (tieneP) {
-                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:6px 4px;background:${cellBg};${borderL}">
+                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:4px 2px;background:${cellBg};${borderL}">
                             <input type="text" inputmode="decimal" class="nota-cr"
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
                                 value="${escapeHtml(String(notaVal))}"
-                                style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #d7d7d7;border-radius:5px;min-height:32px"
+                                style="width:40px;text-align:center;padding:3px 2px;font-size:0.84em;border:1px solid #d7d7d7;border-radius:5px;min-height:28px"
                             /></td>`;
                     } else {
-                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:6px 4px;background:#f3f4f6;${borderL}">
+                        html += `<td data-col-key="${cr.colIdx}" style="text-align:center;padding:4px 2px;background:#f3f4f6;${borderL}">
                             <input type="text" class="nota-cr" disabled
                                 data-cr-codigo="${escapeHtml(cr.codigo)}"
                                 data-cr-colidx="${cr.colIdx}"
                                 value="${escapeHtml(String(notaVal))}"
-                                style="width:68px;text-align:center;padding:5px 4px;font-size:0.88em;border:1px solid #e5e7eb;border-radius:5px;min-height:32px;background:#f3f4f6;color:#9ca3af;cursor:not-allowed"
+                                style="width:40px;text-align:center;padding:3px 2px;font-size:0.84em;border:1px solid #e5e7eb;border-radius:5px;min-height:28px;background:#f3f4f6;color:#9ca3af;cursor:not-allowed"
                             /></td>`;
                     }
                 });
