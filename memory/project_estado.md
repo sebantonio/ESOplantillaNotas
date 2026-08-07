@@ -1,8 +1,17 @@
 ---
 name: Estado del proyecto ESOplantillaNotas
-description: Estado actualizado 2026-08-03 — icono ESO propio, plantilla Excel descargable embebida, toolchain Rust instalado en D:\rust
+description: Estado actualizado 2026-08-06 — corrupcion XML de recuperaciones corregida, comandos async, rediseno visual completo con design.md
 type: project
 ---
+
+**Estado (2026-08-06, sesión 6):**
+- **Bug crítico corregido**: guardar Rec en recuperaciones vaciaba por completo las hojas 2ª/3ª EVA. Causa raíz: `set_xml_formula_cache_number` no reconocía celdas con `<v/>` self-closing (cache vacío típico de `IFERROR(...,"")`) y añadía un `<v>` duplicado → XML inválido → Excel reparaba vaciando la hoja. Fix + 9 tests de regresión (`formula_cache_tests`, `eval_layout_tests`). **Why:** confirmado con el Excel real del usuario (`CCGG PLANTILLA - CE AMPLIADOSv3.xlsx`), tenía backup y no hubo pérdida de datos.
+- **Bug de congelado corregido**: comandos Tauri síncronos (`excel_save_notas_unidad` y otros 6 de guardado) bloqueaban la ventana en guardados pesados (~4MB xlsx). Pasados a `async fn` + `tauri::async_runtime::spawn_blocking`.
+- **Backup automático**: `edit_workbook_sheets_xml`/`ensure_diario_sheet` escriben un `.bak` best-effort justo antes de sobrescribir el xlsx.
+- **Limpieza**: borrados `main.js`/`preload.js`/`tauri-node-backend.js` (Electron legacy, confirmado sin uso — ver pendiente #6, ya resuelto) y limpiado `package.json` (sin scripts/deps de Electron). CI básica añadida en `.github/workflows/ci.yml` (`cargo build --release` + `cargo test`).
+- **Rediseño visual completo (Hallmark)**: `design.md` en la raíz del repo es ahora la fuente de verdad del sistema de diseño (paleta OKLCH sobre el indigo/teal ya existente, tipografía solo de sistema — offline, sin CDN de fuentes —, espaciado 4pt, motion con easings nombrados). `ux-common.css` tiene los tokens nuevos (`--color-*`, `--font-*`, etc.); `--ux-*` quedan como alias. Las 14 páginas que comparten `ux-common.css` se unificaron (antes cada una usaba un tono de indigo distinto suelto, y `incluir-actividad.html` tenía un gradiente morado propio). **How to apply:** cualquier cambio visual futuro debe leer `design.md` primero y usar los tokens `--color-*`/`--font-*`, no hex sueltos. `asteroides.html` queda fuera de este sistema (no usa `ux-common.css`).
+- Versión progresó 0.1.191 → 0.1.196 en esta sesión.
+- Repo tiene además `.agents/`, `.claude/skills/`, `skills-lock.json` sin trackear, de origen ajeno a esta sesión (no tocados).
 
 **Estado (2026-08-03, sesión 5):**
 - Añadido branding propio: `notasESOicon.png` (raíz repo) sustituye el icono heredado del proyecto FP original. Regenerados todos los iconos de `src-tauri/icons/` con `npx tauri icon notasESOicon.png`, referenciados en `tauri.conf.json` → `bundle.icon`. Logo de cabecera de `index.html` (`.brand-mark`) ahora usa la imagen en vez de texto "ESO".

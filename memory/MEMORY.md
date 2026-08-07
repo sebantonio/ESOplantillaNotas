@@ -1,6 +1,7 @@
 # Memory Index — ESOplantillaNotas
 
-- [Estado del proyecto](project_estado.md) — Icono ESO propio, plantilla Excel descargable embebida, toolchain Rust en D:\rust
+- [Estado del proyecto](project_estado.md) — Sesión 6 (2026-08-06): fix corrupción XML recuperaciones, comandos async, rediseño Hallmark
+- `design.md` (raíz del repo) es la fuente de verdad del sistema de diseño desde 2026-08-06 — leer antes de cualquier cambio visual
 - [Arquitectura técnica](project_arquitectura.md) — Stack Tauri v2 + Rust; rangos fijos Excel ESO; comandos IPC registrados
 - [Estructura Excel ESO](project_excel_estructura.md) — Rangos exactos: alumnos A4:B30, unidades I5:K20, instrumentos N4:O13
 - [Perfil del usuario](user_perfil.md) — Sebantonio, Windows 11, prefiere autonomía total
