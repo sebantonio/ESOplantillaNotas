@@ -24,7 +24,11 @@
       "Bash(rm -rf /tmp/xlsxdump)",
       "Bash(mkdir -p /tmp/xlsxdump)",
       "Bash(unzip -o \"/c/cargo-target/plantillaNotas/release/CCGG PLANTILLA - CE AMPLIADOSv3.xlsx\" -d /tmp/xlsxdump)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "PowerShell($env:RUSTUP_HOME='D:\\\\rust\\\\rustup'; $env:CARGO_HOME='D:\\\\rust\\\\cargo'; cd \"h:\\\\Mi unidad\\\\Github\\\\ESOplantillaNotas\\\\src-tauri\"; cargo check --message-format=short 2>&1 | Select-Object -Last 60)",
+      "Bash(ls \"C:\\\\Users\\\\seban\\\\.claude\\\\projects\\\\h--Mi-unidad-Github-ESOplantillaNotas\\\\memory\\\\\")",
+      "Read(//c/Users/seban/.claude/projects/h--Mi-unidad-Github-ESOplantillaNotas/**)",
+      "Read(//c/Users/seban/.claude/projects/h--Mi-unidad-Github-ESOplantillaNotas/memory/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\seban\\.claude\\projects\\c--OneDrive-OneDrive---Consejer-a-de-Educaci-n--Cultura-y-Deportes-Castilla-La-Mancha-Github-ESOplantillaNotas-ESOplantillaNotas\\memory"
