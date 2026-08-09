@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "gestion-notas-secundaria"
-version = "0.1.204"
+version = "0.1.205"
 dependencies = [
  "calamine",
  "chrono",
