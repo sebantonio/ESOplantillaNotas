@@ -9,8 +9,8 @@ const exeDir = path.join(__dirname, '..', 'exe');
 
 fs.mkdirSync(exeDir, { recursive: true });
 
-const src = path.join(bundleDir, `ESO Notas Local_${version}_x64-setup.exe`);
-const dst = path.join(exeDir, `ESO Notas Local_${version}_x64-setup.exe`);
+const src = path.join(bundleDir, `GestionNotasSecundaria_${version}_x64-setup.exe`);
+const dst = path.join(exeDir, `GestionNotasSecundaria_${version}_x64-setup.exe`);
 
 fs.copyFileSync(src, dst);
-console.log(`Copiado: exe/ESO Notas Local_${version}_x64-setup.exe`);
+console.log(`Copiado: exe/GestionNotasSecundaria_${version}_x64-setup.exe`);

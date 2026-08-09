@@ -1016,23 +1016,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eso-notas-local"
-version = "0.1.203"
-dependencies = [
- "calamine",
- "chrono",
- "once_cell",
- "regex",
- "rfd",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "webbrowser",
- "zip",
-]
-
-[[package]]
 name = "event-listener"
 version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1339,6 +1322,23 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "gestion-notas-secundaria"
+version = "0.1.204"
+dependencies = [
+ "calamine",
+ "chrono",
+ "once_cell",
+ "regex",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "webbrowser",
+ "zip",
 ]
 
 [[package]]
