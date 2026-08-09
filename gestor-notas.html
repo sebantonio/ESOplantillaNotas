@@ -927,19 +927,32 @@
     <script>
         let currentState = null;
         let currentNotes = [];
-        let autoSaveTimeout = null;
         let hayCambiosSinGuardar = false;
         const _BASE_TITLE = document.title;
         let studentSearch = '';
         let currentPage = 0;
         let perPage = 15;
-        const AUTO_SAVE_DELAY_MS = 60000;
         const VIEW_PREFS_KEY = "gestorNotasViewPrefs";
         const _notasCache = new Map();
         let busyCount = 0;
         let busyDelayTimer = null;
         let currentQuickFilter = "all";
         let savingNotas = false;
+
+        // Guardado por celda (igual que gestor-recuperaciones): serializa las escrituras
+        // al Excel para que no se solapen, y separa el guardado inmediato (1 celda, sin
+        // recalcular hojas de evaluacion) de la sincronizacion con las hojas de
+        // evaluacion (mas pesada), que se agrupa y retrasa un poco para no bloquear
+        // la ventana mientras el usuario sigue tecleando.
+        let saveQueue = Promise.resolve();
+        function queuedSaveNotasUnidad(payload) {
+            const run = () => window.electronExcel.saveNotasUnidad(payload);
+            const result = saveQueue.then(run, run);
+            saveQueue = result.then(() => {}, () => {});
+            return result;
+        }
+        let evalSyncTimeout = null;
+        let evalSyncUnidad = null;
 
         const messageBox = document.getElementById("message");
         const unidadSelect = document.getElementById("unidadSelect");
@@ -1051,6 +1064,7 @@
                         }
                         crNota.nota = parseFloat(input.value.replace(",", ".")) || 0;
                         crNota.display = input.value;
+                        crNota.dirty = true;
                         input.classList.add("dirty-note");
                         input.classList.remove("saved-note");
                         renderSummary(currentState);
@@ -1078,6 +1092,7 @@
                 const input = event.target;
                 if (input.classList && input.classList.contains("nota-cr")) {
                     updateNoteValidation(input);
+                    saveNotaCellFromInput(input);
                 }
             });
 
@@ -1213,9 +1228,9 @@
                 clearLastSnapshot();
                 document.title = _BASE_TITLE;
                 currentPage = 0;
-                if (autoSaveTimeout) {
-                    clearTimeout(autoSaveTimeout);
-                    autoSaveTimeout = null;
+                if (evalSyncTimeout) {
+                    clearTimeout(evalSyncTimeout);
+                    evalSyncTimeout = null;
                 }
                 renderControls(data);
                 renderSummary(data);
@@ -1661,6 +1676,98 @@
             notasTfoot.innerHTML = html;
         }
 
+        // El estado "necesita guardar" vive en el modelo (crNota.dirty / .needsEvalSync),
+        // no en el DOM: con paginacion solo la pagina visible tiene <input>, y acciones
+        // masivas (vaciar, pegar columna) tocan alumnos que pueden no estar en pantalla.
+        // Las clases CSS dirty-note/saved-note son solo un reflejo visual del input mientras esta en pantalla.
+        function collectEntriesWhere(predicate) {
+            const out = [];
+            currentNotes.forEach((alumno) => {
+                (alumno.crNotas || []).forEach((crNota) => {
+                    if (predicate(crNota)) out.push({ alumno, crNota });
+                });
+            });
+            return out;
+        }
+        function getPendingDirtyCount() {
+            return collectEntriesWhere((cr) => cr.dirty).length;
+        }
+
+        function findInputFor(alumno, crNota) {
+            return notasBody.querySelector(`tr[data-row-idx="${alumno.rowIdx}"] .nota-cr[data-cr-colidx="${crNota.colIdx}"]`);
+        }
+
+        // Guarda una sola celda al perder el foco: payload minimo (1 alumno, 1 CR) y
+        // syncEval:false para que sea rapido y no bloquee la ventana. La sincronizacion
+        // con las hojas de evaluacion se agrupa aparte via scheduleEvalSync.
+        function saveNotaCellFromInput(input) {
+            if (validateGrade(input.value).isInvalid) return Promise.resolve();
+            if (!currentState) return Promise.resolve();
+
+            const row = input.closest("tr");
+            const studentIdx = Number(row?.dataset.studentIdx);
+            const rowIdx = Number(row?.dataset.rowIdx);
+            const codigo = input.dataset.crCodigo;
+            const colIdx = Number(input.dataset.crColidx);
+            if (Number.isNaN(rowIdx) || Number.isNaN(colIdx) || !codigo) return Promise.resolve();
+
+            const alumno = currentNotes[studentIdx];
+            const crNota = (alumno?.crNotas || []).find((n) => n.codigo === codigo);
+            if (!crNota || !crNota.dirty) return Promise.resolve();
+
+            const nota = crNota.nota;
+            const unidad = currentState.unidad;
+
+            crNota.dirty = false; // evita reintentos duplicados mientras se guarda
+            input.classList.remove("dirty-note");
+            return queuedSaveNotasUnidad({
+                unidad,
+                notas: [{ rowIdx, crNotas: { [codigo]: { colIdx, nota } } }],
+                syncEval: false,
+            }).then(() => {
+                input.classList.add("saved-note");
+                setTimeout(() => input.classList.remove("saved-note"), 1200);
+                crNota.needsEvalSync = true;
+                _notasCache.delete(unidad);
+                hayCambiosSinGuardar = getPendingDirtyCount() > 0;
+                if (!hayCambiosSinGuardar) document.title = _BASE_TITLE;
+                if (lastSyncStatus) lastSyncStatus.textContent = `Guardado ${new Date().toLocaleTimeString()}`;
+                updateStatusBar();
+                scheduleEvalSync(unidad);
+            }).catch((error) => {
+                crNota.dirty = true; // reintentable
+                input.classList.add("dirty-note");
+                showMessage("Error al guardar nota: " + (error.message || error), "error");
+            });
+        }
+
+        function scheduleEvalSync(unidad) {
+            evalSyncUnidad = unidad;
+            if (evalSyncTimeout) clearTimeout(evalSyncTimeout);
+            evalSyncTimeout = setTimeout(flushEvalSync, 1500);
+        }
+
+        // Propaga a las hojas de evaluacion las celdas ya guardadas en la hoja de unidad.
+        async function flushEvalSync() {
+            evalSyncTimeout = null;
+            const unidad = evalSyncUnidad;
+            const entries = collectEntriesWhere((cr) => cr.needsEvalSync);
+            if (!entries.length || !unidad) return;
+
+            const notasByRow = new Map();
+            entries.forEach(({ alumno, crNota }) => {
+                if (!notasByRow.has(alumno.rowIdx)) notasByRow.set(alumno.rowIdx, {});
+                notasByRow.get(alumno.rowIdx)[crNota.codigo] = { colIdx: crNota.colIdx, nota: crNota.nota };
+            });
+            const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
+            try {
+                await queuedSaveNotasUnidad({ unidad, notas });
+                entries.forEach(({ crNota }) => { crNota.needsEvalSync = false; });
+            } catch (error) {
+                showMessage("Error al sincronizar evaluaciones: " + (error.message || error), "error");
+            }
+        }
+
         async function saveNotas(options = {}) {
             if (!currentState) {
                 return true;
@@ -1677,55 +1784,61 @@
 
             savingNotas = true;
             try {
+                const active = document.activeElement;
+                if (active && active.classList && active.classList.contains("nota-cr")) {
+                    await saveNotaCellFromInput(active); // celda con foco: guardarla ya, sin esperar al blur
+                    active.blur();
+                }
+                if (evalSyncTimeout) { clearTimeout(evalSyncTimeout); evalSyncTimeout = null; }
+
                 if (!options.silent) {
                     if (saveButton) { saveButton.disabled = true; saveButton.textContent = "Guardando..."; }
                     if (floatingSaveButton) { floatingSaveButton.disabled = true; floatingSaveButton.textContent = "Guardando..."; }
                     showMessage("Guardando notas en el Excel...", "info");
                 }
 
-                // Construir payload: { unidad, notas: [{ rowIdx, crNotas: { "CR1.1": {colIdx, nota} } }] }
-                const payload = {
-                    unidad: currentState.unidad,
-                    notas: currentNotes.map((alumno) => {
-                        const crNotasMap = {};
-                        (alumno.crNotas || []).forEach((crNota) => {
-                            crNotasMap[crNota.codigo] = {
-                                colIdx: crNota.colIdx,
-                                nota: crNota.nota
-                            };
-                        });
-                        return {
-                            rowIdx: alumno.rowIdx,
-                            crNotas: crNotasMap
-                        };
-                    })
-                };
+                // Une pendientes de guardar + pendientes de sincronizar con evaluacion
+                // (por si el debounce de scheduleEvalSync aun no habia disparado) en UNA
+                // sola escritura, en vez de mandar toda la tabla como antes.
+                const seen = new Set();
+                const allEntries = [];
+                collectEntriesWhere((cr) => cr.dirty || cr.needsEvalSync).forEach((entry) => {
+                    const key = entry.alumno.rowIdx + ":" + entry.crNota.codigo;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    allEntries.push(entry);
+                });
 
-                const data = await window.electronExcel.saveNotasUnidad(payload);
-                currentState = data;
-                currentNotes = (data.alumnos || []).map((item) => ({ ...item }));
-                // Invalidar caché de esta clave para que la próxima carga relean datos actualizados
-                const savedKey = `${currentState.unidad}`;
-                _notasCache.set(savedKey, data);
-                renderSummary(data);
-                if (!options.silent) {
-                    renderControls(data);
-                    renderTable();
+                if (allEntries.length) {
+                    const notasByRow = new Map();
+                    allEntries.forEach(({ alumno, crNota }) => {
+                        if (!notasByRow.has(alumno.rowIdx)) notasByRow.set(alumno.rowIdx, {});
+                        notasByRow.get(alumno.rowIdx)[crNota.codigo] = { colIdx: crNota.colIdx, nota: crNota.nota };
+                    });
+                    const notas = Array.from(notasByRow.entries()).map(([rowIdx, crNotas]) => ({ rowIdx, crNotas }));
+                    await queuedSaveNotasUnidad({ unidad: currentState.unidad, notas, syncEval: true });
+                    allEntries.forEach(({ alumno, crNota }) => {
+                        crNota.dirty = false;
+                        crNota.needsEvalSync = false;
+                        const input = findInputFor(alumno, crNota);
+                        if (input) {
+                            input.classList.remove("dirty-note");
+                            input.classList.add("saved-note");
+                            setTimeout(() => input.classList.remove("saved-note"), 1200);
+                        }
+                    });
+                    _notasCache.delete(currentState.unidad);
                 }
-                markDirtyInputsAsSaved();
-                hayCambiosSinGuardar = false;
+                await saveQueue; // espera tambien a guardados en curso lanzados por un blur justo antes
+
+                hayCambiosSinGuardar = getPendingDirtyCount() > 0;
                 clearLastSnapshot();
                 document.title = _BASE_TITLE;
-                if (autoSaveTimeout) {
-                    clearTimeout(autoSaveTimeout);
-                    autoSaveTimeout = null;
-                }
                 if (!options.silent) {
-                    showMessage("Notas guardadas. Excel recalculara las formulas al abrirse.", "success");
+                    showMessage(allEntries.length ? "Notas guardadas. Excel recalculara las formulas al abrirse." : "No hay cambios que guardar.", allEntries.length ? "success" : "info");
                 }
-                if (lastSyncStatus) {
-                    const fileInfo = data.fileName ? ` · ${data.fileName}` : "";
-                    lastSyncStatus.textContent = `Guardado ${new Date().toLocaleTimeString()}${fileInfo}`;
+                if (lastSyncStatus && allEntries.length) {
+                    lastSyncStatus.textContent = `Guardado ${new Date().toLocaleTimeString()}`;
                 }
                 updateStatusBar();
                 saveViewPrefs();
@@ -1774,7 +1887,8 @@
                 alumno.crNotas = (alumno.crNotas || []).map((cr) => ({
                     ...cr,
                     nota: "",
-                    display: ""
+                    display: "",
+                    dirty: true
                 }));
                 return alumno;
             });
@@ -1790,7 +1904,7 @@
             }
             currentNotes = lastClearedSnapshot.map((alumno) => ({
                 ...alumno,
-                crNotas: (alumno.crNotas || []).map((cr) => ({ ...cr }))
+                crNotas: (alumno.crNotas || []).map((cr) => ({ ...cr, dirty: true }))
             }));
             clearLastSnapshot();
             renderSummary(currentState);
@@ -1856,6 +1970,7 @@
                 }
                 crNota.nota = parseFloat(value.replace(",", ".")) || 0;
                 crNota.display = value;
+                crNota.dirty = true;
                 applied += 1;
 
                 const input = notasBody.querySelector(`tr[data-student-idx="${noteIdx}"] .nota-cr[data-cr-colidx="${crColIdx}"]`);
@@ -1942,30 +2057,15 @@
             hayCambiosSinGuardar = true;
             if (!document.title.startsWith('*')) document.title = '* ' + _BASE_TITLE;
             updateStatusBar();
-            if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(() => guardarCambiosAutomaticamente(), AUTO_SAVE_DELAY_MS);
         }
 
-        async function guardarCambiosAutomaticamente() {
-            if (!hayCambiosSinGuardar || !window.electronExcel) {
-                return true;
-            }
-
-            showMessage("Autoguardando notas...", "info");
-            return saveNotas({ silent: true });
-        }
-
+        // El guardado real ya ocurre celda a celda al perder el foco (saveNotaCellFromInput);
+        // esto es la red de seguridad antes de cambiar de unidad o cerrar (delega en saveNotas,
+        // que ya se encarga de guardar la celda con foco y esperar la sincronizacion).
         async function guardarCambiosAntesDeCerrar() {
-            if (!hayCambiosSinGuardar || !window.electronExcel) {
+            if (!window.electronExcel) {
                 return true;
             }
-
-            if (autoSaveTimeout) {
-                clearTimeout(autoSaveTimeout);
-                autoSaveTimeout = null;
-            }
-
-            showMessage("Guardando notas antes de cerrar...", "info");
             return saveNotas({ silent: true });
         }
 
@@ -2000,25 +2100,6 @@
                 busyDelayTimer = null;
             }
             if (busyOverlay) busyOverlay.classList.remove("show");
-        }
-
-        function markDirtyInputsAsSaved() {
-            const dirtyInputs = document.querySelectorAll(".nota-cr.dirty-note");
-            dirtyInputs.forEach((input) => {
-                input.classList.remove("dirty-note");
-                input.classList.add("saved-note");
-            });
-            if (dirtyInputs.length) {
-                setTimeout(() => {
-                    document.querySelectorAll(".nota-cr.saved-note").forEach((input) => {
-                        input.classList.remove("saved-note");
-                    });
-                }, 1200);
-            }
-        }
-
-        function getPendingDirtyCount() {
-            return document.querySelectorAll(".nota-cr.dirty-note").length;
         }
 
         function setDisabled(disabled) {
