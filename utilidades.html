@@ -140,12 +140,15 @@
         .sem-btn { padding: 7px 14px; border: 1.5px solid #d1d5db; border-radius: 7px; background: white; font: inherit; font-size: 0.88rem; font-weight: 700; color: #374151; cursor: pointer; }
         .sem-btn:hover { border-color: var(--color-accent); color: var(--color-accent-strong); }
         .sem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
-        .sem-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; }
+        .sem-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; }
         .sem-row.state-green  { background: #f0fdf4; border-color: #86efac; }
         .sem-row.state-yellow { background: #fefce8; border-color: #fde047; }
         .sem-row.state-red    { background: #fff1f2; border-color: #fca5a5; }
+        .sem-row-top { display: flex; align-items: center; gap: 8px; }
         .sem-name { flex: 1; font-size: 0.88rem; font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .sem-btns { display: flex; gap: 4px; flex-shrink: 0; }
+        .sem-obs-input { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 6px; font: inherit; font-size: 0.8rem; background: rgba(255,255,255,0.7); }
+        .sem-obs-input:focus { outline: none; border-color: var(--color-accent); background: white; }
         .sem-state-btn { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid transparent; font-size: 0.9rem; cursor: pointer; background: #f3f4f6; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
         .sem-state-btn:hover { transform: scale(1.1); }
         .sem-state-btn.active-green  { background: #dcfce7; border-color: #22c55e; }
@@ -822,26 +825,57 @@ function copiarGrupos() {
 
 // ===== SEMÁFORO =====
 const SEM_KEY = 'aula_semaforo_v1';
+const SEM_OBS_KEY = 'aula_semaforo_obs_v1';
 let semData = {}; // { fecha: { nombre: 'green'|'yellow'|'red'|'' } }
+let semObs = {};  // { fecha: { nombre: 'observación' } }
 
-function semLoad() {
+async function semLoad() {
     try { semData = JSON.parse(localStorage.getItem(SEM_KEY) || '{}'); } catch { semData = {}; }
+    try { semObs = JSON.parse(localStorage.getItem(SEM_OBS_KEY) || '{}'); } catch { semObs = {}; }
+    if (!window.electronExcel) return;
+    try {
+        const result = await window.electronExcel.getSemaforo();
+        (result?.entradas || []).forEach(e => {
+            if (!e.fecha || !e.alumno) return;
+            if (!semData[e.fecha]) semData[e.fecha] = {};
+            if (!semObs[e.fecha]) semObs[e.fecha] = {};
+            if (e.estado) semData[e.fecha][e.alumno] = e.estado;
+            if (e.observacion) semObs[e.fecha][e.alumno] = e.observacion;
+        });
+    } catch (e) {}
 }
 
 function semSave() {
     localStorage.setItem(SEM_KEY, JSON.stringify(semData));
+    localStorage.setItem(SEM_OBS_KEY, JSON.stringify(semObs));
 }
 
 function semHoy() {
     return new Date().toISOString().split('T')[0];
 }
 
+// Guarda estado+observación del alumno en la fecha activa en la hoja Diario (cols L-O)
+function semSaveEntry(fecha, nombre) {
+    semSave();
+    if (!window.electronExcel) return;
+    const estado = (semData[fecha] && semData[fecha][nombre]) || '';
+    const observacion = (semObs[fecha] && semObs[fecha][nombre]) || '';
+    window.electronExcel.saveSemaforoEntrada({ fecha, alumno: nombre, estado, observacion }).catch(() => {});
+}
+
 function semSetState(nombre, estado) {
     const fecha = document.getElementById('semDate').value || semHoy();
     if (!semData[fecha]) semData[fecha] = {};
     semData[fecha][nombre] = estado === semData[fecha][nombre] ? '' : estado;
-    semSave();
+    semSaveEntry(fecha, nombre);
     renderSemaforo();
+}
+
+function semSetObs(nombre, valor) {
+    const fecha = document.getElementById('semDate').value || semHoy();
+    if (!semObs[fecha]) semObs[fecha] = {};
+    semObs[fecha][nombre] = valor;
+    semSaveEntry(fecha, nombre);
 }
 
 function semNuevaFecha() {
@@ -854,6 +888,7 @@ function semNuevaFecha() {
 function semLimpiarFecha() {
     const fecha = document.getElementById('semDate').value || semHoy();
     delete semData[fecha];
+    delete semObs[fecha];
     semSave();
     renderSemaforo();
 }
@@ -864,6 +899,7 @@ function renderSemaforo() {
     const warning = document.getElementById('semaforoAlumnosWarning');
     const fecha = document.getElementById('semDate').value || semHoy();
     const session = semData[fecha] || {};
+    const obsSession = semObs[fecha] || {};
 
     if (!alumnosLista.length) {
         warning.style.display = 'block';
@@ -875,21 +911,27 @@ function renderSemaforo() {
     let green = 0, yellow = 0, red = 0, none = 0;
     grid.innerHTML = alumnosLista.map(nombre => {
         const st = session[nombre] || '';
+        const ob = obsSession[nombre] || '';
         if (st === 'green') green++;
         else if (st === 'yellow') yellow++;
         else if (st === 'red') red++;
         else none++;
         const rowClass = st ? `state-${st}` : '';
+        const nombreEsc = escHtml(nombre).replace(/'/g,"\\'");
         return `<div class="sem-row ${rowClass}">
-            <span class="sem-name" title="${escHtml(nombre)}">${escHtml(nombre)}</span>
-            <div class="sem-btns">
-                <button class="sem-state-btn ${st==='green'?'active-green':''}" type="button"
-                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','green')" title="Participa">✓</button>
-                <button class="sem-state-btn ${st==='yellow'?'active-yellow':''}" type="button"
-                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','yellow')" title="Normal/pasivo">~</button>
-                <button class="sem-state-btn ${st==='red'?'active-red':''}" type="button"
-                    onclick="semSetState('${escHtml(nombre).replace(/'/g,"\\'")}','red')" title="No participa">✗</button>
+            <div class="sem-row-top">
+                <span class="sem-name" title="${escHtml(nombre)}">${escHtml(nombre)}</span>
+                <div class="sem-btns">
+                    <button class="sem-state-btn ${st==='green'?'active-green':''}" type="button"
+                        onclick="semSetState('${nombreEsc}','green')" title="Participa">✓</button>
+                    <button class="sem-state-btn ${st==='yellow'?'active-yellow':''}" type="button"
+                        onclick="semSetState('${nombreEsc}','yellow')" title="Normal/pasivo">~</button>
+                    <button class="sem-state-btn ${st==='red'?'active-red':''}" type="button"
+                        onclick="semSetState('${nombreEsc}','red')" title="No participa">✗</button>
+                </div>
             </div>
+            <input type="text" class="sem-obs-input" placeholder="Observación..." value="${escHtml(ob)}"
+                onchange="semSetObs('${nombreEsc}', this.value)">
         </div>`;
     }).join('');
 
@@ -1006,13 +1048,14 @@ function escHtml(s) {
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     updateTimerDisplay();
     horarioLoad();
-    semLoad();
     listaLoad();
     // Fecha de semáforo = hoy
     document.getElementById('semDate').value = semHoy();
+    await semLoad();
+    if (document.getElementById('tab-semaforo').classList.contains('active')) renderSemaforo();
     cargarAlumnos();
 });
 </script>

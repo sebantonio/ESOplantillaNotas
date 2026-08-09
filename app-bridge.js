@@ -43,6 +43,8 @@
     saveDiarioEntrada: (payload) => invoke("excel_save_diario_entrada", { payload }),
     deleteDiarioEntrada: (payload) => invoke("excel_delete_diario_entrada", { payload }),
     getInstrumentos: () => invoke("excel_get_instrumentos"),
-    saveInstrumentos: (instrumentos) => invoke("excel_save_instrumentos", { instrumentos })
+    saveInstrumentos: (instrumentos) => invoke("excel_save_instrumentos", { instrumentos }),
+    getSemaforo: () => invoke("excel_get_semaforo"),
+    saveSemaforoEntrada: (payload) => invoke("excel_save_semaforo_entrada", { payload })
   };
 })();

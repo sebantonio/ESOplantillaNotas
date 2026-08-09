@@ -2875,6 +2875,83 @@ fn excel_delete_diario_entrada(payload: Value) -> Result<Value, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Semáforo de participación (hoja Diario, cols L-O = 11-14, no pisa A-J)
+// ---------------------------------------------------------------------------
+const SEM_COL_FECHA: usize = 11;
+const SEM_COL_ALUMNO: usize = 12;
+const SEM_COL_ESTADO: usize = 13;
+const SEM_COL_OBS: usize = 14;
+
+#[tauri::command]
+fn excel_get_semaforo() -> Result<Value, String> {
+    let path = require_selected_path()?;
+    let entradas: Vec<Value> = match read_sheet_rows(&path, DIARIO_SHEET) {
+        Ok(rows) => rows.iter().enumerate()
+            .skip(1)
+            .filter(|(_, row)| !cell_val_str(row.get(SEM_COL_ALUMNO).unwrap_or(&Value::Null)).is_empty())
+            .map(|(ri, row)| {
+                let cv = |i: usize| cell_val_str(row.get(i).unwrap_or(&Value::Null));
+                json!({
+                    "fila": ri,
+                    "fecha": cv(SEM_COL_FECHA), "alumno": cv(SEM_COL_ALUMNO),
+                    "estado": cv(SEM_COL_ESTADO), "observacion": cv(SEM_COL_OBS),
+                })
+            })
+            .collect(),
+        Err(_) => vec![],
+    };
+    Ok(json!({ "entradas": entradas }))
+}
+
+// Upsert por (fecha, alumno). Crea la hoja Diario si no existe.
+#[tauri::command]
+fn excel_save_semaforo_entrada(payload: Value) -> Result<Value, String> {
+    let path = require_selected_path()?;
+    let gs = |k: &str| payload[k].as_str().unwrap_or("").to_string();
+    let fecha = gs("fecha"); if fecha.is_empty() { return Err("Falta fecha".into()); }
+    let alumno = gs("alumno"); if alumno.is_empty() { return Err("Falta alumno".into()); }
+    let estado = gs("estado");
+    let observacion = gs("observacion");
+
+    ensure_diario_sheet(&path)?;
+
+    let existing_rows = match read_sheet_rows(&path, DIARIO_SHEET) {
+        Ok(rows) => rows, Err(_) => vec![],
+    };
+    let need_header = existing_rows.len() < 1
+        || cell_str(&existing_rows, 0, SEM_COL_FECHA).to_uppercase() != "FECHA_SEM";
+
+    let target_row = (1..existing_rows.len())
+        .find(|&i| cell_str(&existing_rows, i, SEM_COL_FECHA) == fecha
+            && cell_str(&existing_rows, i, SEM_COL_ALUMNO) == alumno);
+    let insert_row = target_row.unwrap_or_else(|| {
+        let last = (1..existing_rows.len().max(1)).rev()
+            .find(|&i| !cell_str(&existing_rows, i, SEM_COL_ALUMNO).is_empty()).unwrap_or(0);
+        (last + 1).max(1)
+    });
+
+    let (fv, av, ev, ov) = (json!(fecha), json!(alumno), json!(estado), json!(observacion));
+    let nhf = need_header;
+
+    edit_workbook_sheets_xml(&path, vec![(DIARIO_SHEET, Box::new(move |xml: &str| {
+        let mut s = xml.to_string();
+        if nhf {
+            for (ci, h) in [(SEM_COL_FECHA, "FECHA_SEM"), (SEM_COL_ALUMNO, "ALUMNO"),
+                             (SEM_COL_ESTADO, "ESTADO"), (SEM_COL_OBS, "OBSERVACION")] {
+                s = set_xml_cell(&s, 0, ci, Some(&json!(h)), "text")?;
+            }
+        }
+        s = set_xml_cell(&s, insert_row, SEM_COL_FECHA, Some(&fv), "text")?;
+        s = set_xml_cell(&s, insert_row, SEM_COL_ALUMNO, Some(&av), "text")?;
+        s = set_xml_cell(&s, insert_row, SEM_COL_ESTADO, if ev.as_str()==Some("") { None } else { Some(&ev) }, "text")?;
+        s = set_xml_cell(&s, insert_row, SEM_COL_OBS, if ov.as_str()==Some("") { None } else { Some(&ov) }, "text")?;
+        Ok(s)
+    }) as Box<dyn Fn(&str) -> Result<String, String>>)])?;
+
+    excel_get_semaforo()
+}
+
+// ---------------------------------------------------------------------------
 // Instrumentos de evaluación (DATOS cols N/O, filas 5-9)
 // ---------------------------------------------------------------------------
 
@@ -3101,6 +3178,7 @@ fn main() {
             excel_get_notas_evaluacion, excel_get_notas_evaluacion_alumno,
             excel_get_notas_unidad, excel_save_notas_unidad, excel_resync_unidad_eval, excel_get_alumnos_informes, app_open_external,
             excel_get_diario, excel_save_diario_entrada, excel_delete_diario_entrada,
+            excel_get_semaforo, excel_save_semaforo_entrada,
             excel_get_instrumentos, excel_save_instrumentos, save_csv_template, excel_download_template
         ])
         .run(tauri::generate_context!())
